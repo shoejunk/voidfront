@@ -1,0 +1,8 @@
+build/
+artifacts/
+client/.godot/
+client/bin/
+third_party/godot-cpp/
+.voidfront-agent/run.json
+*.blend1
+__pycache__/

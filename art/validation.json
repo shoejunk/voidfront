@@ -1,0 +1,20 @@
+{
+  "joints": 15,
+  "mesh_primitives": 5,
+  "animations": [
+    "attack",
+    "death",
+    "hit",
+    "idle",
+    "walk"
+  ],
+  "glb_bytes": 1125196,
+  "vertices": 17436,
+  "triangles": 8888,
+  "bind_dimensions_blender_xyz": [
+    1.03,
+    1.1151,
+    1.3858
+  ],
+  "ground_min_z": 0.0394
+}
