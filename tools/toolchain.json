@@ -1,0 +1,14 @@
+{
+  "godot_version": "4.7.2.stable",
+  "godot_console": "C:/dev/Godot/4.7.2/Godot_v4.7.2-stable_win64_console.exe",
+  "godot_editor": "C:/dev/Godot/4.7.2/Godot_v4.7.2-stable_win64.exe",
+  "godot_editor_sha256": "AB1824F85BFD8E0E4128182C000C4003A3E042245B2967848D089B2A04B22424",
+  "templates": "4.7.2.stable",
+  "windows_release_template_sha256": "D34D36F3BE1A6C49C56525AE86469B92E4F417DDF0B43CF00DD80C385C4B0562",
+  "godot_cpp_repository": "https://github.com/godotengine/godot-cpp.git",
+  "godot_cpp_revision": "05057de73de4b99f114d36c40d84ca46926c0e25",
+  "godot_cpp_api": "4.7",
+  "blender": "C:/Program Files/Blender Foundation/Blender 5.1/blender.exe",
+  "blender_version": "5.1.2",
+  "cmake_generator": "Visual Studio 17 2022"
+}

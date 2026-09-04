@@ -24,11 +24,11 @@ Presentation interpolates previous/current snapshots; it may choose animation an
 - Templates: %APPDATA%\Godot\export_templates\4.7.2.stable.
 - Blender: C:\Program Files\Blender Foundation\Blender 5.1\blender.exe; observed 5.1.2 ec6e62d40fa9.
 - MSVC: Visual Studio 2022 Professional, x64; CMake VS 17 2022 generator.
-- godot-cpp: official repository, exact revision/API recorded in tools/toolchain.json after compatibility verification; no floating dependency updates.
+- godot-cpp: official repository, exact revision 05057de73de4b99f114d36c40d84ca46926c0e25, API 4.7, verified in Godot 4.7.2 packaged runtime. Engine/template SHA256 pins live in tools/toolchain.json; no floating dependency updates.
 
 ## Acceptance and budgets
 
-Reference target: Windows x64, Ryzen 5 5600, RTX 3060 12 GB, 16 GB RAM, 1920x1080 High at 60 FPS. Development CPU observed: Ryzen 7 3700X; GPU/RAM inventory must be captured before hardware claims. Budgets remain targets until measured on the reference or documented comparable hardware. Do not weaken them to pass.
+Reference target: Windows x64, Ryzen 5 5600, RTX 3060 12 GB, 16 GB RAM, 1920x1080 High at 60 FPS. Development host observed: Ryzen 7 3700X (registry), RTX 2070 SUPER (Godot renderer), 68,644,352,000 bytes physical RAM visible to Windows (GlobalMemoryStatusEx). This is not the reference machine. Budgets remain targets until measured on the reference or documented comparable hardware. Do not weaken them to pass.
 
 - 200-unit representative battle and 500-unit stress scenario on a 128x128 navigable grid: p95 CPU frame <=12 ms, p99 frame <=16.67 ms, simulation p95 <=4 ms/tick and p99 <=8 ms/tick; peak resident memory <=2 GB.
 - Local selection/order visual feedback <=50 ms p95; authoritative response <=150 ms p95 at 80 ms RTT. Separate-process tests at 0/80/160 ms RTT, 20 ms jitter and 1% packet loss, with 30-minute complete matches and no divergent hashes.

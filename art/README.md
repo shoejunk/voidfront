@@ -39,3 +39,10 @@ distance; record animation motion; refine locomotion/contact, UV layout/material
 variation, LODs, destruction and damage feedback. The 8,888-triangle mesh and five
 surfaces require actual battle profiling. Blender may log a denied thumbnail-cache
 write outside the project; project source, runtime export and preview still save.
+
+Integration follow-up, 2026-09-03: the Release Godot package loads all five clips,
+and its recorded gameplay/contact sheets show changing leg stance and orientation
+without obvious detached limbs. Independent visual review confirms basic motion,
+team/wreck distinction and improved lighting. Close attack/hit/death distinction,
+foot contact and full transitions remain unverified; this is not production art
+approval. See artifacts/packaged-animation.mp4 and .voidfront-agent/review-visual-2026-09-03.md.

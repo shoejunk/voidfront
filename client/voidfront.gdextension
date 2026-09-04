@@ -1,0 +1,8 @@
+[configuration]
+entry_symbol = "voidfront_library_init"
+compatibility_minimum = "4.7"
+reloadable = false
+
+[libraries]
+windows.debug.x86_64 = "res://bin/Debug/voidfront_bridge.dll"
+windows.release.x86_64 = "res://bin/Release/voidfront_bridge.dll"
