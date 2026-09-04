@@ -36,6 +36,8 @@ public:
     const std::vector<Unit>& units() const { return units_; }
     bool blocked(int x, int z) const;
     uint64_t hash() const;
+    // Executed authoritative state only; independent of future input arrival order.
+    uint64_t state_hash() const;
     // -1 ongoing, 0/1 winning player, 2 draw.
     int winner() const;
 private:

@@ -1,3 +1,4 @@
+param([switch]$Network)
 . "$PSScriptRoot/common.ps1"
 Assert-RunningAllowed
 $evidence = Join-Path $Repo 'artifacts/determinism'
@@ -12,4 +13,8 @@ for ($run = 1; $run -le 10; $run++) {
     Assert-NativeExit 'Repeated replay'
     python "$PSScriptRoot/compare_traces.py" "$evidence/Release/record.trace" "$evidence/repeat-$run.trace"
     Assert-NativeExit 'Repeated trace comparison'
+}
+if ($Network) {
+    python "$PSScriptRoot/verify_network.py"
+    Assert-NativeExit 'Separate-process lockstep and impairment suite'
 }

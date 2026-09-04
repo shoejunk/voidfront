@@ -1,4 +1,5 @@
 #include "voidfront_sim.hpp"
+#include "lockstep.hpp"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -37,7 +38,7 @@ Replay load_replay(const std::string& path) {
     std::vector<uint8_t> bytes(static_cast<size_t>(length));
     stream.seekg(0); stream.read(reinterpret_cast<char*>(bytes.data()), length);
     if (!stream) throw std::runtime_error("replay read failed");
-    if (bytes[0]!='V' || bytes[1]!='F' || bytes[2]!='R' || bytes[3]!=1) throw std::runtime_error("incompatible replay container");
+    if (bytes[0]!='V' || bytes[1]!='F' || bytes[2]!='R' || (bytes[3]!=1 && bytes[3]!=2)) throw std::runtime_error("incompatible replay container");
     size_t pos=4;
     const auto read = [&]() {
         if (bytes.size()-pos < 4) throw std::runtime_error("truncated replay integer");
@@ -49,6 +50,10 @@ Replay load_replay(const std::string& path) {
     Replay replay;
     replay.seed=read(); replay.count=read(); replay.ticks=read();
     const auto frame_count=read();
+    if (bytes[3]==2) {
+        const uint64_t low=read(), high=read();
+        if ((low | (high << 32))!=vf::kLockstepContentId) throw std::runtime_error("incompatible replay content");
+    }
     if (replay.count<1 || replay.count>250 || replay.ticks<1 || replay.ticks>max_ticks || frame_count>max_frames)
         throw std::runtime_error("replay header outside limits");
     replay.commands.reserve(frame_count);
@@ -79,6 +84,7 @@ int main(int argc, char** argv) {
     uint32_t ticks = 2000, count = 6, seed = 42;
     std::string trace_path, record_path, replay_path;
     bool explicit_setup=false;
+    bool state_trace=false;
     try {
         for (int i = 1; i < argc; ++i) {
             const std::string arg = argv[i];
@@ -89,6 +95,11 @@ int main(int argc, char** argv) {
             else if (arg == "--trace") trace_path = argv[++i];
             else if (arg == "--record") record_path = argv[++i];
             else if (arg == "--replay") replay_path = argv[++i];
+            else if (arg == "--hash-mode") {
+                const std::string mode=argv[++i];
+                if (mode!="full" && mode!="state") throw std::invalid_argument("hash-mode must be full or state");
+                state_trace=mode=="state";
+            }
             else throw std::invalid_argument("unknown option");
         }
         if (!replay_path.empty() && (!record_path.empty() || explicit_setup)) throw std::invalid_argument("replay owns setup; cannot combine with record, ticks, seed or units-per-team");
@@ -132,7 +143,7 @@ int main(int argc, char** argv) {
             const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-begin).count();
             durations.push_back(elapsed);
             if (active) active_durations.push_back(elapsed);
-            if(trace) trace << sim.tick() << ' ' << sim.hash() << '\n';
+            if(trace) trace << sim.tick() << ' ' << (state_trace ? sim.state_hash() : sim.hash()) << '\n';
         }
         if(record.is_open()) {
             record.seekp(20); write_u32(record,written_frames); record.flush();

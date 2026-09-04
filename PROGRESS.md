@@ -29,3 +29,10 @@ Critics: independent simulation reviewer found receipt-time dead-unit admission 
 Remaining gaps: actual lockstep/network impairment tests, executed-state/content checksums, full economy/building/tech/fog, complete AI/1v1 matches, queued commands/control groups/enemy context targeting, scalable crowd/dynamic blocker pathing, manual input-latency evidence, production terrain/art/animation/audio/VFX/UI, reference hardware profiling and balance. Unit surfaces/selection rings still overbright. This is an early playable foundation, not AAA or completion evidence; no COMPLETE.md created.
 
 **Exact next step:** introduce deterministic per-player tick frames and an executed-state checksum distinct from receive buffers. Run two separate Windows processes through actual transport, stall on missing frames, reject incompatible content/protocol, report timeout/desync and replay the resulting match trace. Add controlled latency/jitter/loss validation before attaching network play to the Godot client. Then extend the same command stream to economy and construction. Keep the existing skirmish working and preserve all source/art/evidence.
+
+## 2026-09-03 21:37 America/Los_Angeles - network foundation run
+
+Baseline: clean dev at a64808d, previous run marker released, STOP/COMPLETE absent. Origin is now configured at https://github.com/shoejunk/voidfront.git and dev tracks origin/dev; verify remote before pushing. Existing skirmish and all evidence are preserved.
+
+Concrete goals: closed per-player tick frames with receive-independent executed-state hashes; actual separate Windows peer processes using bounded transport and compatibility/desync/disconnect diagnostics; deterministic latency/jitter/loss harness, cross-configuration replay evidence and independent code/evidence review. Client network UI and 30-minute complete matches remain subsequent gates.
+

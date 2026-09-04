@@ -212,7 +212,7 @@ bool deserialize_command(std::span<const uint8_t> bytes, Command& out) {
     out = std::move(c); return true;
 }
 
-uint64_t Sim::hash() const {
+uint64_t Sim::state_hash() const {
     uint64_t h = 14695981039346656037ull;
     const auto add = [&](uint64_t v) { for (int i = 0; i < 8; ++i) { h ^= (v >> (8 * i)) & 255; h *= 1099511628211ull; } };
     add(kProtocolVersion); add(tick_); add(rng_); add(last_sequence_[0]); add(last_sequence_[1]); add(units_.size());
@@ -220,6 +220,13 @@ uint64_t Sim::hash() const {
         add(u.id); add(u.player); add(u.x); add(u.z); add(u.hp); add(static_cast<uint8_t>(u.order));
         add(u.target_id); add(u.cooldown); add(u.moving); add(u.goal_x); add(u.goal_z); add(u.next_x); add(u.next_z);
     }
+    return h;
+}
+
+uint64_t Sim::hash() const {
+    // Preserve the legacy replay hash, which includes queued commands.
+    uint64_t h = state_hash();
+    const auto add = [&](uint64_t v) { for (int i = 0; i < 8; ++i) { h ^= (v >> (8 * i)) & 255; h *= 1099511628211ull; } };
     add(pending_.size());
     for (const auto& c : pending_) for (auto b : serialize_command(c)) add(b);
     return h;
