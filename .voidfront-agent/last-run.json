@@ -1,0 +1,15 @@
+{
+  "run": "2026-09-03-first-run",
+  "checkpoint_utc": "2026-09-04T03:11:03Z",
+  "source_commit": "015ec4d",
+  "branch": "dev",
+  "remote_backup": false,
+  "state": "playable foundation; completion gates remain open",
+  "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
+  "package_pck_sha256": "4F0C729801EE6D86ABD9B1C52A56DDF6F6D9AEEEDC0058EB730778E633E17379",
+  "package_bridge_sha256": "80A8AE824B20DA0840B100F08D386A622899EBA3B16BE1876371C2FBD731F6E4",
+  "verification": "C:/dev/voidfront/artifacts/verification.log",
+  "runtime_report": "C:/dev/voidfront/artifacts/packaged-smoke.json",
+  "movie": "C:/dev/voidfront/artifacts/packaged-animation.mp4",
+  "next": "closed tick frames, executed-state checksum, actual separate-process lockstep transport and impairment tests"
+}
