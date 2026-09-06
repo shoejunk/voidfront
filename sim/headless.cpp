@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cwctype>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -75,7 +76,16 @@ Replay load_replay(const std::string& path) {
     return replay;
 }
 bool same_path(const std::string& a,const std::string& b) {
-    return !a.empty() && !b.empty() && std::filesystem::weakly_canonical(a)==std::filesystem::weakly_canonical(b);
+    if (a.empty() || b.empty()) return false;
+    if (std::filesystem::exists(a) && std::filesystem::exists(b) && std::filesystem::equivalent(a,b)) return true;
+    auto left=std::filesystem::weakly_canonical(a).wstring();
+    auto right=std::filesystem::weakly_canonical(b).wstring();
+#ifdef _WIN32
+    // Also protect two not-yet-created outputs on Windows' default filesystem.
+    std::transform(left.begin(),left.end(),left.begin(),std::towlower);
+    std::transform(right.begin(),right.end(),right.begin(),std::towlower);
+#endif
+    return left==right;
 }
 }
 

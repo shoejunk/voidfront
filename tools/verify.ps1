@@ -5,6 +5,8 @@ $evidence = Join-Path $Repo 'artifacts/determinism'
 foreach ($configuration in @('Debug','Release')) {
     & "$PSScriptRoot/build.ps1" -Configuration $configuration
     & "$Repo/sim/verify_replay.ps1" -Executable "$Repo/build/windows/sim/$configuration/voidfront_headless.exe" -OutputDirectory "$evidence/$configuration"
+    python "$PSScriptRoot/verify_output_aliases.py" --executable "$Repo/build/windows/sim/$configuration/voidfront_headless.exe"
+    Assert-NativeExit 'Replay/output alias preservation'
 }
 python "$PSScriptRoot/compare_traces.py" "$evidence/Debug/record.trace" "$evidence/Release/record.trace"
 Assert-NativeExit 'Cross-configuration trace comparison'
