@@ -46,3 +46,40 @@ Standalone active-tick preliminary Release results: 200 units p95/p99 314/638 us
 Independent reports: .voidfront-agent/review-simulation-2026-09-03.md and review-visual-2026-09-03.md. No independent shipping approval. Official SC2 screenshots could not be retrieved for direct side-by-side comparison; that evidence remains missing.
 
 Not executed/implemented: real network exchange, latency/jitter/loss, complete economic AI or 1v1 matches, production-map performance, manual input responsiveness, dynamic-blocker/opposing-flow crowd suite, complete content, audio or production animation polish. No COMPLETE.md is justified.
+
+## 2026-09-06 recovered network checkpoint
+
+The earlier ledger above describes the foundation at its date. This run resumes saved dev commit 96e56a9 and preserves its implementation. Godot 4.7.2.stable.official.ed1daf0bf, matching template hashes and pinned godot-cpp revision passed the existing build guards.
+
+### Replay evidence preservation
+
+`./tools/verify.ps1` passes integrated MSVC Debug/Release builds and 2/2 CTest executables per configuration, fifteen malformed replay fixtures per configuration, 2,000-tick cross-configuration trace equality, and ten repeat playbacks. It now also runs `tools/verify_output_aliases.py`: seven Windows cases per configuration require nonzero exit, the expected alias diagnostic and preservation of original bytes (exact path, hard link and case variant for replay/record, plus case aliases of nonexistent output). A disposable pre-fix fixture demonstrated that replay/hardlink output was accepted. Fixed in 24b4842. Logs: `artifacts/output-aliases-before.log`, `artifacts/replay-alias-verification-2026-09-06.log`.
+
+### Packaged local skirmish regression
+
+`./tools/package.ps1` and `./tools/capture.ps1 -Packaged -Name packaged-network-regression -Ticks 400` pass. Current package remains `artifacts/package/Voidfront.exe`. Programmatic click/drag selection, Move/Stop/AttackMove, combat damage, no stop drift and restart pass; terminal hash remains b559cd93ea152fc0. Five clips are imported/requested. This is local offline gameplay, despite the capture filename; Godot networking is not attached. No new animation movie or manual playtest was run.
+
+Primary and independent runtime critic actually inspected both current 1920x1080 screenshots. Overbright walker surfaces, crowded selection indicators, blockout terrain, incomplete animation evidence and ambiguous defeat wording remain open. No unexpected engine error was logged; only the recognized certificate-store diagnostic remains. Report: `.voidfront-agent/review-runtime-2026-09-06.md`. Logs: `artifacts/package-2026-09-06.log`, `artifacts/capture-2026-09-06.log`, `artifacts/packaged-network-regression{,-host}.json`, matching engine log and screenshots.
+
+Observed normal twelve-unit frame interval p95/p99 3.036/3.611 ms, bridge advance 0.036/0.056 ms and sampled resident peak 235,040,768 bytes over 21.774 seconds. Unchanged client code and unnormalized presentation/scheduling conditions do not establish an optimization relative to the previous ~17 ms run. These are neither CPU-frame/input-latency measurements nor representative 128x128, 200/500-unit battle results; SPEC budgets remain unchanged.
+
+### Separate-process UDP lockstep
+
+Final command: `python tools/verify_network.py --out artifacts/network-verified-2026-09-06`. All eleven cases pass with distinct Windows peer processes and real UDP relaying. Current evidence: `artifacts/network-verified-2026-09-06/summary.json`, initial `run.json`, per-case reports/logs, canonical VFR2 records and traces; console log `artifacts/network-verified-2026-09-06.log`. UTC run interval is 2026-09-06 17:29:21 through 17:33:51. Binary SHA256 fingerprints are recorded for both configurations of peers/replayers.
+
+| Case | Executed ticks per peer | Result |
+| --- | ---: | --- |
+| Debug/Debug and Release/Release clean | 1,000 | All hashes agree; 49.08/49.03 seconds including confirmation linger and replay work |
+| Debug/Release, 80 ms RTT, 20 ms one-way jitter, 1% loss | 1,000 | 82/73 actual random drops by direction; all hashes agree; 143.52 seconds |
+| Release/Debug, 160 ms RTT, 20 ms one-way jitter, 1% loss | 1,000 | 106/101 actual random drops; all hashes agree; 220.83 seconds |
+| Forced terminal loss | 100 | Twelve Finish/FinishAck packets dropped across both directions; recovery succeeds |
+| Withheld frame | 100 | Eleven copies of player 1 tick 25 withheld for 0.5 seconds; no packet indicating advancement beyond held tick |
+| Lost tick ACK | 100 | Three tick-25 ACKs dropped; overtaking frame/retry recovery succeeds |
+| Incompatible content and protocol | 0 | Both peers fail before advancement with incompatibility diagnostics |
+| Injected desync and disconnect | 25 | Both peers stop with diagnostic; applied failure prefixes replay identically |
+
+Every successful pair's recording replays in the opposite configuration. The four 1,000-tick configurations/impairment traces agree with the clean baseline and ten repeated Release playbacks; trace SHA256 `3cda78f81a85a1a9f45175d5566a5090db3216c1b7394b70ecb892fcbc68823e`. Three malformed VFR2 cases reject changed content, truncated content identity and trailing data. Full suite includes seeded random duplication/reordering and records actual relay delays; this is controlled loopback impairment, not a physical network benchmark.
+
+The interrupted implementation initially failed this run because the Python relay treated Windows UDP `ConnectionResetError`/10054 notifications as fatal. The C++ peer already handled the corresponding notification. A fresh fifty-tick probe reproduced the harness failure; after the narrow relay repair all eleven probe and full cases pass. Reset handling is actually exercised (clean cases one notification; full negative cases up to 43 per direction) while authoritative progress timeout still rejects disconnects. Other socket errors remain fatal. Per-case failures now print immediately. Default output is a new timestamped directory under `artifacts/network/`; explicit `--out` must not exist. A rejected reuse preserved the prior summary hash (`artifacts/network-reuse-rejected-2026-09-06.log`). Pre-repair evidence in `artifacts/network/` and `artifacts/network-probe-2026-09-06` must not be substituted for the fresh final suite.
+
+Independent network source and executed-evidence review: `.voidfront-agent/review-network-2026-09-06.md`. This accepts only the bounded transport/replay foundation. `stall_count` counts completed turns and `stall_ms` sums whole elapsed turns, including handling; neither is pure network-stall or input latency. The stop-and-wait harness has no real-time pacing and cannot sustain 20 Hz at 80/160 ms RTT (roughly 7/4.5 ticks per second including harness overhead). Next: scheduled input delay, a bounded pipeline, tick-tagged lagged checksums, measured 20 Hz/response behavior, and then two packaged clients. Complete economic games, 30-minute network soak, LAN/Internet transport, representative performance and all production/shipping gates remain open.

@@ -5,6 +5,7 @@ loopback protocol regression, not an Internet, input-latency or soak benchmark.
 """
 import argparse
 import concurrent.futures
+from datetime import datetime, timezone
 import hashlib
 import heapq
 import json
@@ -15,6 +16,7 @@ import selectors
 import socket
 import subprocess
 import time
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 HIDDEN = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -69,7 +71,8 @@ def run_case(case, build, out, ticks):
     queue, sequence = [], 0
     rng = [random.Random(73291), random.Random(19087)]
     counts = {"received": [0, 0], "dropped": [0, 0], "forwarded": [0, 0],
-              "duplicates": [0, 0], "delays_ms": [[], []], "forced_drops": [0, 0]}
+              "duplicates": [0, 0], "delays_ms": [[], []], "forced_drops": [0, 0],
+              "connection_resets": [0, 0]}
     terminal_seen = [[0, 0], [0, 0]]
     held_since = None
     start = time.monotonic()
@@ -121,6 +124,12 @@ def run_case(case, build, out, ticks):
                     try:
                         data, address = key.fileobj.recvfrom(65536)
                     except BlockingIOError:
+                        break
+                    except ConnectionResetError:
+                        # Windows UDP may report ICMP from a peer that has not
+                        # bound yet or has already exited. This is not a packet;
+                        # peer progress timeouts still detect real disconnects.
+                        counts["connection_resets"][player] += 1
                         break
                     if address != ("127.0.0.1", ports[player]):
                         raise AssertionError("unexpected sender at isolated relay")
@@ -219,6 +228,9 @@ def run_case(case, build, out, ticks):
         print(f"PASS {name}: separate PIDs {result['pids']}, {result['elapsed_seconds']:.2f}s, "
               f"dropped={counts['dropped']}", flush=True)
         return result
+    except Exception as error:
+        print(f"FAIL {name}: {error!r}", flush=True)
+        raise
     finally:
         for p in children:
             if p.poll() is None:
@@ -234,14 +246,24 @@ def run_case(case, build, out, ticks):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build", type=Path, default=ROOT / "build/windows")
-    parser.add_argument("--out", type=Path, default=ROOT / "artifacts/network")
+    parser.add_argument("--out", type=Path, help="new evidence directory (must not exist)")
     parser.add_argument("--ticks", type=int, default=1000)
     parser.add_argument("--jobs", type=int, choices=range(1, 4), default=3)
     args = parser.parse_args()
     if not 50 <= args.ticks <= 100000:
         parser.error("ticks must be 50..100000")
+    allowed()
+    started = datetime.now(timezone.utc)
+    if args.out is None:
+        args.out = ROOT / "artifacts/network" / (started.strftime("%Y%m%dT%H%M%SZ-") + uuid.uuid4().hex[:8])
     args.build, args.out = args.build.resolve(), args.out.resolve()
-    args.out.mkdir(parents=True, exist_ok=True)
+    args.out.mkdir(parents=True, exist_ok=False)
+    print(f"Network evidence: {args.out}", flush=True)
+    binaries = [args.build / cfg / "voidfront_peer.exe" for cfg in ("Debug", "Release")]
+    binaries += [args.build / "sim" / cfg / "voidfront_headless.exe" for cfg in ("Debug", "Release")]
+    fingerprints = {str(p.relative_to(args.build)): hashlib.sha256(p.read_bytes()).hexdigest() for p in binaries}
+    (args.out / "run.json").write_text(json.dumps({"started_utc": started.isoformat(),
+                                                 "binary_sha256": fingerprints}, indent=2))
     cases = [
         ("debug-clean", ("Debug", "Debug"), 0, 0, 0, None),
         ("release-clean", ("Release", "Release"), 0, 0, 0, None),
@@ -281,7 +303,9 @@ def main():
                               text=True, timeout=15, creationflags=HIDDEN)
         if test.returncode == 0:
             raise AssertionError(f"invalid network replay accepted: {name}")
-    summary = {"verified": True, "ticks_per_successful_case": args.ticks, "cases": results,
+    summary = {"verified": True, "started_utc": started.isoformat(),
+               "completed_utc": datetime.now(timezone.utc).isoformat(), "binary_sha256": fingerprints,
+               "ticks_per_successful_case": args.ticks, "cases": results,
                "ten_replays_equal": True, "malformed_replays_rejected": list(malformed),
                "trace_sha256": hashlib.sha256((args.out / "release-clean/peer0.trace").read_bytes()).hexdigest(),
                "scope": "loopback UDP headless skirmish, accelerated ticks, no client network or 30-minute soak"}

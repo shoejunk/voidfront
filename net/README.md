@@ -7,7 +7,8 @@ standalone simulation. Godot client networking is not connected yet.
 
 Build/test from the repository root with `./tools/verify.ps1 -Network`, or run
 `python tools/verify_network.py` after building both configurations. Evidence is
-written to `artifacts/network/summary.json` and per-case logs, peer reports,
+written to a fresh timestamped directory under `artifacts/network/`, including
+`run.json`, `summary.json` and per-case logs, peer reports,
 canonical input recordings and tick/hash traces. The harness checks distinct
 peer PIDs, compares every executed tick across configurations/impairments, replays
 each recording in the opposite configuration, and runs ten repeated playbacks.
@@ -15,6 +16,12 @@ The relay uses real UDP sockets, not calls into either peer simulation. Seeded
 per-direction random streams choose loss, jitter and duplication; actual packet
 counts and relay delays are recorded. OS scheduling means exact packet histories
 are not reproducible; canonical applied inputs and resulting state traces are.
+Each run records UTC times and SHA256 fingerprints of both peer and replay
+executables. An explicit `--out` must name a nonexistent directory, so failed
+reruns cannot inherit an old successful report. Case failures print immediately
+while other bounded workers finish. The relay counts and tolerates Windows UDP
+connection-reset notifications from endpoints that have not bound or have closed;
+all other socket errors remain fatal and peers retain progress timeouts.
 
 The transport checks protocol, source content identity, session, player assignment,
 seed, unit count and requested tick count in every datagram. It binds exclusively
@@ -48,6 +55,10 @@ one-way jitter, 1% random loss, duplication, deliberately dropped ACK/terminal
 packets, a withheld frame, incompatible protocol/content, desync and disconnect.
 Use `--ticks` and `--jobs` on `verify_network.py` to control duration/concurrency.
 Concurrent cases are correctness tests; elapsed times are not isolated benchmarks.
+Peer `stall_count` counts completed turns and `stall_ms` sums elapsed turn time,
+including simulation/transport handling. They are not pure network-stall or
+input-response measurements. The withheld-frame fixture also checks packets to
+reject advancement beyond the withheld turn during the hold interval.
 
 Network recordings use VFR2: the VFR1 24-byte header with container byte 2 followed
 by an 8-byte little-endian authoritative source content ID, then the same canonical
