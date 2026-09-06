@@ -1,15 +1,15 @@
 {
-  "run": "2026-09-03-first-run",
-  "checkpoint_utc": "2026-09-04T03:11:03Z",
-  "source_commit": "015ec4d",
   "branch": "dev",
-  "remote_backup": false,
-  "state": "playable foundation; completion gates remain open",
-  "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
+  "verification": "C:/dev/voidfront/artifacts/replay-alias-verification-2026-09-06.log",
+  "remote_backup": true,
+  "runtime_report": "C:/dev/voidfront/artifacts/packaged-network-regression.json",
+  "state": "reviewed loopback lockstep foundation; real-time client networking and all shipping gates remain open",
   "package_pck_sha256": "4F0C729801EE6D86ABD9B1C52A56DDF6F6D9AEEEDC0058EB730778E633E17379",
-  "package_bridge_sha256": "80A8AE824B20DA0840B100F08D386A622899EBA3B16BE1876371C2FBD731F6E4",
-  "verification": "C:/dev/voidfront/artifacts/verification.log",
-  "runtime_report": "C:/dev/voidfront/artifacts/packaged-smoke.json",
-  "movie": "C:/dev/voidfront/artifacts/packaged-animation.mp4",
-  "next": "closed tick frames, executed-state checksum, actual separate-process lockstep transport and impairment tests"
+  "network_report": "C:/dev/voidfront/artifacts/network-verified-2026-09-06/summary.json",
+  "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
+  "run": "2026-09-06-network-verification",
+  "package_bridge_sha256": "800F357D440EDB4E861E97BA079C34FF7FAE97F99BA00AAB7FF1E7F1AEE5DDD3",
+  "next": "scheduled input delay and bounded pipeline with tick-tagged lagged checksums; prove 20 Hz and response timing under 80/160ms RTT before two-client integration",
+  "checkpoint_utc": "2026-09-06T17:37:17.3437471Z",
+  "source_commit": "6e6a20158c743f762cecbb4a1c844b6d13923761"
 }
