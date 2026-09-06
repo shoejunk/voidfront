@@ -28,7 +28,6 @@ std::vector<uint8_t> serialize_frame(const TickFrame& frame) {
     append(bytes, kLockstepContentId, 8);
     append(bytes, frame.tick, 4);
     bytes.push_back(frame.player);
-    append(bytes, frame.previous_hash, 8);
     append(bytes, frame.commands.size(), 4);
     for (const auto& c : frame.commands) {
         const auto command = serialize_command(c);
@@ -39,7 +38,7 @@ std::vector<uint8_t> serialize_frame(const TickFrame& frame) {
 }
 
 bool deserialize_frame(std::span<const uint8_t> bytes, TickFrame& out) {
-    if (bytes.size() < 33 || bytes.size() > kMaxFrameBytes || bytes[0] != 'V' ||
+    if (bytes.size() < 25 || bytes.size() > kMaxFrameBytes || bytes[0] != 'V' ||
         bytes[1] != 'F' || bytes[2] != 'L' || bytes[3] != 1) return false;
     size_t pos = 4;
     const auto read = [&](size_t count) {
@@ -51,7 +50,6 @@ bool deserialize_frame(std::span<const uint8_t> bytes, TickFrame& out) {
     TickFrame frame;
     frame.tick = static_cast<uint32_t>(read(4));
     frame.player = static_cast<uint8_t>(read(1));
-    frame.previous_hash = read(8);
     const auto count = read(4);
     if (count > kMaxFrameCommands) return false;
     for (uint64_t i = 0; i < count; ++i) {
@@ -87,9 +85,6 @@ ReceiveResult Lockstep::receive(const TickFrame& frame) {
 AdvanceResult Lockstep::advance() {
     const auto found = frames_.find(sim_.tick());
     if (found == frames_.end() || !found->second[0] || !found->second[1]) return AdvanceResult::Waiting;
-    const auto prior = sim_.state_hash();
-    for (const auto& frame : found->second)
-        if (frame->previous_hash != prior) return AdvanceResult::Desync;
     Sim candidate = sim_;
     for (const auto& frame : found->second) for (const auto& command : frame->commands)
         if (!candidate.submit(command)) return AdvanceResult::Invalid;

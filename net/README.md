@@ -2,7 +2,7 @@
 
 `voidfront_peer.exe` is a Windows loopback UDP evidence harness. Two separate
 processes each generate only their own player's skirmish AI inputs. They exchange
-closed tick frames, validate prior executed-state hashes, and advance the same
+scheduled tick frames, validate separately tagged executed-state hashes, and advance the same
 standalone simulation. Godot client networking is not connected yet.
 
 Build/test from the repository root with `./tools/verify.ps1 -Network`, or run
@@ -24,23 +24,39 @@ connection-reset notifications from endpoints that have not bound or have closed
 all other socket errors remain fatal and peers retain progress timeouts.
 
 The transport checks protocol, source content identity, session, player assignment,
-seed, unit count and requested tick count in every datagram. It binds exclusively
+seed, unit count and requested tick count in every datagram. The handshake also
+requires identical input delay. It binds exclusively
 to `127.0.0.1`, accepts only its configured endpoint, retries unacknowledged frames,
-and buffers one overtaking frame while the previous ACK is in flight. Missing
-frames stall authoritative advancement. No-advancement timeouts report the current
+and pipelines future input without waiting for receipt ACKs to execute a turn.
+Missing frames stall authoritative advancement. No-advancement timeouts report the current
 tick; duplicate traffic cannot keep a stalled match alive indefinitely. Each peer
-compares and acknowledges terminal state hashes and lingers for a timeout interval
+confirms every executed checksum, compares and acknowledges terminal state hashes,
+and lingers for a timeout interval
 to answer retransmitted terminal packets. Finite packet loss can still cause a
 disconnect; successful local termination cannot guarantee the remote peer received
 every final ACK under an indefinite one-way partition.
 
 The core frame buffer in `sim/lockstep.*` supports 64 future ticks and 16 commands
-per player/frame. The initial harness uses one outstanding tick and no real-time
-pacing. At significant RTT this cannot sustain the specified 20 Hz match rate.
-It is protocol evidence, not input-response, playable multiplayer, reference
-hardware performance, LAN/Internet transport or a 30-minute complete-match soak.
-Pipelined scheduled input, a nonblocking client session adapter, match setup and
-UI remain the next integration work. Authentication, NAT traversal, reconnect,
+per player/frame. Transport protocol 2 removes the impossible requirement for a
+future input to contain its preceding future state hash. Kinds 6/7 carry separate
+executed-state checksums and acknowledgements (u32 state tick, u64 hash). An input
+receipt ACK confirms bytes received; a checksum ACK confirms compared execution.
+The verification window permits at most 16 executed ticks beyond contiguous
+mutually confirmed state. Missing checksums eventually stop execution even while
+future inputs arrive. This detects divergence with bounded delay rather than
+requiring a round trip before every step.
+
+`--input-delay-ticks` schedules commands sampled from deterministic state tick t
+for command tick t+delay (1..16, both peers must agree). The initial delay frames
+are empty. Samples are taken once per source tick and never depend on packet
+arrival order. Transport pacing targets one step per 50 ms; clocks and timing
+samples remain outside `sim/`. Changing delay changes the canonical input stream,
+so cross-impairment trace comparisons use the same delay. Current suite uses 2.
+
+This is protocol and generated-command timing evidence, not human input-response,
+playable multiplayer, reference hardware performance, LAN/Internet transport or
+a 30-minute complete-match soak. A nonblocking client session adapter, match setup
+and UI remain integration work. Authentication, NAT traversal, reconnect,
 resynchronization, packet fragmentation and hostile remote networking are absent.
 
 Manual paired process invocation (separate terminals):
@@ -52,13 +68,23 @@ Manual paired process invocation (separate terminals):
 
 The automated relay additionally tests 0/80/160 ms configured RTT, up to 20 ms
 one-way jitter, 1% random loss, duplication, deliberately dropped ACK/terminal
-packets, a withheld frame, incompatible protocol/content, desync and disconnect.
+packets, withheld frames/checksums, incompatible protocol/content/input delay,
+desync and disconnect. Lagged verification can let peers end at different bounded
+ticks after a fault; each applied prefix is replayed and their common prefix must
+agree. Desync diagnostics identify the mismatched executed-state tick.
 Use `--ticks` and `--jobs` on `verify_network.py` to control duration/concurrency.
 Concurrent cases are correctness tests; elapsed times are not isolated benchmarks.
-Peer `stall_count` counts completed turns and `stall_ms` sums elapsed turn time,
-including simulation/transport handling. They are not pure network-stall or
-input-response measurements. The withheld-frame fixture also checks packets to
-reject advancement beyond the withheld turn during the hold interval.
+Peer reports now distinguish missing-data stalls from scheduled waits, expose
+tick timestamps and command generation/application events, and record bounded
+backlog peaks. The verifier recomputes rates/percentiles from raw samples and
+checks source-to-execution tick mapping. Pacing excludes startup and terminal
+linger. Command timing starts at generated canonical input; sparse tick-aligned
+AI commands omit the human polling phase, client dispatch and presentation.
+`summary.json` records strict timing-target booleans separately from protocol
+success; a passing protocol suite does not silently accept a missed budget.
+Use `--jobs 1` to measure cases without other network cases running concurrently.
+The withheld-frame fixture watches executed checksum packets to reject advancement
+beyond the held turn; future input transmission is expected during a stall.
 
 Network recordings use VFR2: the VFR1 24-byte header with container byte 2 followed
 by an 8-byte little-endian authoritative source content ID, then the same canonical

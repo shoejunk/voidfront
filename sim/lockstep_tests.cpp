@@ -11,7 +11,7 @@ Command command(uint32_t tick, uint8_t player, uint32_t sequence) {
     return {tick, sequence, player, Order::Move, {player == 0 ? 1u : 7u}, 12 * kScale + 128, 12 * kScale + 128};
 }
 TickFrame frame(const Sim& sim, uint8_t player, uint32_t sequence = 0) {
-    TickFrame result{sim.tick(), player, sim.state_hash(), {}};
+    TickFrame result{sim.tick(), player, {}};
     if (sequence) result.commands.push_back(command(result.tick, player, sequence));
     return result;
 }
@@ -26,7 +26,7 @@ void wire_validation() {
         check(!deserialize_frame(std::span(bytes).first(n), output), "truncated frame accepted");
         check(serialize_frame(output) == saved, "decoder partially changed output");
     }
-    for (const size_t offset : {size_t(0), size_t(3), size_t(4), size_t(8), size_t(20), size_t(29), size_t(33)}) {
+    for (const size_t offset : {size_t(0), size_t(3), size_t(4), size_t(8), size_t(20), size_t(21), size_t(25)}) {
         auto bad = bytes; bad[offset] = 255;
         check(!deserialize_frame(bad, output), "invalid frame header or length accepted");
     }
@@ -62,9 +62,7 @@ void receipt_validation() {
     auto input = frame(lock.sim(), 0, 1);
     check(lock.receive(input) == ReceiveResult::Accepted, "frame rejected");
     check(lock.receive(input) == ReceiveResult::Duplicate, "duplicate not recognized");
-    auto changed = input; changed.previous_hash++;
-    check(lock.receive(changed) == ReceiveResult::Conflict, "conflicting duplicate accepted");
-    changed = input; changed.commands[0].x++;
+    auto changed = input; changed.commands[0].x++;
     check(lock.receive(changed) == ReceiveResult::Conflict, "changed commands accepted as duplicate");
     auto other = frame(lock.sim(), 1, 1); other.commands[0].units = {1};
     check(lock.receive(other) == ReceiveResult::Invalid, "foreign ownership accepted");
@@ -135,18 +133,52 @@ void rejection_atomicity() {
     check(lock.advance() == AdvanceResult::Invalid, "reused executed sequence accepted");
     check(lock.sim().tick() == 1 && lock.sim().hash() == before, "invalid second player partially mutated first player");
     check(lock.advance() == AdvanceResult::Invalid && lock.sim().hash() == before, "invalid retry mutated state");
-    Lockstep desync;
-    auto wrong = frame(desync.sim(), 1); wrong.previous_hash ^= 1;
-    const auto pristine = desync.sim().hash();
-    check(desync.receive(frame(desync.sim(), 0, 1)) == ReceiveResult::Accepted &&
-          desync.receive(wrong) == ReceiveResult::Accepted, "desync pair receipt failed");
-    check(desync.advance() == AdvanceResult::Desync && desync.sim().hash() == pristine,
-          "desync advanced or mutated state");
+}
+std::vector<uint64_t> scheduled_ai(uint32_t delay, bool reversed) {
+    Lockstep lock;
+    Sim reference(42);
+    std::array<uint32_t, 2> sequences{};
+    std::vector<uint64_t> hashes;
+    constexpr uint32_t ticks = 300;
+    for (uint32_t tick = 0; tick < delay; ++tick)
+        for (uint8_t player = 0; player < 2; ++player)
+            check(lock.receive(TickFrame{tick, player, {}}) == ReceiveResult::Accepted, "initial empty input rejected");
+    for (uint32_t source = 0; source < ticks; ++source) {
+        const auto before = lock.sim().state_hash();
+        if (source + delay < ticks) {
+            std::array<TickFrame, 2> pair;
+            for (uint8_t player = 0; player < 2; ++player) {
+                auto& input = pair[player];
+                input.tick = source + delay; input.player = player;
+                input.commands = make_ai_commands(lock.sim(), player, sequences[player]);
+                for (auto& c : input.commands) {
+                    check(c.tick == source, "AI did not sample the source tick");
+                    c.tick = input.tick;
+                    check(reference.submit(c), "reference delayed input rejected");
+                }
+            }
+            for (uint8_t n = 0; n < 2; ++n) {
+                const auto player = static_cast<uint8_t>(reversed ? 1 - n : n);
+                TickFrame decoded;
+                check(deserialize_frame(serialize_frame(pair[player]), decoded), "future input wire decode failed");
+                check(lock.receive(decoded) == ReceiveResult::Accepted, "future AI input rejected");
+                check(lock.receive(decoded) == ReceiveResult::Duplicate, "future AI duplicate not recognized");
+            }
+            check(lock.sim().state_hash() == before, "scheduling future AI changed executed state");
+        }
+        check(lock.advance() == AdvanceResult::Advanced, "scheduled turn failed");
+        reference.step();
+        check(lock.sim().state_hash() == reference.state_hash(), "delayed canonical replay differs");
+        hashes.push_back(lock.sim().state_hash());
+    }
+    return hashes;
 }
 }
 int main() {
     try {
         wire_validation(); receipt_validation(); stall_and_hashes(); reorder_and_determinism(); rejection_atomicity();
+        for (const uint32_t delay : {1u, 2u, 16u})
+            check(scheduled_ai(delay, false) == scheduled_ai(delay, true), "arrival order changed scheduled AI outcome");
         std::cout << "lockstep tests passed\n";
         return EXIT_SUCCESS;
     } catch (const std::exception& error) {

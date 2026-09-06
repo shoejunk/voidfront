@@ -1,7 +1,8 @@
 """Exercise independent Windows UDP peers through a measured impairment relay.
 
 All impairment and clocks live outside authoritative simulation. This is a
-loopback protocol regression, not an Internet, input-latency or soak benchmark.
+loopback protocol and paced command-execution regression. Command timing starts
+at generated canonical input, not human input or presentation; no soak claim.
 """
 import argparse
 import concurrent.futures
@@ -9,6 +10,7 @@ from datetime import datetime, timezone
 import hashlib
 import heapq
 import json
+import math
 import os
 from pathlib import Path
 import random
@@ -57,11 +59,61 @@ def replay(executable, record, trace):
         raise AssertionError(f"replay rejected {record}: {result.stderr}")
 
 
+def verify_timing(report):
+    """Recompute metrics from measured events; never infer latency from ticks."""
+    def close(actual, expected, label):
+        if not math.isfinite(actual) or abs(actual - expected) > .01:
+            raise AssertionError(f"{label}: {actual} != {expected}")
+
+    times = report["tick_times_ms"]
+    intervals = report["tick_interval_samples_ms"]
+    deadlines = report["tick_deadline_samples_ms"]
+    lateness = report["tick_lateness_samples_ms"]
+    latency = report["command_latency_samples_ms"]
+    commands = report["command_timings"]
+    if len(times) != report["ticks"] or len(intervals) != max(0, len(times) - 1):
+        raise AssertionError("missing per-tick timing observations")
+    if len(deadlines) != len(times) or len(lateness) != len(times) or report["timer_period_ms"] != 1:
+        raise AssertionError("missing paced deadlines or timer resolution")
+    for actual, due, late in zip(times, deadlines, lateness):
+        close(late, actual - due, "tick deadline lateness")
+        if late < 0:
+            raise AssertionError("tick executed before its pacing deadline")
+    if len(latency) != report["command_count"] or len(commands) != len(latency):
+        raise AssertionError("missing measured command events")
+    for index, interval in enumerate(intervals):
+        close(interval, times[index + 1] - times[index], "tick interval")
+        if interval <= 0:
+            raise AssertionError("tick timestamps are not increasing")
+    if len(times) > 1:
+        elapsed = times[-1] - times[0]
+        close(report["pacing_elapsed_ms"], elapsed, "paced duration")
+        close(report["pacing_hz"], (len(times) - 1) * 1000 / elapsed, "paced rate")
+    for event, measured in zip(commands, latency):
+        if event["execution_tick"] != event["source_tick"] + report["input_delay_ticks"]:
+            raise AssertionError("command execution differs from scheduled source tick")
+        if not 0 <= event["source_tick"] < event["execution_tick"] < len(times):
+            raise AssertionError("command timing refers to an unexecuted tick")
+        close(event["executed_ms"], times[event["execution_tick"]], "command application time")
+        close(event["latency_ms"], event["executed_ms"] - event["generated_ms"], "command elapsed time")
+        close(measured, event["latency_ms"], "command sample")
+        if measured < 0 or event["generated_ms"] > times[event["source_tick"]]:
+            raise AssertionError("invalid command generation timestamp")
+    for prefix, values in (("command_latency", latency), ("tick_interval", intervals)):
+        ordered = sorted(values)
+        for suffix, percentile in (("p95", .95), ("p99", .99), ("max", 1)):
+            expected = ordered[math.ceil(len(ordered) * percentile) - 1] if ordered else 0
+            close(report[f"{prefix}_{suffix}_ms"], expected, f"{prefix} {suffix}")
+
+
 def run_case(case, build, out, ticks):
     allowed()
     name, configs, rtt, jitter, loss, fault = case
-    positive = fault in (None, "terminal-loss", "delayed-frame", "lost-ack")
-    if fault in ("terminal-loss", "delayed-frame", "lost-ack"):
+    positive = fault in (None, "terminal-loss", "delayed-frame", "lost-ack",
+                         "delayed-checksum", "lost-checksum-ack")
+    if positive and fault:
+        ticks = min(ticks, 100)
+    if fault == "desync-final":
         ticks = min(ticks, 100)
     folder = out / name
     folder.mkdir(parents=True, exist_ok=True)
@@ -75,6 +127,9 @@ def run_case(case, build, out, ticks):
               "connection_resets": [0, 0]}
     terminal_seen = [[0, 0], [0, 0]]
     held_since = None
+    execution_during_hold = []
+    held_ack_released = False
+    executed_before_held_ack = False
     start = time.monotonic()
     try:
         for player in range(2):
@@ -96,6 +151,7 @@ def run_case(case, build, out, ticks):
             args = [str(peers[player]), "--player", str(player), "--port", str(ports[player]),
                     "--remote-port", str(relays[player].getsockname()[1]), "--session", "64040903",
                     "--ticks", str(ticks), "--seed", "42", "--units-per-team", "6",
+                    "--input-delay-ticks", "2",
                     "--timeout-ms", "2000", "--trace", str(prefix.with_suffix(".trace")),
                     "--record", str(prefix.with_suffix(".vfr")), "--report", str(prefix.with_suffix(".json"))]
             if player == 1:
@@ -105,8 +161,12 @@ def run_case(case, build, out, ticks):
                     args += ["--protocol-version", "999"]
                 elif fault == "desync":
                     args += ["--desync-tick", "25"]
+                elif fault == "desync-final":
+                    args += ["--desync-tick", str(ticks)]
                 elif fault == "disconnect":
                     args += ["--exit-at-tick", "25"]
+                elif fault == "input-delay":
+                    args[args.index("--input-delay-ticks") + 1] = "3"
             log = prefix.with_suffix(".log").open("w")
             logs.append(log)
             allowed()
@@ -136,6 +196,9 @@ def run_case(case, build, out, ticks):
                     counts["received"][player] += 1
                     kind = int.from_bytes(data[40:44], "little")
                     frame_tick = int.from_bytes(data[60:64], "little") if kind == 2 else None
+                    state_tick = int.from_bytes(data[44:48], "little") if kind == 6 else None
+                    if fault == "lost-ack" and player == 0 and state_tick is not None and state_tick >= 26 and not held_ack_released:
+                        executed_before_held_ack = True
                     forced = False
                     if fault == "terminal-loss" and kind in (4, 5):
                         terminal_seen[player][kind - 4] += 1
@@ -145,12 +208,30 @@ def run_case(case, build, out, ticks):
                         # Withhold ACKs long enough for the other peer's next
                         # frame to overtake them, then permit retry recovery.
                         forced = ack_tick == 25 and counts["forced_drops"][player] < 3
-                    elif fault == "delayed-frame" and kind == 2:
+                        if ack_tick == 25 and not forced:
+                            held_ack_released = True
+                    elif fault == "delayed-frame":
                         if player == 1 and frame_tick == 25:
                             held_since = held_since or now
                             forced = now - held_since < .5
-                        if player == 0 and frame_tick > 25 and held_since and now - held_since < .5:
+                        # Future inputs now intentionally precede execution.
+                        # Executed-state checksums, not future Frame packets,
+                        # establish whether the held authoritative turn ran.
+                        if player == 0 and state_tick is not None and held_since and now - held_since < .5:
+                            execution_during_hold.append(state_tick)
+                        if player == 0 and state_tick is not None and state_tick > 25 and held_since and now - held_since < .5:
                             raise AssertionError("peer advanced while the remote tick frame was withheld")
+                    elif fault == "delayed-checksum":
+                        if player == 1 and state_tick == 25:
+                            held_since = held_since or now
+                            forced = now - held_since < 1.1
+                        if player == 0 and state_tick is not None and held_since and now - held_since < 1.1:
+                            execution_during_hold.append(state_tick)
+                            if state_tick > 24 + 16:
+                                raise AssertionError("peer exceeded verification lag while checksum was withheld")
+                    elif fault == "lost-checksum-ack" and kind == 7 and player == 1:
+                        ack_tick = int.from_bytes(data[44:48], "little")
+                        forced = ack_tick == 25 and counts["forced_drops"][player] < 3
                     if forced:
                         counts["forced_drops"][player] += 1
                         continue
@@ -174,10 +255,23 @@ def run_case(case, build, out, ticks):
         for log in logs:
             log.flush()
         reports = [json.loads((folder / f"peer{p}.json").read_text()) for p in range(2)]
+        for report in reports:
+            verify_timing(report)
         codes = [p.returncode for p in children]
         if positive:
             if codes != [0, 0] or any(r["status"] != "complete" for r in reports):
                 raise AssertionError(f"{name}: peers did not complete: {codes} {reports}")
+            for r in reports:
+                if r["confirmed_ticks"] != ticks:
+                    raise AssertionError(f"{name}: completed without confirming every executed checksum")
+                if r["max_verification_lag_ticks"] > r["verification_lag_limit"]:
+                    raise AssertionError(f"{name}: exceeded declared verification bound")
+                if r["input_delay_ticks"] != 2 or r["verification_lag_limit"] != 16:
+                    raise AssertionError(f"{name}: unexpected scheduling/bound contract")
+                if r["max_unacked_checksums"] > 16 or r["max_unacked_frames"] > 19:
+                    raise AssertionError(f"{name}: retry backlog exceeded the pipeline window")
+                if r["command_count"] < 1 or r["command_latency_max_ms"] < r["command_latency_p95_ms"]:
+                    raise AssertionError(f"{name}: missing or invalid command-response measurement")
             traces = [read_trace(folder / f"peer{p}.trace", ticks) for p in range(2)]
             compare(*traces, f"{name}: communicating peers")
             for player in range(2):
@@ -194,26 +288,46 @@ def run_case(case, build, out, ticks):
                 raise AssertionError(f"{name}: required forced impairment never exercised")
             if fault == "terminal-loss" and sum(counts["forced_drops"]) != 12:
                 raise AssertionError("did not force-drop all terminal packet kinds in both directions")
-            if fault == "delayed-frame" and min(r["stall_ms"] for r in reports) < 500:
+            if fault == "delayed-frame" and reports[0]["stall_ms"] < 250:
                 raise AssertionError("withheld turn did not produce measured stalls")
+            if fault == "delayed-checksum" and (reports[0]["max_verification_lag_ticks"] != 16 or reports[0]["stall_ms"] < 150):
+                raise AssertionError("withheld checksum did not exercise verification backpressure")
+            if fault == "lost-ack" and (reports[0]["advanced_without_ack"] < 1 or not executed_before_held_ack):
+                raise AssertionError("lost ACK fixture did not demonstrate ACK-independent execution")
         else:
             if any(code == 0 for code in codes):
                 raise AssertionError(f"{name}: fault incorrectly succeeded: {codes}")
             diagnostic = " ".join((folder / f"peer{p}.log").read_text() for p in range(2)).lower()
-            expected = {"content": "incompat", "protocol": "incompat", "desync": "desync",
+            expected = {"content": "incompat", "protocol": "incompat", "input-delay": "incompat", "desync": "desync", "desync-final": "desync",
                         "disconnect": "timeout"}[fault]
             if expected not in diagnostic:
                 raise AssertionError(f"{name}: missing {expected} diagnostic: {diagnostic}")
             for p in range(2):
                 executed = (folder / f"peer{p}.trace").read_text().splitlines()
-                expected_tick = 0 if fault in ("content", "protocol") else 25
-                if len(executed) != expected_tick or reports[p]["ticks"] != expected_tick:
-                    raise AssertionError(f"{name}: expected stop at {expected_tick}, got {reports[p]}")
+                expected_tick = reports[p]["ticks"]
+                if len(executed) != expected_tick:
+                    raise AssertionError(f"{name}: report and applied trace disagree: {reports[p]}")
+                if fault in ("content", "protocol", "input-delay") and expected_tick != 0:
+                    raise AssertionError(f"{name}: incompatible session advanced")
+                if fault == "desync" and not 25 <= expected_tick <= 25 + 16:
+                    raise AssertionError(f"{name}: desync detection exceeded verification window: {reports[p]}")
+                if fault == "desync-final" and expected_tick != ticks:
+                    raise AssertionError(f"{name}: final checksum fault did not reach final state")
+                if fault == "disconnect" and not 25 <= expected_tick <= 25 + 2:
+                    raise AssertionError(f"{name}: disconnected peer exceeded scheduled input window: {reports[p]}")
                 if expected_tick:
                     target = folder / f"prefix-replayed{p}.trace"
                     executable = build / "sim" / configs[1 - p] / "voidfront_headless.exe"
                     replay(executable, folder / f"peer{p}.vfr", target)
                     compare(executed, read_trace(target, expected_tick), f"{name}: failure prefix {p}")
+            if fault == "desync" and not any(r["first_divergent_tick"] == 25 for r in reports):
+                raise AssertionError("desync report did not identify the first mismatched state tick")
+            if fault == "desync-final" and not any(r["first_divergent_tick"] == ticks for r in reports):
+                raise AssertionError("desync report did not identify mismatched terminal state")
+            if fault in ("desync", "desync-final", "disconnect"):
+                prefixes = [(folder / f"peer{p}.trace").read_text().splitlines() for p in range(2)]
+                shared = min(map(len, prefixes))
+                compare(prefixes[0][:shared], prefixes[1][:shared], f"{name}: shared applied prefix")
         delays = counts.pop("delays_ms")
         counts["delay_ms"] = []
         for values in delays:
@@ -223,6 +337,8 @@ def run_case(case, build, out, ticks):
         result = {"case": name, "ticks": ticks, "configurations": configs, "rtt_ms": rtt,
                   "one_way_jitter_ms": jitter, "loss_probability": loss,
                   "elapsed_seconds": time.monotonic() - start, "pids": [p.pid for p in children],
+                  "executed_state_ticks_observed_during_hold": sorted(set(execution_during_hold)),
+                  "executed_before_held_input_ack": executed_before_held_ack,
                   "relay": counts, "peers": reports, "verified": True}
         (folder / "result.json").write_text(json.dumps(result, indent=2))
         print(f"PASS {name}: separate PIDs {result['pids']}, {result['elapsed_seconds']:.2f}s, "
@@ -272,9 +388,13 @@ def main():
         ("terminal-loss", ("Debug", "Release"), 80, 20, 0, "terminal-loss"),
         ("withheld-frame", ("Debug", "Release"), 0, 0, 0, "delayed-frame"),
         ("lost-tick-ack", ("Debug", "Release"), 0, 0, 0, "lost-ack"),
+        ("withheld-checksum", ("Debug", "Release"), 0, 0, 0, "delayed-checksum"),
+        ("lost-checksum-ack", ("Debug", "Release"), 0, 0, 0, "lost-checksum-ack"),
         ("reject-content", ("Debug", "Release"), 0, 0, 0, "content"),
         ("reject-protocol", ("Debug", "Release"), 0, 0, 0, "protocol"),
+        ("reject-input-delay", ("Debug", "Release"), 0, 0, 0, "input-delay"),
         ("detect-desync", ("Debug", "Release"), 0, 0, 0, "desync"),
+        ("detect-terminal-desync", ("Debug", "Release"), 0, 0, 0, "desync-final"),
         ("detect-disconnect", ("Debug", "Release"), 0, 0, 0, "disconnect"),
     ]
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
@@ -308,9 +428,27 @@ def main():
                "ticks_per_successful_case": args.ticks, "cases": results,
                "ten_replays_equal": True, "malformed_replays_rejected": list(malformed),
                "trace_sha256": hashlib.sha256((args.out / "release-clean/peer0.trace").read_bytes()).hexdigest(),
-               "scope": "loopback UDP headless skirmish, accelerated ticks, no client network or 30-minute soak"}
+               "scope": "loopback UDP paced headless skirmish; generated canonical command timing, no human/client latency or 30-minute soak"}
+    # Functional protocol success is distinct from the strict SPEC targets.
+    # No rate tolerance silently turns a target miss into acceptance.
+    summary["timing_assessment"] = {
+        "isolated_cases": args.jobs == 1,
+        "pacing_target_hz": 20,
+        "command_p95_target_at_80ms_rtt_ms": 150,
+        "cases": [{"case": r["case"],
+                   "pacing_hz": [p["pacing_hz"] for p in r["peers"]],
+                   "at_least_20hz": all(p["pacing_hz"] >= 20 for p in r["peers"]),
+                   "command_p95_ms": [p["command_latency_p95_ms"] for p in r["peers"]],
+                   "tick_interval_min_ms": [min(p["tick_interval_samples_ms"]) for p in r["peers"]],
+                   "tick_lateness_max_ms": [max(p["tick_lateness_samples_ms"]) for p in r["peers"]],
+                   "generated_command_80ms_budget_met":
+                       all(p["command_latency_p95_ms"] <= 150 for p in r["peers"]) if r["rtt_ms"] == 80 else None}
+                  for r in results[:4]],
+        "limits": "Sparse tick-aligned skirmish AI commands; excludes human polling phase, client input, presentation and physical network. Strict target booleans do not include scheduling tolerance."}
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2))
     print(f"PASS network suite: {len(cases)} cases, cross-configuration traces and ten replays agree", flush=True)
+    for assessment in summary["timing_assessment"]["cases"]:
+        print(f"TIMING {assessment}", flush=True)
 
 
 if __name__ == "__main__":
