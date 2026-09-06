@@ -52,6 +52,14 @@ are empty. Samples are taken once per source tick and never depend on packet
 arrival order. Transport pacing targets one step per 50 ms; clocks and timing
 samples remain outside `sim/`. Changing delay changes the canonical input stream,
 so cross-impairment trace comparisons use the same delay. Current suite uses 2.
+Before accepting any canonical input, each peer requires all initial remote empty
+frames and receipt acknowledgements for all its own initial empty frames. It
+continues retrying during this readiness phase and times out if it cannot finish.
+`session_ready_ms` / `startup_duration_ms` expose that wait separately; source-zero
+command samples remain in the measurements with their actual creation times.
+This establishes local buffer readiness, not simultaneous clocks or a shared
+wall-clock start. Ordinary deadline phase correction can shorten an interval;
+actual missing-data stalls and fully missed slots reset the pacing deadline.
 
 This is protocol and generated-command timing evidence, not human input-response,
 playable multiplayer, reference hardware performance, LAN/Internet transport or
@@ -68,7 +76,7 @@ Manual paired process invocation (separate terminals):
 
 The automated relay additionally tests 0/80/160 ms configured RTT, up to 20 ms
 one-way jitter, 1% random loss, duplication, deliberately dropped ACK/terminal
-packets, withheld frames/checksums, incompatible protocol/content/input delay,
+packets, withheld startup ACKs/frames/checksums, incompatible protocol/content/input delay,
 desync and disconnect. Lagged verification can let peers end at different bounded
 ticks after a fault; each applied prefix is replayed and their common prefix must
 agree. Desync diagnostics identify the mismatched executed-state tick.

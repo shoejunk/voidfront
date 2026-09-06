@@ -51,6 +51,7 @@ struct Stats {
     std::vector<CommandTiming> command_timings;
     std::vector<double> tick_times_ms;
     std::vector<double> tick_deadline_ms,tick_lateness_ms;
+    std::optional<double> session_ready_ms;
 };
 uint64_t number(const char* raw) {
     const std::string s(raw);
@@ -237,6 +238,10 @@ void report(const Options& o,const Stats& s,const std::string& status,const std:
        <<",\"tick_interval_max_ms\":"<<percentile(s.tick_interval_ms,100)
        <<",\"first_divergent_tick\":";
     if(s.first_divergent_tick==UINT32_MAX) out<<"null"; else out<<s.first_divergent_tick;
+    out<<",\"session_ready_ms\":";
+    if(s.session_ready_ms) out<<*s.session_ready_ms; else out<<"null";
+    out<<",\"startup_duration_ms\":";
+    if(s.session_ready_ms) out<<*s.session_ready_ms; else out<<"null";
     out<<",\"command_latency_samples_ms\":"; samples(out,s.command_latency_ms);
     out<<",\"tick_interval_samples_ms\":"; samples(out,s.tick_interval_ms);
     out<<",\"tick_times_ms\":"; samples(out,s.tick_times_ms);
@@ -347,13 +352,23 @@ void run(const Options& o,Stats& stats) {
         const auto now=Clock::now();
         if(o.exit_tick==stats.tick) throw std::runtime_error("injected disconnect at tick "+std::to_string(o.exit_tick));
         if(!complete_since && now-progress>std::chrono::milliseconds(o.timeout))
-            throw std::runtime_error("timeout/disconnect waiting for "+std::string(!joined?"handshake":stats.tick==o.ticks?"all checksums/terminal confirmation":"missing input/checksum")+" at tick "+std::to_string(stats.tick));
+            throw std::runtime_error("timeout/disconnect waiting for "+std::string(!joined?"handshake":!stats.session_ready_ms?"initial input readiness":stats.tick==o.ticks?"all checksums/terminal confirmation":"missing input/checksum")+" at tick "+std::to_string(stats.tick));
         if(!peer_ready && now-last_hello>=kRetry) { hello(hello_sent); hello_sent=true; last_hello=now; }
         if(joined && !initialized) {
             for(uint32_t tick=0;tick<std::min(o.input_delay,o.ticks);++tick) create_input(tick,0,true);
-            initialized=true; next_due=now;
+            initialized=true;
         }
-        if(initialized && stats.tick<o.ticks && now>=next_due && generated_source!=stats.tick) {
+        if(initialized && !stats.session_ready_ms) {
+            bool ready=true;
+            for(uint32_t tick=0;tick<std::min(o.input_delay,o.ticks);++tick)
+                ready=ready && remote[tick].has_value() && local[tick].sent && local[tick].receipt_acked;
+            if(ready) {
+                // Canonical input is accepted only after both initial empty
+                // buffers are known received. Setup remains separately timed.
+                stats.session_ready_ms=milliseconds(now-origin); next_due=now; progress=now;
+            }
+        }
+        if(stats.session_ready_ms && stats.tick<o.ticks && now>=next_due && generated_source!=stats.tick) {
             // Sampling is tied to deterministic source state, never packet arrival.
             // It occurs at this tick's deadline before executing that tick.
             if(stats.tick+o.input_delay<o.ticks) create_input(stats.tick+o.input_delay,stats.tick,false);
@@ -400,6 +415,7 @@ void run(const Options& o,Stats& stats) {
                 vf::TickFrame frame;
                 if(!vf::deserialize_frame(body,frame) || frame.player!=1-o.player || frame.tick>=o.ticks)
                     throw std::runtime_error("invalid peer tick frame");
+                if(frame.tick<o.input_delay && !frame.commands.empty()) throw std::runtime_error("initial input frame must be empty");
                 const auto hash=digest(body);
                 if(remote_digests[frame.tick]) {
                     if(*remote_digests[frame.tick]!=hash) throw std::runtime_error("conflicting duplicate frame at tick "+std::to_string(frame.tick));
@@ -451,7 +467,7 @@ void run(const Options& o,Stats& stats) {
             }
         }
         const auto due_now=Clock::now();
-        if(initialized && stats.tick<o.ticks && due_now>=next_due && generated_source==stats.tick) {
+        if(stats.session_ready_ms && stats.tick<o.ticks && due_now>=next_due && generated_source==stats.tick) {
             const auto tick=stats.tick;
             const bool ready=local[tick].frame && remote[tick] && stats.tick-stats.confirmed_ticks<kVerificationLag;
             if(!ready) {

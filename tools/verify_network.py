@@ -71,6 +71,14 @@ def verify_timing(report):
     lateness = report["tick_lateness_samples_ms"]
     latency = report["command_latency_samples_ms"]
     commands = report["command_timings"]
+    ready = report["session_ready_ms"]
+    if ready is None:
+        if times or commands or report["startup_duration_ms"] is not None:
+            raise AssertionError("session executed or sampled input before readiness")
+    else:
+        close(report["startup_duration_ms"], ready, "visible startup duration")
+        if ready < 0 or (times and times[0] < ready):
+            raise AssertionError("execution precedes initial buffer readiness")
     if len(times) != report["ticks"] or len(intervals) != max(0, len(times) - 1):
         raise AssertionError("missing per-tick timing observations")
     if len(deadlines) != len(times) or len(lateness) != len(times) or report["timer_period_ms"] != 1:
@@ -99,6 +107,8 @@ def verify_timing(report):
         close(measured, event["latency_ms"], "command sample")
         if measured < 0 or event["generated_ms"] > times[event["source_tick"]]:
             raise AssertionError("invalid command generation timestamp")
+        if ready is None or event["generated_ms"] < ready:
+            raise AssertionError("canonical input accepted before session readiness")
     for prefix, values in (("command_latency", latency), ("tick_interval", intervals)):
         ordered = sorted(values)
         for suffix, percentile in (("p95", .95), ("p99", .99), ("max", 1)):
@@ -110,7 +120,7 @@ def run_case(case, build, out, ticks):
     allowed()
     name, configs, rtt, jitter, loss, fault = case
     positive = fault in (None, "terminal-loss", "delayed-frame", "lost-ack",
-                         "delayed-checksum", "lost-checksum-ack")
+                         "delayed-checksum", "lost-checksum-ack", "startup-ack")
     if positive and fault:
         ticks = min(ticks, 100)
     if fault == "desync-final":
@@ -203,6 +213,13 @@ def run_case(case, build, out, ticks):
                     if fault == "terminal-loss" and kind in (4, 5):
                         terminal_seen[player][kind - 4] += 1
                         forced = terminal_seen[player][kind - 4] <= 3
+                    elif fault == "startup-ack":
+                        if kind == 3 and player == 1 and int.from_bytes(data[44:48], "little") == 0:
+                            held_since = held_since or now
+                            forced = now - held_since < .5
+                        if player == 0 and held_since and now - held_since < .5:
+                            if state_tick is not None or (frame_tick is not None and frame_tick >= 2):
+                                raise AssertionError("peer sampled or executed input before initial ACK readiness")
                     elif fault == "lost-ack" and kind == 3 and player == 1:
                         ack_tick = int.from_bytes(data[44:48], "little")
                         # Withhold ACKs long enough for the other peer's next
@@ -272,6 +289,8 @@ def run_case(case, build, out, ticks):
                     raise AssertionError(f"{name}: retry backlog exceeded the pipeline window")
                 if r["command_count"] < 1 or r["command_latency_max_ms"] < r["command_latency_p95_ms"]:
                     raise AssertionError(f"{name}: missing or invalid command-response measurement")
+                if r["command_timings"][0]["source_tick"] != 0 or r["command_timings"][0]["sequence"] != 1:
+                    raise AssertionError(f"{name}: source-zero input timing was discarded")
             traces = [read_trace(folder / f"peer{p}.trace", ticks) for p in range(2)]
             compare(*traces, f"{name}: communicating peers")
             for player in range(2):
@@ -294,6 +313,8 @@ def run_case(case, build, out, ticks):
                 raise AssertionError("withheld checksum did not exercise verification backpressure")
             if fault == "lost-ack" and (reports[0]["advanced_without_ack"] < 1 or not executed_before_held_ack):
                 raise AssertionError("lost ACK fixture did not demonstrate ACK-independent execution")
+            if fault == "startup-ack" and reports[0]["startup_duration_ms"] < 500:
+                raise AssertionError("withheld initial ACK did not delay explicit readiness")
         else:
             if any(code == 0 for code in codes):
                 raise AssertionError(f"{name}: fault incorrectly succeeded: {codes}")
@@ -388,6 +409,7 @@ def main():
         ("terminal-loss", ("Debug", "Release"), 80, 20, 0, "terminal-loss"),
         ("withheld-frame", ("Debug", "Release"), 0, 0, 0, "delayed-frame"),
         ("lost-tick-ack", ("Debug", "Release"), 0, 0, 0, "lost-ack"),
+        ("withheld-startup-ack", ("Debug", "Release"), 0, 0, 0, "startup-ack"),
         ("withheld-checksum", ("Debug", "Release"), 0, 0, 0, "delayed-checksum"),
         ("lost-checksum-ack", ("Debug", "Release"), 0, 0, 0, "lost-checksum-ack"),
         ("reject-content", ("Debug", "Release"), 0, 0, 0, "content"),
@@ -441,6 +463,7 @@ def main():
                    "command_p95_ms": [p["command_latency_p95_ms"] for p in r["peers"]],
                    "tick_interval_min_ms": [min(p["tick_interval_samples_ms"]) for p in r["peers"]],
                    "tick_lateness_max_ms": [max(p["tick_lateness_samples_ms"]) for p in r["peers"]],
+                   "startup_duration_ms": [p["startup_duration_ms"] for p in r["peers"]],
                    "generated_command_80ms_budget_met":
                        all(p["command_latency_p95_ms"] <= 150 for p in r["peers"]) if r["rtt_ms"] == 80 else None}
                   for r in results[:4]],
