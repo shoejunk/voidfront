@@ -1,15 +1,16 @@
 {
   "branch": "dev",
-  "verification": "C:/dev/voidfront/artifacts/replay-alias-verification-2026-09-06.log",
+  "verification": "C:/dev/voidfront/artifacts/pipeline-build-fixed-2026-09-06.log",
+  "readiness_build": "C:/dev/voidfront/artifacts/pipeline-readiness-build-2026-09-06.log",
   "remote_backup": true,
-  "runtime_report": "C:/dev/voidfront/artifacts/packaged-network-regression.json",
-  "state": "reviewed loopback lockstep foundation; real-time client networking and all shipping gates remain open",
+  "runtime_report": "C:/dev/voidfront/artifacts/packaged-pipeline-regression.json",
+  "state": "Reviewed paced headless lockstep and local regression; 160ms pacing, real client networking and shipping gates remain open",
   "package_pck_sha256": "4F0C729801EE6D86ABD9B1C52A56DDF6F6D9AEEEDC0058EB730778E633E17379",
-  "network_report": "C:/dev/voidfront/artifacts/network-verified-2026-09-06/summary.json",
+  "package_bridge_sha256": "BA0B56C92F0C0BDF94BD97A9642F8ECFF3B7268D6B14C161CCA9F6140BBE5D9F",
+  "network_report": "C:/dev/voidfront/artifacts/pipeline-ready-verified-2026-09-06/summary.json",
   "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
-  "run": "2026-09-06-network-verification",
-  "package_bridge_sha256": "800F357D440EDB4E861E97BA079C34FF7FAE97F99BA00AAB7FF1E7F1AEE5DDD3",
-  "next": "scheduled input delay and bounded pipeline with tick-tagged lagged checksums; prove 20 Hz and response timing under 80/160ms RTT before two-client integration",
-  "checkpoint_utc": "2026-09-06T17:37:17.3437471Z",
-  "source_commit": "6e6a20158c743f762cecbb4a1c844b6d13923761"
+  "run": "2026-09-06-pipelined-readiness",
+  "next": "Test a larger agreed input delay at 160 ms RTT against a baseline with the same delay while preserving 80 ms response; extract a nonblocking session for two packaged clients; retain the required any-angle movement milestone",
+  "checkpoint_utc": "2026-09-06T19:16:25.7673958Z",
+  "source_commit": "e86b3753760fae4678d8795467285dfbeca80acd"
 }
