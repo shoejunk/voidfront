@@ -126,3 +126,141 @@ Fault evidence: terminal loss drops twelve Finish/FinishAck packets; withheld fr
 Independent reviews: `.voidfront-agent/review-pipeline-2026-09-06.md` and `.voidfront-agent/review-runtime-pipeline-2026-09-06.md`. These cover actual source/evidence and local screenshots, not shipping approval. Next: test a larger agreed delay for 160 ms RTT against an identically delayed clean baseline while retaining the 80 ms latency evidence; then a reusable nonblocking session and two packaged clients with explicit readiness/stall/disconnect/outcome UI and actual human-input measurements. Any-angle movement, complete economy/AI/matches, 30-minute networking, production content and representative performance remain mandatory. No COMPLETE.md.
 
 Final incremental pin/build/test evidence: artifacts/pipeline-readiness-build-2026-09-06.log records the final Godot version guard, both peer targets and 2/2 CTest per configuration. This post-suite log capture made no source changes or recompilation; its binaries retain the final suite fingerprints.
+
+## 2026-09-07 nonblocking session and matched delay study
+
+`./tools/verify.ps1` passes integrated MSVC Debug/Release builds and **3/3 CTest**
+per configuration, fifteen malformed legacy replays and seven output-alias cases
+per configuration, 2,000-tick cross-configuration equality and ten repeated
+playbacks. Evidence: `artifacts/session-build-2026-09-07.log`. Godot
+4.7.2.stable.official.ed1daf0bf, matching template hashes and the recorded
+godot-cpp SHA pass the existing guards. No simulation, client, art or tool pins
+changed. Compilation is not gameplay evidence.
+
+The new direct Session API CTest passed in 3.84 seconds Debug and 3.79 seconds
+Release. It tests caller-provided empty/custom canonical input against a separately
+authored Move/Hold schedule and serialized applied-frame replay in a plain Sim;
+exactly-once eligible source sampling; at most one tick per overdue poll; rejected
+ownership/player and provider exceptions without authoritative advancement;
+exclusive socket binding and immediate reuse after cancel/error/completion or
+destruction; terminal idempotence; and retained applied frames when a checksum
+error follows advancement within the same poll. These are paired sessions in one
+test process, not separate-process networking evidence or a poll-time benchmark.
+
+The CLI now uses `vf::net::Session` for transport and retains its evidence files,
+AI provider, scoped Windows timer resolution and Sleep(1) loop. The library
+exposes read-only simulation/statistics and explicit lifecycle states. It drains
+at most 256 datagrams and advances at most one tick per poll, without sleeping or
+waiting for transport. Provider/simulation work and OS scheduling remain outside
+any wall-time guarantee. The Godot client is still offline; no new packaged
+playtest, screenshots, animation, input-to-display or frame-time capture was run.
+Prior presentation evidence remains dated evidence, not a fresh verification.
+
+### Complete command timing coverage
+
+`verify_network.py` now matches every command timing event's execution tick and
+sequence to every applied local command in its VFR2 recording, including failed
+prefixes. This closes the independent reviewer's gap where internally consistent
+timing arrays could omit a later command. `artifacts/command-coverage-regression-2026-09-07.log`
+checks all 32 prior peer recordings and rejects deliberately omitted, duplicated,
+reordered and wrong-sequence timing events. The twelve frozen baseline recordings
+also pass (`artifacts/delay-baseline-coverage-2026-09-07.log`). Timing begins after
+the command provider returns; original input queue residence, provider cost,
+human polling phase and presentation are unmeasured.
+
+### Pre-extraction control study
+
+After the clean baseline build/test completed, its four peer/replayer executables
+were copied to `artifacts/session-baseline-binaries-2026-09-07`. Then
+`python tools/verify_network.py --suite delay-study --ticks 1000 --build artifacts/session-baseline-binaries-2026-09-07 --out artifacts/delay-baseline-2026-09-07`
+ran six isolated profiles. All passed; no build/capture ran concurrently. Each
+impaired case has a clean control with the same input delay and player/build
+assignment. The suite checks every same-delay trace, opposite-build recording
+playback and ten repeated replays per delay. Different delays deliberately have
+different canonical streams and are not compared for hash equality.
+
+| Profile | Input delay | Paced Hz, player 0/1 | Missing-data stall ms, player 0/1 | Generated-command p95 ms, player 0/1 |
+|---|---:|---|---|---|
+| Mixed clean, 80 ms control | 2 | 19.99935 / 19.99934 | 0 / 0 | 101.855 / 101.672 |
+| Mixed 80 ms RTT | 2 | 19.99757 / 19.99673 | 4 / 2 | 101.685 / 101.437 |
+| Mixed clean, 160 ms control | 2 | 19.99670 / 19.99755 | 0 / 0 | 101.394 / 112.573 |
+| Mixed 160 ms RTT | 2 | 18.81376 / 18.81937 | 2293 / 2227 | 133.318 / 103.138 |
+| Mixed clean, 160 ms control | 4 | 19.99924 / 19.99971 | 0 / 0 | 201.739 / 201.173 |
+| Mixed 160 ms RTT | 4 | 19.99957 / 19.99962 | 0 / 0 | 201.323 / 201.801 |
+
+Impaired cases use +/-20 ms one-way jitter and 1% loss, with 231/405/403 total
+random drops in the 80 ms/two-tick 160 ms/four-tick 160 ms cases. Four-tick startup
+at 160 ms is 287.163/273.252 ms, separately retained. Four ticks improved observed
+pacing at the cost of about 100 ms more scheduled response. This is an explicit
+configuration experiment; defaults remain two ticks, both peers must agree, and
+there is no automatic latency-based negotiation. Strict at-least-20-Hz assessments
+remain false; no target was weakened. Sparse tick-aligned twelve-unit skirmish
+commands do not establish human response, physical-network performance, complete
+matches or a 30-minute soak.
+
+Baseline trace SHA256 by input delay: two ticks
+`b4aac2b20ec6ec7ae028341a6488abbd00938e62a3e00b3d6f0c19561a8d0776`;
+four ticks `db91bcbf2beb5bb497c2b4f21c0175bbf7a1e206da3619cb0a6697cd4d324734`.
+Reports, raw timing, PIDs, actual relay impairments and executable fingerprints
+are in `artifacts/delay-baseline-2026-09-07/summary.json` and its case folders.
+
+### Final extracted-session process regression
+
+`python tools/verify_network.py --ticks 1000 --jobs 1 --out artifacts/session-verified-2026-09-07`
+passes all **22 cases** from 2026-09-07 15:04:59 through 15:13:16 UTC. Evidence:
+`artifacts/session-verified-2026-09-07/summary.json`, its per-case reports/recordings/
+traces and `artifacts/session-verified-2026-09-07.log`. All eight ordinary profiles
+execute 1,000 ticks per peer; bounded fault fixtures run shorter prefixes. No
+build, API test or packaged capture overlaps these isolated network cases.
+
+| Profile | Input delay | Paced Hz, player 0/1 | Missing-data stall ms, player 0/1 | Generated-command p95 ms, player 0/1 |
+|---|---:|---|---|---|
+| Mixed clean, 80 ms control | 2 | 19.99983 / 19.99982 | 0 / 0 | 101.793 / 101.201 |
+| Mixed 80 ms RTT | 2 | 19.99569 / 19.99488 | 7 / 8 | 101.490 / 101.364 |
+| Mixed clean, 160 ms control | 2 | 19.99956 / 19.99966 | 0 / 0 | 101.709 / 102.151 |
+| Mixed 160 ms RTT | 2 | 19.73730 / 19.73503 | 547 / 553 | 104.331 / 104.502 |
+| Mixed clean, 160 ms control | 4 | 19.99938 / 19.99962 | 0 / 0 | 201.554 / 202.245 |
+| Mixed 160 ms RTT | 4 | 19.99954 / 19.99935 | 0 / 0 | 201.292 / 201.416 |
+
+Debug/Debug and Release/Release clean profiles also pass, with no stalls and
+approximately 19.9995/19.9996 Hz. Every ordinary peer has twelve applied-command
+timing samples, all matched to the recording. The three impaired profiles incur
+231, 398 and 397 actual random drops respectively. Startup is 149.851/138.256 ms
+at 80 ms and 271.734/279.101 ms at four-tick 160 ms. Complete raw metrics and
+same-delay/build control deltas are retained. At 80 ms, generated-command p95 is
+below 150 ms; every strict at-least-20-Hz assessment remains false. Four ticks
+again remove observed missing-data stalls for this 160 ms run at the cost of
+about 100 ms more command delay. Different OS/packet scheduling between runs
+prevents attributing baseline-versus-extraction timing variation to an optimization.
+
+Both delay trace SHA256 values exactly match the pre-extraction study above.
+Every positive recording replays in the opposite configuration; ten repeat
+playbacks pass for each delay, and three malformed VFR2 fixtures reject. The
+verifier checks full command timing coverage on all 44 peer recordings, including
+failed zero/nonzero prefixes. Current executable fingerprints are recorded in
+the summary; no binaries were rebuilt after this suite started.
+
+Faults preserve the existing behavior: terminal loss drops twelve Finish/FinishAck
+packets; withheld input blocks execution beyond its tick; lost input ACK still
+allows execution before its release; withheld startup ACK blocks that peer's
+canonical input until readiness. Withheld checksums hit exactly the 16-state
+verification cap at both delays (350/350 ms stalls at two ticks; 353/353 ms at
+four ticks). Lost checksum ACKs recover. Protocol/content/input-delay mismatches
+reject at zero; desync retains 25/27-tick applied prefixes, final-state desync
+retains 100/100 and cannot report completion. Disconnect ends at 27/25 ticks with
+delay two and 29/25 with delay four, respecting scheduled-input bounds. Every
+nonzero failed prefix independently replays and common peer prefixes agree.
+
+The reviewer independently audited all 44 reports/recordings, all 288 applied
+local command events, raw timing calculations, repeats, failure prefixes, four
+current executable fingerprints and both frozen-baseline hashes. The held-startup-ACK
+case retains a 529.120 ms command p95 on the already-ready counterpart: readiness
+is local buffer readiness, not a simultaneous start, and the fault sample is
+neither filtered nor claimed to meet ordinary response targets.
+
+Independent source/evidence review: `.voidfront-agent/review-session-2026-09-07.md`.
+This is acceptance of the bounded session extraction and retained protocol/replay
+behavior only. Godot networking, actual input-to-execution/display measurements,
+strict pacing, LAN/Internet, complete economic matches, 30-minute soak, any-angle
+pathfinding, production presentation and representative performance/shipping
+remain open. No fresh runtime/visual approval or COMPLETE.md is justified.

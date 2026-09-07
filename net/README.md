@@ -51,7 +51,11 @@ for command tick t+delay (1..16, both peers must agree). The initial delay frame
 are empty. Samples are taken once per source tick and never depend on packet
 arrival order. Transport pacing targets one step per 50 ms; clocks and timing
 samples remain outside `sim/`. Changing delay changes the canonical input stream,
-so cross-impairment trace comparisons use the same delay. Current suite uses 2.
+so cross-impairment trace comparisons use the same delay. The suite retains the
+two-tick profiles and adds a four-tick 160 ms RTT profile with its own clean
+control. Controls use the same player/build assignment as their impaired case.
+Four ticks are an experiment, not an automatic delay negotiation policy; both
+peers must still be explicitly configured to agree. The default remains two.
 Before accepting any canonical input, each peer requires all initial remote empty
 frames and receipt acknowledgements for all its own initial empty frames. It
 continues retrying during this readiness phase and times out if it cannot finish.
@@ -63,8 +67,9 @@ actual missing-data stalls and fully missed slots reset the pacing deadline.
 
 This is protocol and generated-command timing evidence, not human input-response,
 playable multiplayer, reference hardware performance, LAN/Internet transport or
-a 30-minute complete-match soak. A nonblocking client session adapter, match setup
-and UI remain integration work. Authentication, NAT traversal, reconnect,
+a 30-minute complete-match soak. `vf::net::Session` extracts the peer's transport
+state machine into a reusable library; Godot integration, match setup and UI
+remain open. Authentication, NAT traversal, reconnect,
 resynchronization, packet fragmentation and hostile remote networking are absent.
 
 Manual paired process invocation (separate terminals):
@@ -81,6 +86,12 @@ desync and disconnect. Lagged verification can let peers end at different bounde
 ticks after a fault; each applied prefix is replayed and their common prefix must
 agree. Desync diagnostics identify the mismatched executed-state tick.
 Use `--ticks` and `--jobs` on `verify_network.py` to control duration/concurrency.
+Cases run serially by default. `--suite delay-study --ticks 1000` runs only six
+matched clean/impaired profiles (80 ms at two ticks; 160 ms at two and four ticks)
+and requires one worker. The full suite includes those controls and the existing
+fault regressions. `matched_delay_comparisons` records per-player clean/impaired
+metrics and observed differences, without converting an improvement into target
+acceptance. Each distinct delay has its own trace hash and ten repeat replays.
 Concurrent cases are correctness tests; elapsed times are not isolated benchmarks.
 Peer reports now distinguish missing-data stalls from scheduled waits, expose
 tick timestamps and command generation/application events, and record bounded
@@ -90,6 +101,8 @@ linger. Command timing starts at generated canonical input; sparse tick-aligned
 AI commands omit the human polling phase, client dispatch and presentation.
 `summary.json` records strict timing-target booleans separately from protocol
 success; a passing protocol suite does not silently accept a missed budget.
+Every timing event is checked against every applied local command in the VFR2
+recording, including failure prefixes; omitted/duplicated/reordered samples fail.
 Use `--jobs 1` to measure cases without other network cases running concurrently.
 The withheld-frame fixture watches executed checksum packets to reject advancement
 beyond the held turn; future input transmission is expected during a stall.
@@ -104,3 +117,31 @@ zero-tick failures are intentionally not playable replays. Replaying records wit
 `voidfront_headless --replay ... --hash-mode state --trace ...` compares executed
 state independently of future input receipts. Legacy VFR1 files retain their
 protocol-only compatibility and default full-hash behavior.
+
+## Nonblocking session adapter
+
+`net/session.hpp` exposes a single-threaded `Session` with explicit Handshake,
+Readiness, Running, Stalled, Finishing, Complete and Error states. `poll()` uses
+nonblocking UDP, drains at most 256 datagrams and advances at most one tick. It
+does not sleep or wait for a peer. Callers must poll frequently; arbitrary provider
+work, simulation work and OS scheduling mean this is not a wall-time guarantee.
+The CLI owns its scoped 1 ms Windows timer request and Sleep(1) loop. A client
+must validate its own cadence, rendering cost and input response.
+
+The caller supplies a canonical command provider; the CLI explicitly supplies
+the existing AI. After readiness, the provider receives read-only source state,
+local player and sequence counter. The adapter schedules and validates its output.
+Empty output closes an empty frame. A client can drain queued input here, but
+must retain original input timestamps externally: current generated-command
+timing starts after the provider returns and excludes queue residence, provider
+execution cost, human polling phase and presentation.
+
+Read-only simulation/statistics expose state for snapshots and status UI.
+`applied_frames()` contains just the most recent poll's executed tick, in player
+order, including a tick whose subsequent checksum comparison fails. Consume it
+before the next poll to preserve a replay prefix. The CLI owns recording and
+reports, independently of the session. Cancel is a local error state; it closes
+the socket immediately and the remote peer subsequently times out. Errors,
+completion (after terminal retry linger), and destruction also release WinSock
+and the exclusive bind. The adapter retains match-bounded histories and metrics;
+it is not a constant-memory production networking implementation.
