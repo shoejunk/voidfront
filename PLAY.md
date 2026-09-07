@@ -1,4 +1,4 @@
-# Voidfront — field trial 01
+# Voidfront â€” field trial 01
 
 Launch `Voidfront.exe` beside its .pck and DLL. This is the first development skirmish, not the finished game. Windows x64; six Cairn walkers fight six opposing walkers on the Glass Reach test field. Enemy attack orders start after five seconds. Eliminate the opposing team to secure the sector.
 
@@ -9,7 +9,7 @@ Launch `Voidfront.exe` beside its .pck and DLL. This is the first development sk
 - Arrow keys pan the camera; wheel zooms.
 - R restarts the skirmish. Escape cancels attack targeting. Close the window to quit.
 
-The current prototype has no economy, construction, fog, queued orders, control groups or match setup menu. Enemy AI only fights. Group pathing is a conservative grid prototype and needs crowd improvements. Art, animations and interface are foundation work; audio is not present yet.
+The current prototype has no economy, construction, fog, queued orders, control groups or match setup menu. Enemy AI only fights. Units now travel at arbitrary headings with clearance-aware routes around the test terrain. Single-unit moves retain the exact clicked position; group destinations still use spaced cell centers. Crowded units can wait indefinitely because dynamic detours and deadlock recovery are unfinished. Art, animations and interface are foundation work; audio is not present yet.
 
 ## Experimental two-window loopback skirmish
 
@@ -35,3 +35,5 @@ commands again with the same new session number. This is an experimental combat
 skirmish, with no LAN/Internet support or complete RTS match content yet.
 
 From source, run `./tools/build.ps1 -Configuration Debug`, then `./tools/run.ps1`. Rebuild assets with `./tools/export_assets.ps1`. Produce the release package with `./tools/package.ps1`. Tool paths and dependency revision are pinned in tools/toolchain.json; build instructions and evidence are in TESTING.md.
+
+Movement verification from source: `./tools/capture.ps1 -Packaged -Movement -Ticks 400 -Name packaged-movement` exercises actual selection/orders, exact oblique arrival, a ridge detour, Stop and live retarget. Add `-Movie` for a recording. Rebuild the package first. Simulation compatibility changed for this movement increment; older recordings and old-build network peers are rejected rather than reinterpreted.

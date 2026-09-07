@@ -20,6 +20,26 @@ var camera_target := Vector3(16, 0, 12)
 var order_mark: MeshInstance3D
 var order_age := 99.0
 var smoke := false
+var movement_smoke := false
+var movement_stage := 0
+var movement_inputs: Array[Dictionary] = []
+var movement_samples: Array[Dictionary] = []
+var movement_captures: Array[Dictionary] = []
+var movement_errors: Array[String] = []
+var movement_label := ""
+var movement_selected := false
+var movement_direct_arrived := false
+var movement_detour_arrived := false
+var movement_retarget_arrived := false
+var movement_ridge_crossed := false
+var movement_midsegment_stop := false
+var movement_live_retarget := false
+var movement_stop_tick := -1
+var movement_stop_at := Vector2i.ZERO
+var movement_stop_samples := 0
+var movement_stop_drift := false
+var movement_arbitrary_steps := 0
+var movement_max_step_squared := 0
 var smoke_stage := 0
 var smoke_moves := 0
 var smoke_damage := false
@@ -66,6 +86,7 @@ func _ready() -> void:
 	var ticks_specified := false
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--smoke": smoke = true
+		elif argument == "--movement-smoke": movement_smoke = true
 		elif argument == "--network": network = true
 		elif argument == "--network-smoke":
 			network = true
@@ -81,6 +102,9 @@ func _ready() -> void:
 		elif argument.begins_with("--session="): session_id = _integer_option(argument, 1, 2147483647)
 		elif argument.begins_with("--delay="): input_delay = _integer_option(argument, 1, 16)
 		else: option_error = "Unknown option: " + argument
+	if movement_smoke and not ticks_specified: finish_tick = 400
+	if movement_smoke and (smoke or network): option_error = "Movement smoke requires its own offline fixture."
+	if movement_smoke and finish_tick > 600: option_error = "Movement smoke is bounded to 600 ticks."
 	if network and not ticks_specified: finish_tick = 400 if network_smoke else 36000
 	if network and local_port == remote_port: option_error = "Local and remote ports must differ."
 	if network and smoke: option_error = "Choose --smoke or --network-smoke."
@@ -100,7 +124,10 @@ func _ready() -> void:
 	print("VOIDFRONT_RUNTIME extension=ready renderer=", RenderingServer.get_video_adapter_name())
 	if not option_error.is_empty():
 		push_error(option_error)
-		if smoke or network_smoke:
+		if movement_smoke:
+			completed = true
+			_finish_movement_smoke.call_deferred()
+		elif smoke or network_smoke:
 			completed = true
 			_finish_network_smoke.call_deferred()
 
@@ -230,7 +257,7 @@ func _reset() -> void:
 	for entry in actors.values(): entry.root.queue_free()
 	actors.clear()
 	selected.clear()
-	bridge.reset(1, true)
+	bridge.reset(1, not movement_smoke)
 	if network and option_error.is_empty():
 		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick):
 			network_notice = "Network session could not start."
@@ -306,9 +333,9 @@ func _subdue_corpse(node: Node) -> void:
 func _process(delta: float) -> void:
 	if current.is_empty() or completed: return
 	if not option_error.is_empty(): return
-	if smoke or network_smoke:
+	if smoke or network_smoke or movement_smoke:
 		var now := Time.get_ticks_usec()
-		if last_frame_usec != 0: frame_times.append((now - last_frame_usec) / 1000.0)
+		if last_frame_usec != 0 and (not movement_smoke or frame_times.size() < finish_tick * 12): frame_times.append((now - last_frame_usec) / 1000.0)
 		last_frame_usec = now
 	if network:
 		var start := Time.get_ticks_usec()
@@ -327,15 +354,16 @@ func _process(delta: float) -> void:
 	else:
 		accumulator += delta
 		var ticks := 0
-		while accumulator >= STEP and ticks < 8:
+		while accumulator >= STEP and ticks < 8 and (not movement_smoke or current.tick < finish_tick):
 			previous = current
 			var start := Time.get_ticks_usec()
 			bridge.advance()
-			if smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
+			if smoke or movement_smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
 			current = bridge.snapshot()
 			accumulator -= STEP
 			ticks += 1
 			if smoke: _smoke_tick()
+			if movement_smoke: _movement_smoke_tick()
 	_present(clampf(accumulator / STEP, 0, 1), delta)
 	# The first positive interpolation includes the new authoritative state.
 	if network_smoke and accumulator > 0 and current.tick != presented_tick:
@@ -353,6 +381,9 @@ func _process(delta: float) -> void:
 	order_age += delta
 	order_mark.visible = order_age < 1.2
 	order_mark.scale = Vector3.ONE * (1.0 + minf(order_age, 1.2) * 0.5)
+	if movement_smoke and current.tick >= finish_tick and not completed:
+		completed = true
+		_finish_movement_smoke.call_deferred()
 	if smoke and current.tick >= finish_tick and not completed:
 		completed = true
 		_finish_smoke.call_deferred()
@@ -502,6 +533,8 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 	if nearest != -1:
 		if additive and nearest in selected: selected.erase(nearest)
 		else: selected.append(nearest)
+	if movement_smoke and from.distance_to(to) <= 7:
+		movement_selected = selected.size() == 1 and selected[0] == 1
 	if smoke:
 		# Assert after Godot dispatches the event, not from a tick that may precede dispatch.
 		if from.distance_to(to) <= 7 and selected.size() == 1: click_selection_passed = true
@@ -522,6 +555,9 @@ func _issue(order: int, at: Vector3) -> void:
 		elif not accepted: network_notice = "Order rejected: " + str(bridge.network_status().get("error", "session unavailable"))
 	else:
 		accepted = bridge.issue(order, PackedInt32Array(selected), int(at.x * SCALE), int(at.z * SCALE))
+	if movement_smoke:
+		movement_inputs.append({"label": movement_label, "accepted": accepted, "order": order, "units": selected.duplicate(), "x": int(at.x * SCALE), "z": int(at.z * SCALE), "event_tick": current.tick, "input_usec": event_usec})
+		if not accepted: movement_errors.append("Rejected input: " + movement_label)
 	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
 		order_mark.position = Vector3(at.x, 0.05, at.z)
@@ -610,6 +646,112 @@ func _smoke_key(key: Key) -> void:
 	var release := InputEventKey.new()
 	release.physical_keycode = key
 	Input.parse_input_event(release)
+
+func _movement_input(label: String, at: Vector3) -> void:
+	movement_label = label
+	_smoke_mouse(MOUSE_BUTTON_RIGHT, camera.unproject_position(at), true)
+	_smoke_mouse(MOUSE_BUTTON_RIGHT, camera.unproject_position(at), false)
+
+func _movement_last_input(label: String) -> Dictionary:
+	for entry in movement_inputs:
+		if entry.label == label and entry.accepted: return entry
+	return {}
+
+func _movement_arrived(unit: Dictionary, label: String) -> bool:
+	var command := _movement_last_input(label)
+	return not command.is_empty() and unit.x == command.x and unit.z == command.z and not unit.moving
+
+func _movement_smoke_tick() -> void:
+	var unit: Dictionary = current.units[0]
+	var before: Dictionary = previous.units[0]
+	var dx: int = unit.x - before.x
+	var dz: int = unit.z - before.z
+	var step_squared := dx * dx + dz * dz
+	movement_max_step_squared = maxi(movement_max_step_squared, step_squared)
+	if dx != 0 and dz != 0 and absi(dx) != absi(dz): movement_arbitrary_steps += 1
+	if movement_samples.size() < finish_tick:
+		movement_samples.append({"tick": current.tick, "stage": movement_stage, "x": unit.x, "z": unit.z, "dx": dx, "dz": dz, "step_squared": step_squared, "moving": unit.moving, "order": unit.order, "hp": unit.hp})
+	if current.tick == 1:
+		var screen := camera.unproject_position(actors[1].root.position + Vector3(0, 0.5, 0))
+		_smoke_mouse(MOUSE_BUTTON_LEFT, screen, true)
+		_smoke_mouse(MOUSE_BUTTON_LEFT, screen, false)
+	if movement_stage == 0 and current.tick >= 3 and movement_selected:
+		_movement_input("direct", Vector3(10.734375, 0, 6.3515625))
+		movement_stage = 1
+	elif movement_stage == 1 and _movement_arrived(unit, "direct"):
+		movement_direct_arrived = true
+		_capture_movement.call_deferred("direct", int(current.tick))
+		_movement_input("detour", Vector3(20.234375, 0, 6.68359375))
+		movement_stage = 2
+	elif movement_stage == 2:
+		# Northern ridge is [15,17] x [3,9], expanded by 64 fixed units.
+		if unit.x >= 3776 and unit.x <= 4416 and unit.z >= 2368 and not movement_ridge_crossed:
+			movement_ridge_crossed = true
+			_capture_movement.call_deferred("ridge", int(current.tick))
+		if _movement_arrived(unit, "detour"):
+			movement_detour_arrived = true
+			_capture_movement.call_deferred("detour", int(current.tick))
+			_movement_input("stop_leg", Vector3(23.3125, 0, 13.7890625))
+			movement_stage = 3
+	elif movement_stage == 3:
+		var command := _movement_last_input("stop_leg")
+		if not command.is_empty() and current.tick >= command.event_tick + 10 and unit.moving:
+			movement_midsegment_stop = not _movement_arrived(unit, "stop_leg")
+			movement_label = "stop"
+			_smoke_key(KEY_S)
+			movement_stage = 4
+	elif movement_stage == 4:
+		var command := _movement_last_input("stop")
+		if not command.is_empty() and current.tick > command.event_tick:
+			if movement_stop_tick < 0:
+				movement_stop_tick = int(current.tick)
+				movement_stop_at = Vector2i(unit.x, unit.z)
+			movement_stop_samples += 1
+			if Vector2i(unit.x, unit.z) != movement_stop_at or unit.moving: movement_stop_drift = true
+			if movement_stop_samples >= 9:
+				_capture_movement.call_deferred("stopped", int(current.tick))
+				_movement_input("resume", Vector3(23.3125, 0, 13.7890625))
+				movement_stage = 5
+	elif movement_stage == 5:
+		var command := _movement_last_input("resume")
+		if not command.is_empty() and current.tick >= command.event_tick + 8 and unit.moving:
+			movement_live_retarget = not _movement_arrived(unit, "resume")
+			_movement_input("retarget", Vector3(21.671875, 0, 11.171875))
+			movement_stage = 6
+	elif movement_stage == 6 and _movement_arrived(unit, "retarget"):
+		movement_retarget_arrived = true
+		_capture_movement.call_deferred("retarget", int(current.tick))
+		movement_stage = 7
+
+func _capture_movement(phase: String, tick: int) -> void:
+	if capture_path.is_empty(): return
+	await RenderingServer.frame_post_draw
+	var path := capture_path.get_basename() + "-" + phase + ".png"
+	var error := get_viewport().get_texture().get_image().save_png(path)
+	movement_captures.append({"phase": phase, "snapshot_tick": tick, "path": path, "error": error})
+	if error != OK: movement_errors.append("Capture failed: " + phase)
+
+func _finish_movement_smoke() -> void:
+	await RenderingServer.frame_post_draw
+	var input_ok := movement_inputs.size() == 6
+	for entry in movement_inputs:
+		input_ok = input_ok and entry.accepted and entry.units == [1]
+	var direct := _movement_last_input("direct")
+	var off_center: bool = not direct.is_empty() and direct.x % 256 != 128 and direct.z % 256 != 128
+	var ok: bool = option_error.is_empty() and movement_errors.is_empty() and movement_stage == 7 and movement_selected and input_ok and off_center and movement_direct_arrived and movement_detour_arrived and movement_ridge_crossed and movement_retarget_arrived and movement_midsegment_stop and movement_live_retarget and movement_stop_samples >= 9 and not movement_stop_drift and movement_arbitrary_steps > 20 and movement_max_step_squared <= 1024 and movement_samples.size() == finish_tick
+	var report := {"ok": ok, "mode": "movement", "tick": current.tick, "hash": current.hash, "input_stage": movement_stage, "single_unit_selection": movement_selected, "accepted_inputs": movement_inputs, "positions": movement_samples, "captures": movement_captures, "errors": movement_errors, "option_error": option_error, "direct_arrived": movement_direct_arrived, "off_center_destination": off_center, "detour_arrived": movement_detour_arrived, "ridge_crossed_with_clearance": movement_ridge_crossed, "retarget_arrived": movement_retarget_arrived, "stopped_midsegment": movement_midsegment_stop, "live_retarget": movement_live_retarget, "stop_samples": movement_stop_samples, "stop_without_drift": not movement_stop_drift, "arbitrary_heading_steps": movement_arbitrary_steps, "max_step_squared": movement_max_step_squared, "renderer": RenderingServer.get_video_adapter_name(), "frame_interval_ms_p95": _percentile(frame_times, 0.95), "frame_interval_ms_p99": _percentile(frame_times, 0.99), "sim_ms_p95": _percentile(sim_times, 0.95), "sim_ms_p99": _percentile(sim_times, 0.99), "note": "Single-unit packaged InputEvent fixture with enemy command AI disabled. Actual canonical input coordinates are retained unchanged from production conversion; exact authoritative arrivals are asserted. Static ridge and stop/retarget evidence only, not crowds, manual responsiveness, route optimality or representative battle performance. Movie timings include recording overhead."}
+	if not capture_path.is_empty():
+		var error := get_viewport().get_texture().get_image().save_png(capture_path)
+		if error != OK:
+			ok = false
+			report["capture_error"] = error
+	report["ok"] = ok
+	if not report_path.is_empty():
+		var file := FileAccess.open(report_path, FileAccess.WRITE)
+		if file: file.store_string(JSON.stringify(report, "\t"))
+		else: ok = false
+	print("VOIDFRONT_MOVEMENT_SMOKE ", JSON.stringify(report))
+	get_tree().quit(0 if ok else 3)
 
 func _smoke_tick() -> void:
 	if current.tick == 1:

@@ -1,6 +1,6 @@
 # Voidfront progress
 
-## 2026-09-03 19:39 America/Los_Angeles — first development run
+## 2026-09-03 19:39 America/Los_Angeles â€” first development run
 
 Baseline: empty checkout, no existing implementation, STOP or completion marker. Initialized local Git on dev. No development remote is configured. Verified Godot 4.7.2.stable.official.ed1daf0bf, matching template directory, MSVC VS2022 Professional and Blender 5.1.2. Hardware queries via CIM were denied; CPU registry reports Ryzen 7 3700X, GPU/RAM remain unverified.
 
@@ -12,7 +12,7 @@ Original Blender walker created and structurally validated: editable source, rep
 
 Integrated Debug C++ bridge now compiles and its sim tests pass. godot-cpp API profile requires OS in addition to RefCounted for upstream print_string.cpp. This host needs PATH/Path normalization and single MSBuild node; scripts encode both. Client runtime/export work is in progress. Detailed results and exact continuation will be recorded before the run marker is released.
 
-## 2026-09-03 20:10 America/Los_Angeles — packaged foundation checkpoint
+## 2026-09-03 20:10 America/Los_Angeles â€” packaged foundation checkpoint
 
 Landed a controllable 3D six-versus-six skirmish: click/drag/Shift selection, F2 army select, right-click Move, A+click AttackMove, immediate S/H Stop/Hold, camera pan/zoom, team health bars, minimap, projectile feedback, unit deaths, outcome display and restart. Godot interpolates integer simulation snapshots; no Godot navigation or physics determines movement/combat. Enemy uses the same canonical simulation command interface. This combat bot is not a complete RTS AI.
 
@@ -112,3 +112,45 @@ Independent source/evidence report: `.voidfront-agent/review-client-network-2026
 **Exact next step:** begin the required any-angle movement milestone: define fixed-point unit-clearance fixtures, independent shortest-route reference and quantitative tolerance, then implement the first bounded arbitrary-heading movement increment with deterministic replay and packaged pathing evidence. Preserve this network/offline suite and all full economy/AI, production content and performance gates. No COMPLETE.md; continue the same game next scheduled run.
 
 Published source checkpoint: d7bdd72 is pushed to origin/dev. Final metadata records that reviewed source and the current packaged evidence. The owned run marker is released after a clean handoff checkpoint; automation stays active.
+
+## 2026-09-07 13:03 America/Los_Angeles - bounded any-angle movement
+
+Baseline: clean dev b192afe, STOP/COMPLETE and prior marker absent; exclusively acquired this task marker. Existing packaged loopback and offline evidence is preserved. Goals: replace orthogonal stepping with authoritative arbitrary headings and exact off-center destinations, implement square unit clearance with static visibility routes, independently measure shortest-route error against a declared 1% plus two fixed-point-unit tolerance, and verify packaged movement plus network/replay regressions. This bounded two-ridge map increment does not claim scalable crowd routing, dynamic construction, reference performance or full RTS completion.
+
+Landed fixed-point arbitrary headings, exact single-unit destinations, cached
+square-clearance visibility routes, immediate Stop/retarget and conservative
+swept unit separation. Navigation and route state participate in content and
+executed-state hashes; simulation compatibility2 rejects older movement recordings.
+Independent review found/fixed tangent-corner rounding stalls and lost attack-move
+routes after combat. Debug/Release4/4CTest, legacy malformed/alias checks,
+2,000 tick cross-build traces and ten repeats pass. Source checkpoint **eb2fe03**
+is pushed to origin/dev. Static oracle:51 fixtures x10/config,zero observed
+route error within predeclared1%+2 coordinate-unit tolerance; no crowd acceptance.
+
+Packaged movement now has an actual InputEvent fixture and independent full-ledger
+validator:400 ticks,184 arbitrary-heading steps,three exact arrivals,clearance at
+the ridge,nine drift-free Stop ticks and live retarget; integrated route excess
+max0.018590%. All25 adversarial evidence mutations reject. Normal and movie
+captures pass;1201-frame20.016667s1600x900 recording at
+`artifacts/packaged-movement-2026-09-07.mp4`. Root and critic inspected actual
+screenshots/contact sequence. Detailed temporal animation/manual response still
+unverified; overbright units/rings,blockout terrain and presentation debt remain.
+Offline400 tick input/combat/restart regression passes (winner-1 at 400).
+
+Transport preserved:22case1,000 tick CLI suite and6case240 tick rendered-client
+suite pass with cross-build recordings/repeats. Additional1,000 tick two-package
+combat confirms winner1 on both clients and visible outcome. Evidence folders:
+`artifacts/any-angle-network-2026-09-07`, `any-angle-client-network-2026-09-07`,
+and `any-angle-client-combat-2026-09-07`. Full commands,hashes,timing limitations
+and independent review are in TESTING.md. Strict20 Hz remains unmet; normal offline
+framep99 17.443 ms misses16.67 ms. No budget or evidence gate was weakened.
+
+**Decisive next gap:** current32x24-map200/500unit2,000 tick diagnostics measure
+p95/p99 2.465/2.704 ms and15.740/16.815 ms,respectively;500 units exceeds4/8 ms even on
+the small map,and neither battle completes in2,000 ticks. Static route quality does
+not resolve collision-only waiting or quadratic crowd cost. Next run should add
+stationary-blocker/opposing-swap progress fixtures,spatial broadphase and bounded
+deterministic collision/replanning work,then a genuine128x128 benchmark for group
+orders/repeated orders/replans before accepting crowd routing. Full game/economy,
+network scale,production content and shipping remain mandatory. No COMPLETE.md;
+automation stays active and this game continues.

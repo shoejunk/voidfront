@@ -385,3 +385,140 @@ and production presentation debt remain. Independent review:
 `.voidfront-agent/review-client-network-2026-09-07.md`. Same-poll post-advance
 desync recording is covered in the underlying Session API but still lacks a
 Godot adapter fault fixture. No shipping acceptance or COMPLETE.md is justified.
+
+## 2026-09-07 bounded any-angle movement (bounded increment verified)
+
+`./tools/verify.ps1` passed integrated MSVC Debug/Release **4/4 CTest** each,
+15 malformed replay and seven output-alias cases/configuration, 2,000-tick
+cross-configuration hashes and ten repeat playbacks. Evidence:
+`artifacts/any-angle-build-fixed-2026-09-07.log`. Godot 4.7.2, template hashes
+and godot-cpp pin remain verified. The initial build failed on a probe/test API
+mismatch; retained in `artifacts/any-angle-build-2026-09-07.log`.
+
+Independent review derived a valid tangent route that component truncation could
+permanently stop: (3968,3920) to (4570,1835). The corrected integrator considers
+neighboring integer samples with stable error ordering, bounded speed, strict
+waypoint progress and full swept clearance. The simulation regression covers
+this fixture and off-center arrival, direct non-axis/non-45-degree travel,
+obstacle routes, instant Stop and live retarget. A natural two-unit combat fixture
+also verifies attack-move resumes after firing: clearing a route now invalidates
+its cache key. That additional test passes Debug/Release in
+`artifacts/any-angle-resume-test-2026-09-07.log`. The previous unproven speed-loss
+comment was removed. Candidate sampling over deltas [0,500]^2 observed a minimum
+full-step length 30.610456 versus nominal32; this limited calculation is not a
+global uniform-speed bound. Final short arrival steps and collision waits differ.
+
+`python tools/verify_navigation.py --out artifacts/navigation-verified-2026-09-07`
+passes **51 fixtures x10 runs in each configuration**, with byte-identical route
+JSON and zero observed worst/mean route-length excess against the independent
+Euclidean reference. Predeclared tolerance is 1% plus two coordinate units;
+contract: `.voidfront-agent/navigation-contract.md`. The oracle uses a different
+candidate superset and exact rational edge-event/midpoint collision, cross-checked
+with slabs on 4,000 random segments plus fixture pairs. Analytic open, box,
+long-detour, passage and unreachable cases validate it separately. Inputs,
+per-fixture results, raw routes and binary hashes are retained in that directory.
+This is bounded axis-aligned rectangle geometry: the angled fixture is a staircase,
+the capacity fixture uses64 duplicate boxes, and the 1024 exposed-vertex cap is
+not stress-tested. No dynamic/crowd, arbitrary polygon or performance acceptance.
+
+Simulation compatibility version2 rejects older movement recordings. VFC wire1
+is unchanged; navigation sources join the automatic VFR2/network content hash.
+Old recorded hashes are intentionally not expected to match changed movement.
+
+### Separate-process regression after movement changes
+
+`python tools/verify_network.py --ticks 1000 --jobs 1 --out artifacts/any-angle-network-2026-09-07`
+passes all 22 cases, 20:09:28-20:17:47 UTC. Eight ordinary pairs execute1,000 ticks;
+all fault, content/protocol, input-delay, missing-frame/checksum/ACK, terminal,
+desync and disconnect cases retain expected behavior. All44 VFR2 recordings,
+436 applied local-command timing identities and38 nonzero replay traces were
+independently reviewed. Common prefixes agree, ten repeats per delay match, and
+four current peer/headless binary fingerprints match the summary. Delay2 trace
+SHA256774f5fff200d480c75dffe38ad9866f372df995218be0623f71396bd0faa37fe;
+delay 4 a923285a4ced2818b59321803405b4c5264644bbeb53197c8037f8d2fd2d3bc8.
+
+At 80 ms RTT with 20 ms jitter/1% loss, generated command p95=101.468/100.993 ms,
+paced rate19.97374/19.98119 Hz and231 random drops. At 160 ms delay 2,
+p95=157.013/166.737 ms and19.06791/19.06941 Hz. Delay4 reaches
+19.99952/19.99956 Hz with 201.091/201.406 ms p95 and400 random drops.
+Matched controls remain in the same report; no pacing tolerance, sample filtering,
+default-delay change or optimization claim was introduced. CLI timing excludes
+original human input/queue/display and does not establish the full response gate.
+Builds, package capture and benchmarks did not overlap this suite.
+
+### Packaged exact movement and recording
+
+Rebuilt pinned package with `./tools/package.ps1`. Normal command:
+`./tools/capture.ps1 -Packaged -Movement -Ticks 400 -Name packaged-movement-2026-09-07`.
+The new fixture uses actual InputEvents and the production order conversion,
+disables only enemy AI for this fixture, and retains six canonical order attempts
+plus all400 unit-position rows. Independent
+`python tools/verify_movement_capture.py artifacts/packaged-movement-2026-09-07.json --out artifacts/packaged-movement-verified-2026-09-07.json`
+checks complete data, every swept segment with the separate midpoint oracle,
+maximum speed32,184 non-axis/non-45-degree steps, instant Stop and nine stationary
+ticks, real movement before Stop/live retarget, actual ridge crossing and exact
+arrival at all three completed legs. Actual integrated path-length excess is
+0.018590% direct,0.013368% detour and0.013346% retarget. This includes stepping
+variation, separately from the static graph's zero observed error. Arrival ticks
+are76,170,219. This is one scripted walker, not crowd or human play acceptance.
+
+Independent verifier review initially found weak assertions allowing omitted
+coordinates and fake Stop/detour evidence. Corrected checks now reject all 25
+adversarial cases; log `artifacts/movement-verifier-review-2026-09-07.log` records
+the source/report hashes and results. Source review also caught the two simulation
+regressions described above, both now covered by passing C++ tests.
+
+`-Movie -Name packaged-movement-movie-2026-09-07` passes the same400-row verification.
+Canonical event ticks differ by one from normal capture due frame/input dispatch;
+spatial routes and their lengths agree. No identical-stream claim across these
+separate input recordings. Converted movie:
+`artifacts/packaged-movement-2026-09-07.mp4`,1600x900,60 fps,1201 frames,20.016667s.
+Primary and independent reviewer inspected actual ridge/detour PNGs and the
+12-frame,1 fps extracted contact `artifacts/movement-contact-2026-09-07.png`.
+Oblique departure and ridge/retarget progression are visible, with no obvious
+teleport in sampled frames. Detailed deformation, temporal smoothness and manual
+responsiveness remain unverified; movie timings are encoding-distorted.
+
+Normal movement frame p95/p99=16.997/17.369 ms, bridge advance0.027/0.031 ms,
+resident peak238,157,824bytes. Existing offline400 tick capture
+`artifacts/packaged-any-angle-offline.json` passes click/drag/groupMove/Stop/
+AttackMove/combat/clip requests/restart; changed hash f2870e230c766422 and winner-1
+at 400. Offline frame17.071/17.443 ms, bridge0.040/0.055 ms, resident235,126,784bytes.
+Both normal captures use1920x1080 on the recorded development machine and twelve
+walkers (only one moving in the dedicated fixture). Framep99 still misses16.67 ms;
+no reference-hardware or representative-battle performance acceptance.
+
+### Packaged networking and scale diagnostics
+
+`python tools/verify_client_network.py --out artifacts/any-angle-client-network-2026-09-07`
+passes6/6 cases: four positive240 tick pairs, zero-tick mismatched-delay rejection,
+and replayable52/52 tick disconnect prefixes. All ten clean repeats pass. At 80 ms
+RTT, event-to-observed-execution p95=133.781/133.861 ms and first-render
+166.824/166.708 ms; at 160 ms withdelay 4,234.258/233.869 ms execution and
+266.826/266.782 ms render. Only three synthetic inputs/player/profile; full human
+latency and pacing gates remain open. A separate `--case clean --ticks 1000 --out
+artifacts/any-angle-client-combat-2026-09-07` passes confirmed1,000 ticks and ten
+repeats, with winner1 reported by both clients. Actual outcome screenshots were
+inspected: player0 defeat, player1 victory, both complete/confirmed1000. Across
+the two suites, all 14 recordings retain Debug/Release replay equality and common
+prefix agreement; five current package/replayer fingerprints match their reports.
+This is a scripted combat skirmish, not a complete economy/AI RTS match or soak.
+
+After builds, capture, encoding and network sessions ended, ran the Release
+headless executable for2,000 ticks with `--units-per-team 100` and250. Current
+32x24-map diagnostics: **200 units p95/p99=2.465/2.704 ms;500 units=15.740/16.815 ms**.
+Logs: `artifacts/any-angle-{200,500}unit-2026-09-07.log`; traces retained alongside.
+Both runs remain winner-1 at2,000 ticks. These are whole-harness active-tick timings
+including AI/command work, excluding trace hash/write, not isolated pathfinding
+or representative128x128 measurements. The500 unit case already exceeds the4/8 ms
+simulation budgets on this smaller map. Conservative waiting and repeated unit
+collision scans are unfinished scale/crowd work; neither no-lock nor performance
+acceptance is supported. Next: spatial broadphase and deterministically bounded
+collision/replanning work with explicit crowd progress regressions, then genuine
+128x128 group-order/replan benchmarks. Do not lower the budgets.
+
+Independent final review: `.voidfront-agent/review-movement-2026-09-07.md` accepts
+only the bounded any-angle/static-route and transport preservation increment.
+Production art/audio/UI, true angled terrain, dynamic blockers/streams/chokes,
+full economy/technology/fog/AI, LAN/Internet,30-minute matches, manual controls,
+reference hardware, balance and shipping gates remain open. No COMPLETE.md.
