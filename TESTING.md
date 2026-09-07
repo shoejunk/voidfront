@@ -264,3 +264,124 @@ behavior only. Godot networking, actual input-to-execution/display measurements,
 strict pacing, LAN/Internet, complete economic matches, 30-minute soak, any-angle
 pathfinding, production presentation and representative performance/shipping
 remain open. No fresh runtime/visual approval or COMPLETE.md is justified.
+
+## 2026-09-07 packaged loopback client integration
+
+This entry supersedes the earlier offline-only client status. The bridge now owns
+a nonblocking Session; the Godot client queues canonical commands for its selected
+player and interpolates authoritative snapshots. Normal offline play keeps its
+original command path. A network session has explicit handshake, buffer readiness,
+running, stalled, final confirmation, complete and error states. Active shared
+matches reject local restart; terminal R returns that window to offline play.
+
+Reproduction:
+
+```powershell
+./tools/verify.ps1
+. ./tools/common.ps1
+Invoke-ProjectGodot @('--headless','--path',"$Repo/client",'--script','res://bridge_network_test.gd')
+./tools/package.ps1
+python tools/verify_client_network.py
+./tools/capture.ps1 -Packaged -Name packaged-client-offline-regression -Ticks 400
+```
+
+Integrated MSVC Debug and Release each pass 3/3 CTest, legacy malformed replay
+and output-alias preservation checks, cross-configuration 2,000-tick equality and
+ten repeat playbacks. Log: `artifacts/client-network-build-2026-09-07.log`.
+Pinned engine/templates/godot-cpp checks pass. Time is added to the narrow bridge
+API profile to share Godot's exact microsecond clock with event ingress.
+
+The direct Godot bridge regression passes with the Debug extension:
+`artifacts/bridge-api-2026-09-07.log`. It rejects invalid player, pre-ready input,
+enemy/unknown unit, invalid order/destination, queue slot 65 and unschedulable tail
+input. All 64 accepted queue slots execute with consecutive identities; both
+bridge states agree. Terminal rejection, socket reuse and offline reset/step
+also pass. This is a same-process adapter test, distinct from packaged UDP proof.
+Queue capacity is 64; replay evidence is capped at 100,000 commands/64 MiB.
+Exceeding replay storage fails visibly with incomplete-evidence status. The client
+keeps normal-play transition history bounded and only collects per-event/render
+telemetry in network smoke mode.
+
+The package harness launches two rendered Windows processes through a bounded
+loopback UDP relay, retains PIDs/binary fingerprints/actual packet losses and
+checks every tick hash plus every applied recording in both build configurations.
+Every original accepted event is joined by identity to queue timing, canonical
+recording, executed input and post-draw observation, including failure prefixes.
+Ten repeated Release playbacks of the new clean recording also run. The harness
+rejects reused evidence directories and unexpected runtime errors. Zero-tick
+failure headers are validated but not replayed: the VFR2 reader intentionally
+requires a nonzero applied prefix.
+
+Synthetic F2, right-click Move, S Stop and A+click AttackMove run through
+Input.parse_input_event. Timing starts at `_input`, before unhandled dispatch and
+queuing; it excludes physical input and the OS-to-Godot event queue. `executed_usec`
+is the first bridge observation after Session.poll returns, including poll and
+provider cost. Display timing observes frame_post_draw after the first positive
+snapshot interpolation; it is software rendering evidence, not monitor photons.
+Feedback timing observes the order ring; Stop still places that ring at the map
+origin, so useful unit-local stop acknowledgement is not established. Only three
+orders per peer/profile are sampled. No sample is removed or retried to improve
+latency. Human responsiveness, strict pacing, representative battle performance,
+LAN/Internet, 30-minute soak and full RTS content remain unaccepted.
+
+The first full harness attempt is preserved at
+`artifacts/client-network-verified-2026-09-07`: four positive cases passed before
+an overly strict mismatch assertion failed. Actual mismatch reports show one
+peer rejecting incompatible input delay at tick zero and the other timing out
+in handshake at zero after the rejecting peer closed. The corrected assertion
+requires both zero-prefix errors and at least one exact incompatibility diagnostic;
+it accepts that asymmetric handshake timeout without claiming both peers received
+the mismatch. No simulation or transport rule was weakened.
+
+### Final packaged evidence
+
+`python tools/verify_client_network.py --out artifacts/client-network-final-2026-09-07`
+passes **6/6 cases**, 2026-09-07 19:46:16 through 19:47:50 UTC, followed by ten
+clean-recording repeats. All four positive pairs confirm 240 ticks; mismatch
+fails at zero (both peers receive incompatibility in this final run), and the
+disconnect retains 52/51-tick prefixes after the relay cuts communication.
+Every common prefix agrees; twenty nonzero Debug/Release replay traces match.
+All twelve recordings and 28 applied local commands have complete identity and
+timing coverage. Evidence: that folder's `summary.json`, per-peer JSON/VFR/log/PNG,
+per-case `verification.json` and `artifacts/client-network-final-2026-09-07.log`.
+
+| Profile | Delay ticks | Event to observed execution p95 ms, player 0/1 | Event to first rendered state p95 ms, player 0/1 | Ring feedback p95 ms, player 0/1 |
+| --- | ---: | --- | --- | --- |
+| Clean | 2 | 133.957 / 133.871 | 166.652 / 166.736 | 16.555 / 16.577 |
+| 80 ms RTT, 20 ms jitter, 1% loss | 2 | 133.749 / 133.874 | 166.673 / 166.654 | 16.604 / 16.599 |
+| 160 ms RTT, 20 ms jitter, 1% loss | 4 | 250.795 / 234.510 | 283.503 / 266.842 | 16.591 / 16.541 |
+
+Only three orders per peer/profile: these nearest-rank p95 values are sample
+maxima, not stable population estimates. Actual random drops are 54/76 at
+80/160 ms; withheld-frame fixture drops thirteen copies over 0.6 seconds and
+exposes stalled state without advancing past the missing turn. Disconnect drops
+1,206 packets. Paced rates at 80 ms are 19.873/19.928 Hz with 66/33 ms stalls;
+strict 20 Hz is unmet. There is no matched clean four-tick client control, so this
+run makes no comparative delay optimization claim. All samples remain retained.
+
+Additional `--case clean --ticks 1000 --out artifacts/client-network-combat-2026-09-07`
+passes: both packages confirm 1,000 ticks, both recordings replay in Debug and
+Release, and ten repeats match. Both report winner 1; actual terminal screenshots
+show defeat for player 0 and victory for player 1. This demonstrates a scripted
+combat skirmish outcome, not an economic RTS match, balance or a 30-minute soak.
+Session completion still waits for the configured tick cap/confirmation after
+combat victory. Network terminal R was source-reviewed and bridge reset tested;
+the packaged network-to-offline R input path has not been exercised.
+
+Packaged offline capture passes all existing assertions and unchanged hash
+`b559cd93ea152fc0`, including click/drag/move/stop/combat/restart and imported clip
+requests. Logs: `artifacts/client-offline-capture-2026-09-07.log`,
+`artifacts/packaged-client-offline-regression{,-host}.json` and matching PNGs.
+Frame interval p95/p99 is 16.871/17.243 ms; bridge advance 0.044/0.065 ms; sampled
+peak resident memory 242,016,256 bytes. Twelve units at 1920x1080 on the existing
+development host; frame p99 still misses 16.67 ms. Network captures use 1280x720
+with two rendered processes; neither capture establishes representative hardware
+or large-battle budgets. No new movie or manual playtest was performed.
+
+Primary and independent critic inspected actual final network active/error/outcome
+and offline screenshots. Lifecycle/role/outcome text is readable. Overbright
+walkers/rings, narrow queued formations, blockout terrain, ambiguous defeat wording
+and production presentation debt remain. Independent review:
+`.voidfront-agent/review-client-network-2026-09-07.md`. Same-poll post-advance
+desync recording is covered in the underlying Session API but still lacks a
+Godot adapter fault fixture. No shipping acceptance or COMPLETE.md is justified.

@@ -9,6 +9,7 @@ var status: Label
 var selection: Label
 var tip: Label
 var result: Label
+var connection: Label
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -17,10 +18,14 @@ func _ready() -> void:
 	title.text = "V O I D F R O N T"
 	status = _label(Vector2(32, 59), 13, Color("8eaaa8"))
 	status.text = "THE GLASS REACH   /   CAIRN COMPACT"
+	connection = _label(Vector2(32, 82), 13, Color("d6c49c"))
+	connection.size.x = 888
+	connection.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	selection = _label(Vector2(36, 785), 22, Color("eaf1e9"))
 	tip = _label(Vector2(36, 825), 14, Color("a4b9b6"))
 	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nF2  select army    arrows  camera    wheel  zoom    R  restart"
 	result = _label(Vector2(590, 350), 34, Color("f0d19b"))
+	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func _label(at: Vector2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -41,27 +46,59 @@ func _process(_delta: float) -> void:
 	if game.attack_pending:
 		selection.text += "     —     SELECT ATTACK DESTINATION"
 	status.text = "THE GLASS REACH   /   FIELD TRIAL 01     •     %02d:%02d" % [int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
-	result.position = Vector2(view.x / 2 - 240, view.y / 2 - 30)
-	if game.current.winner == 0:
+	connection.text = ""
+	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nF2  select army    arrows  camera    wheel  zoom    R  restart"
+	result.size.x = 700 if game.network or not game.option_error.is_empty() else 500
+	result.position = Vector2((view.x - result.size.x) / 2, view.y / 2 - 30)
+	if game.current.winner == game.local_player:
 		result.text = "SECTOR SECURED\nR  /  deploy again"
-	elif game.current.winner == 1:
+	elif game.current.winner in [0, 1]:
 		result.text = "SIGNAL LOST\nR  /  deploy again"
 	elif game.current.winner == 2:
 		result.text = "MUTUAL DESTRUCTION\nR  /  deploy again"
 	else:
 		result.text = ""
+	if game.network:
+		var state := str(game.network_state.get("state", "handshake"))
+		if game.current.winner != -1:
+			result.text = result.text.get_slice("\n", 0) + "\nAwaiting session confirmation"
+		status.text = "EXPERIMENTAL LOOPBACK 1v1   /   PLAYER %d   /   DELAY %d TICKS (%d ms)" % [game.local_player + 1, game.input_delay, game.input_delay * 50]
+		connection.text = "%s   •   tick %d   /   confirmed %d   •   UDP %d → %d" % [state.to_upper(), game.current.tick, game.network_state.get("confirmed_ticks", 0), game.local_port, game.remote_port]
+		tip.text = "LMB / drag  select own units    RMB  move    A + click  attack-move    S  stop    H  hold\nF2  select army    arrows  camera    wheel  zoom    shared match — restart after session ends"
+		if state in ["handshake", "readiness"]:
+			result.text = "CONNECTING TO PEER" if state == "handshake" else "PREPARING INPUT BUFFER"
+			result.text += "\nOrders unlock when ready"
+		elif state == "stalled":
+			connection.text += "\nWaiting for peer data — simulation paused"
+		elif state == "finishing":
+			connection.text += "\nConfirming final state with peer"
+		elif state == "complete":
+			if game.current.winner == -1: result.text = "SESSION LIMIT REACHED"
+			else: result.text = result.text.get_slice("\n", 0)
+			result.text += "\nR  /  return to offline skirmish"
+			tip.text = "Final state confirmed by both peers.\nR  returns this client to offline play; launch both clients again for a new network session."
+		elif state == "error":
+			result.text = "NETWORK SESSION ENDED\nR  /  return to offline skirmish"
+			connection.text += "\n" + str(game.network_state.get("error", "Unknown network failure"))
+		if not game.network_notice.is_empty(): connection.text += "\n" + game.network_notice
+	if not game.option_error.is_empty():
+		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
+		connection.text = game.option_error
 	queue_redraw()
 
 func _draw() -> void:
 	var view := get_viewport_rect().size
-	draw_rect(Rect2(16, 12, 548, 80), Color(0.025, 0.047, 0.055, 0.94))
-	draw_rect(Rect2(16, 12, 3, 80), Color("61c9c6"))
+	var network_panel: bool = is_instance_valid(game) and (game.network or not game.option_error.is_empty())
+	var panel_size := Vector2(920, 128) if network_panel else Vector2(548, 80)
+	draw_rect(Rect2(Vector2(16, 12), panel_size), Color(0.025, 0.047, 0.055, 0.94))
+	draw_rect(Rect2(16, 12, 3, panel_size.y), Color("61c9c6"))
 	draw_rect(Rect2(16, view.y - 131, 965, 114), Color(0.025, 0.047, 0.055, 0.96))
 	draw_line(Vector2(16, view.y - 131), Vector2(981, view.y - 131), Color("4b777b"), 1)
 	if not is_instance_valid(game) or game.current.is_empty():
 		return
-	if game.current.winner != -1:
-		draw_rect(Rect2(view.x / 2 - 265, view.y / 2 - 48, 530, 128), Color(0.025, 0.047, 0.055, 0.94))
+	if not result.text.is_empty():
+		var result_width := 740 if network_panel else 530
+		draw_rect(Rect2((view.x - result_width) / 2, view.y / 2 - 48, result_width, 128), Color(0.025, 0.047, 0.055, 0.94))
 	var map_rect := Rect2(view.x - 220, view.y - 174, 204, 153)
 	draw_rect(map_rect.grow(6), Color("12252c"))
 	draw_rect(map_rect, Color("27373b"))

@@ -1,0 +1,49 @@
+# Independent packaged-client network review - 2026-09-07
+
+Independent source/evidence critic. Reviewed extension/bridge.cpp, client/main.gd, client/hud.gd, client/bridge_network_test.gd, tools/verify_client_network.py and the retained net/session contract. No code edits, Git operations, builds or runtime helpers were performed by this reviewer. Only this review document is reviewer-owned. This is bounded integration evidence, not AAA, complete RTS, physical-network or shipping approval.
+
+## Source findings and resolution
+
+The bridge owns one Session, routes network snapshots to its read-only authoritative Sim and disables offline stepping/input while that session exists. Both player selections use the configured local player; bridge admission independently rejects foreign and unknown unit IDs. Inputs receive an ingress timestamp in Godot _input before the unhandled-input/queue/provider path. Canonical source/execution ticks, accepted/sampled/observed execution timestamps and terminal unapplied dispositions are retained. Input sampling has no hidden AI. The original offline issue/step behavior remains separate and the client guards unilateral active-session restart.
+
+The bridge consumes applied_frames even if Session.poll also reports a post-advance error. Recording has an explicit incomplete-evidence flag, validated by the harness, rather than treating a truncated recording as complete. The final input-delay tail rejects commands that cannot fit the remaining scheduled slots. Queue capacity is 64, frames drain at most 16 commands, command history is capped at 100,000 and replay storage at 64 MiB; reaching recording limits terminates with an explicit incomplete-evidence diagnostic. Session tick/history allocation is match-bounded, not a fixed-size production ring. Normal client post-draw telemetry is smoke-only; normal status history retains at most 64 entries.
+
+Review reported a mismatch where the client dispatched orders during Stalled while the bridge accepted only Running, potentially rejecting transient-stall input with an empty diagnostic. Final bridge source accepts Running or Stalled with the same readiness, capacity and scheduling checks. Review also requested full input identity coverage, applied-prefix checks, tail rejection and explicit evidence completeness; the final harness/adapter contains those checks. No remaining blocking source defect was found within this integration scope.
+
+The client records first positive snapshot interpolation at frame_post_draw. This is a software rendering observation, not measured photons or proof that every command visibly changed its unit. Stop currently places the generic order ring at map origin; its timing is not proof of useful unit-local stop acknowledgement. At low rendering rates, interpolation/display behavior needs separate exercise. No authoritative sim decisions moved into Godot.
+
+## Executed build and adapter evidence
+
+Read artifacts/client-network-build-2026-09-07.log: Godot 4.7.2.stable.official.ed1daf0bf and pinned godot-cpp SHA/API checks pass, integrated MSVC Debug and Release builds pass, with 3/3 CTest each. Legacy malformed replay/output-alias rejection, 2,000-tick cross-configuration trace equality and ten repeated playbacks pass. Builds are compilation/regression evidence only.
+
+Read artifacts/bridge-api-2026-09-07.log and the actual test script: pinned headless Godot reports an empty failure array and ok=true. The same-process bridge fixture exercises pre-readiness, bad ownership/ID/order/destination, terminal and unschedulable-tail rejection; 64 queued inputs accepted and slot 65 rejected; all 64 executed with continuous identity; paired final state equality; released-port reuse; and reset to functional offline input/stepping. This does not replace separate-process rendered evidence. Queuing specifically during a forced stalled interval and same-poll final-state desync through the packaged bridge were not directly exercised.
+
+## Final packaged evidence
+
+Final suite: artifacts/client-network-final-2026-09-07/summary.json and its raw reports/VFR files/traces/screenshots. Run: 2026-09-07 12:46:16 through 12:47:50 America/Los_Angeles. All six cases pass; ordinary clean, 80 ms RTT, 160 ms RTT and held-frame profiles reach 240 ticks per peer. These are two actual packaged rendered processes through a loopback relay, not an in-process simulation test. Each successful peer has three synthetic InputEvent commands: Move, Stop and AttackMove.
+
+The reviewer independently read all 12 reports and binary recordings, matched all 28 applied local command tick/sequence identities, recomputed each reported execution p95 from original input timestamps, compared all 20 nonzero Debug/Release replay traces line by line against reported authoritative hashes, checked ten repeated clean replay file hashes and verified all five current package/replayer fingerprints. The harness additionally joins full command payloads, accepted event ingress, feedback and post-draw samples without omissions. Zero-tick incompatible setup retains an empty VFR2 envelope; the existing replayer deliberately rejects zero-length matches, so no zero-tick playback claim is made.
+
+| Final profile | Event to observed execution p95 ms, players 0/1 | Event to first rendered snapshot p95 ms | Generic feedback p95 ms | Actual random drops |
+|---|---|---|---|---|
+| Clean, delay 2 | 133.957 / 133.871 | 166.652 / 166.736 | 16.555 / 16.577 | 0 |
+| 80 ms RTT, delay 2 | 133.749 / 133.874 | 166.673 / 166.654 | 16.604 / 16.599 | 54 |
+| 160 ms RTT, delay 4 | 250.795 / 234.510 | 283.503 / 266.842 | 16.591 / 16.541 | 76 |
+
+Impaired profiles have +/-20 ms one-way jitter and 1% configured loss. These p95 values are nearest-rank maxima of only three synthetic commands per peer. They do not establish human latency or robust latency distributions. Execution is first bridge observation after poll returns; rendering includes first positive interpolation. No matched clean delay-4 profile was run here, so do not infer a controlled delay tradeoff from this table.
+
+Strict pacing remains below 20 Hz: clean approximately 19.984, 80 ms approximately 19.873/19.928 and 160 ms approximately 19.928/19.984. Positive-case frame-interval p99 is approximately 17.2-17.4 ms, exceeding the 16.67 ms target. Bridge poll p99 is approximately 0.34-0.50 ms in these twelve-unit captures, not a representative-battle bound or full simulation/frame budget. No memory-budget or reference-hardware approval follows.
+
+Held canonical frame 25 drops 13 copies, exposes Stalled and prevents advancing past the withheld frame before recovery. Disconnect drops 1,206 packets and preserves 52/51-tick prefixes with explicit timeout diagnostics; both prefixes replay. Final mismatched-delay peers reject at tick zero with incompatibility diagnostics. The earlier retained suite at artifacts/client-network-verified-2026-09-07 stopped on an overstrict assertion because one peer diagnosed incompatibility and the other timed out during handshake after its counterpart closed. The corrected check still requires both zero-prefix failures and at least one explicit incompatibility; final rerun was not an input retry or filtered timing sample.
+
+## Visual/offline inspection and remaining gates
+
+Actually inspected probe battle/player-2 terminal screenshots, final RTT80 player-2 battle, disconnect/player-1 and mismatch/player-2 terminal screenshots. Local player and selected side agree; running status, configured delay, confirmed ticks, session-limit and error/recovery text are legible. The active battlefield has no central terminal modal. Persistent visual shortcomings are overbright walker surfaces and selection rings obscuring form, dense straight queues at the choke, blockout terrain and limited contextual order feedback. Static screenshots do not prove motion/deformation, responsiveness, path quality or balance.
+
+Read artifacts/packaged-client-offline-regression.json and inspected its 1920x1080 terminal screenshot. Offline input/selection/combat/stop-without-drift/restart checks pass, preserving hash b559cd93ea152fc0 at 400 ticks. Frame p99 is 17.243 ms; bridge advance p99 is 0.065 ms. The static allocator field is zero and cannot substantiate memory use. The existing defeat text and production art debt remain.
+
+Accept the bounded packaged loopback integration and preserved offline regression. Completion is not justified: physical LAN/Internet, actual human input, repeated phase/random input studies, UI-driven rematch, packaged final-state desync, complete economy/technology/AI matches, 30-minute soak, required any-angle crowd routing, representative performance, production assets/audio/UI and independent shipping review remain open. This review does not authorize COMPLETE.md.
+
+## Longer combat outcome supplement
+
+Independently inspected artifacts/client-network-combat-2026-09-07/summary.json, both clean peer reports, both terminal PNGs, all four 1,000-line Debug/Release replay traces, ten repeated clean replay fingerprints and current package fingerprints. The run completed at 2026-09-07 12:50:02 America/Los_Angeles. Both actual rendered peers reach and confirm 1,000 ticks with winner=1 and matching replayed states. Player 1 (zero-based player 0) visibly receives SIGNAL LOST and Player 2 visibly receives SECTOR SECURED; both show terminal confirmation and the offline-return instruction. This closes the previously unobserved local-player victory/defeat presentation for a longer network skirmish. It is still a three-command-per-player, twelve-unit combat fixture, not a complete economy/AI match or soak. The actual network-terminal R InputEvent transition to offline was not exercised; the bridge reset and existing offline R path were tested separately. Verdict and remaining gates above are unchanged.

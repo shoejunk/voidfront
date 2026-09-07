@@ -41,13 +41,50 @@ var early_capture_done := false
 var material_cache: Dictionary = {}
 var team_material_cache: Dictionary = {}
 var last_frame_usec := 0
+var network := false
+var network_smoke := false
+var local_player := 0
+var local_port := 39000
+var remote_port := 39001
+var session_id := 1
+var input_delay := 2
+var network_state: Dictionary = {}
+var option_error := ""
+var network_notice := ""
+var network_inputs: Array[Dictionary] = []
+var feedback_samples: Array[Dictionary] = []
+var rendered_snapshots: Array[Dictionary] = []
+var presented_tick := -1
+var event_usec := 0
+var network_finish_requested := false
+var status_history: Array[Dictionary] = []
+var own_selection_passed := false
+var pending_execution_display: Array[Dictionary] = []
+var execution_display_samples: Array[Dictionary] = []
 
 func _ready() -> void:
+	var ticks_specified := false
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--smoke": smoke = true
+		elif argument == "--network": network = true
+		elif argument == "--network-smoke":
+			network = true
+			network_smoke = true
 		elif argument.begins_with("--capture="): capture_path = argument.trim_prefix("--capture=")
 		elif argument.begins_with("--report="): report_path = argument.trim_prefix("--report=")
-		elif argument.begins_with("--ticks="): finish_tick = int(argument.trim_prefix("--ticks="))
+		elif argument.begins_with("--ticks="):
+			finish_tick = _integer_option(argument, 1, 10000000)
+			ticks_specified = true
+		elif argument.begins_with("--player="): local_player = _integer_option(argument, 0, 1)
+		elif argument.begins_with("--port="): local_port = _integer_option(argument, 1, 65535)
+		elif argument.begins_with("--remote-port="): remote_port = _integer_option(argument, 1, 65535)
+		elif argument.begins_with("--session="): session_id = _integer_option(argument, 1, 2147483647)
+		elif argument.begins_with("--delay="): input_delay = _integer_option(argument, 1, 16)
+		else: option_error = "Unknown option: " + argument
+	if network and not ticks_specified: finish_tick = 400 if network_smoke else 36000
+	if network and local_port == remote_port: option_error = "Local and remote ports must differ."
+	if network and smoke: option_error = "Choose --smoke or --network-smoke."
+	if network_smoke and finish_tick < 80: option_error = "Network smoke needs at least 80 ticks."
 	bridge = ClassDB.instantiate("VoidfrontBridge")
 	if bridge == null:
 		push_error("Required C++ simulation extension failed to load")
@@ -61,6 +98,18 @@ func _ready() -> void:
 	canvas.add_child(hud)
 	_reset()
 	print("VOIDFRONT_RUNTIME extension=ready renderer=", RenderingServer.get_video_adapter_name())
+	if not option_error.is_empty():
+		push_error(option_error)
+		if smoke or network_smoke:
+			completed = true
+			_finish_network_smoke.call_deferred()
+
+func _integer_option(argument: String, minimum: int, maximum: int) -> int:
+	var value := argument.get_slice("=", 1)
+	if not value.is_valid_int() or int(value) < minimum or int(value) > maximum:
+		option_error = "Invalid option %s (expected %d..%d)" % [argument, minimum, maximum]
+		return minimum
+	return int(value)
 
 func _material(color: Color, metallic: float = 0.0, emission: bool = false) -> StandardMaterial3D:
 	var key := "%s/%s/%s" % [color.to_html(), metallic, emission]
@@ -166,10 +215,26 @@ func _setup_world() -> void:
 	add_child(order_mark)
 
 func _reset() -> void:
+	# A peer must never reset the authoritative shared match unilaterally.
+	if network and not current.is_empty():
+		if option_error.is_empty() and str(network_state.get("state", "")) not in ["complete", "error"]:
+			network_notice = "Shared match active. Restart is available after it ends."
+			return
+		bridge.network_cancel()
+		network = false
+		local_player = 0
+		network_notice = ""
+		option_error = ""
+	elif not current.is_empty() and not option_error.is_empty():
+		option_error = ""
 	for entry in actors.values(): entry.root.queue_free()
 	actors.clear()
 	selected.clear()
 	bridge.reset(1, true)
+	if network and option_error.is_empty():
+		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick):
+			network_notice = "Network session could not start."
+		_update_network_status()
 	current = bridge.snapshot()
 	previous = current.duplicate(true)
 	initial_hash = current.hash
@@ -240,22 +305,42 @@ func _subdue_corpse(node: Node) -> void:
 
 func _process(delta: float) -> void:
 	if current.is_empty() or completed: return
-	if smoke:
+	if not option_error.is_empty(): return
+	if smoke or network_smoke:
 		var now := Time.get_ticks_usec()
 		if last_frame_usec != 0: frame_times.append((now - last_frame_usec) / 1000.0)
 		last_frame_usec = now
-	accumulator += delta
-	var ticks := 0
-	while accumulator >= STEP and ticks < 8:
-		previous = current
+	if network:
 		var start := Time.get_ticks_usec()
-		bridge.advance()
-		if smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
-		current = bridge.snapshot()
-		accumulator -= STEP
-		ticks += 1
-		if smoke: _smoke_tick()
+		var advanced: bool = bridge.network_poll(start)
+		if network_smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
+		_update_network_status()
+		if advanced:
+			previous = current
+			current = bridge.snapshot()
+			accumulator = 0
+			if network_smoke:
+				for execution in network_state.get("executed_inputs", []): pending_execution_display.append(execution)
+		else: accumulator = minf(accumulator + delta, STEP)
+		if network_smoke and network_state.get("ready", false) and str(network_state.get("state", "")) in ["running", "stalled"]:
+			_network_smoke_tick()
+	else:
+		accumulator += delta
+		var ticks := 0
+		while accumulator >= STEP and ticks < 8:
+			previous = current
+			var start := Time.get_ticks_usec()
+			bridge.advance()
+			if smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
+			current = bridge.snapshot()
+			accumulator -= STEP
+			ticks += 1
+			if smoke: _smoke_tick()
 	_present(clampf(accumulator / STEP, 0, 1), delta)
+	# The first positive interpolation includes the new authoritative state.
+	if network_smoke and accumulator > 0 and current.tick != presented_tick:
+		presented_tick = current.tick
+		_record_network_frame.call_deferred(int(current.tick))
 	var camera_axis := Vector2.ZERO
 	if Input.is_physical_key_pressed(KEY_UP): camera_axis.y -= 1
 	if Input.is_physical_key_pressed(KEY_DOWN): camera_axis.y += 1
@@ -271,6 +356,31 @@ func _process(delta: float) -> void:
 	if smoke and current.tick >= finish_tick and not completed:
 		completed = true
 		_finish_smoke.call_deferred()
+	if network_smoke and str(network_state.get("state", "")) in ["complete", "error"] and not network_finish_requested:
+		network_finish_requested = true
+		_finish_network_smoke.call_deferred()
+
+func _update_network_status() -> void:
+	network_state = bridge.network_status()
+	var state := str(network_state.get("state", "error"))
+	if status_history.is_empty() or status_history[-1].state != state:
+		status_history.append({"state": state, "tick": network_state.get("tick", 0), "usec": Time.get_ticks_usec(), "ready": network_state.get("ready", false), "error": network_state.get("error", "")})
+		if not network_smoke and status_history.size() > 64: status_history.pop_front()
+		print("VOIDFRONT_NETWORK player=", local_player, " state=", state, " tick=", network_state.get("tick", 0), " error=", network_state.get("error", ""))
+
+func _record_network_frame(tick: int) -> void:
+	await RenderingServer.frame_post_draw
+	var now := Time.get_ticks_usec()
+	rendered_snapshots.append({"tick": tick, "rendered_usec": now})
+	var remaining: Array[Dictionary] = []
+	for execution in pending_execution_display:
+		if int(execution.execution_tick) < tick:
+			var sample: Dictionary = execution.duplicate()
+			sample["displayed_usec"] = now
+			sample["display_tick"] = tick
+			execution_display_samples.append(sample)
+		else: remaining.append(execution)
+	pending_execution_display = remaining
 
 func _present(alpha: float, delta: float) -> void:
 	var old_units := {}
@@ -330,19 +440,31 @@ func _world_at(point: Vector2) -> Vector3:
 	if absf(direction.y) < 0.001: return Vector3(-1, 0, -1)
 	return origin + direction * (-origin.y / direction.y)
 
+func _input(event: InputEvent) -> void:
+	event.set_meta("voidfront_input_usec", Time.get_ticks_usec())
+
 func _unhandled_input(event: InputEvent) -> void:
+	event_usec = int(event.get_meta("voidfront_input_usec", Time.get_ticks_usec()))
 	if current.is_empty(): return
+	if event is InputEventKey and event.pressed and event.physical_keycode == KEY_R:
+		_reset()
+		return
+	if not option_error.is_empty(): return
+	if network and (not network_state.get("ready", false) or str(network_state.get("state", "")) not in ["running", "stalled"]): return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_F2:
 				selected.clear()
 				for unit in current.units:
-					if unit.player == 0 and unit.hp > 0: selected.append(unit.id)
+					if unit.player == local_player and unit.hp > 0: selected.append(unit.id)
+				if network_smoke:
+					own_selection_passed = not selected.is_empty()
+					for unit in current.units:
+						if unit.id in selected and unit.player != local_player: own_selection_passed = false
 			KEY_A: attack_pending = true
 			KEY_ESCAPE: attack_pending = false
 			KEY_S: _issue(0, Vector3(0, 0, 0))
 			KEY_H: _issue(3, Vector3(0, 0, 0))
-			KEY_R: _reset()
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed: camera.size = maxf(14, camera.size - 1.5)
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed: camera.size = minf(36, camera.size + 1.5)
@@ -370,7 +492,7 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 	var nearest := -1
 	var distance := 32.0
 	for unit in current.units:
-		if unit.player != 0 or unit.hp <= 0: continue
+		if unit.player != local_player or unit.hp <= 0: continue
 		var at: Vector2 = camera.unproject_position(actors[unit.id].root.position + Vector3(0, 0.5, 0))
 		if from.distance_to(to) > 7:
 			if bounds.has_point(at) and unit.id not in selected: selected.append(unit.id)
@@ -389,11 +511,96 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 func _issue(order: int, at: Vector3) -> void:
 	if selected.is_empty(): return
 	if at.x < 0 or at.x >= 32 or at.z < 0 or at.z >= 24: return
-	if bridge.issue(order, PackedInt32Array(selected), int(at.x * SCALE), int(at.z * SCALE)):
+	var accepted := false
+	var sequence := -1
+	if network:
+		if not network_state.get("ready", false): return
+		sequence = bridge.network_issue(order, PackedInt32Array(selected), int(at.x * SCALE), int(at.z * SCALE), event_usec)
+		accepted = sequence >= 0
+		if accepted and network_smoke:
+			network_inputs.append({"sequence": sequence, "input_usec": event_usec, "order": order, "units": selected.duplicate(), "x": int(at.x * SCALE), "z": int(at.z * SCALE), "event_tick": current.tick})
+		elif not accepted: network_notice = "Order rejected: " + str(bridge.network_status().get("error", "session unavailable"))
+	else:
+		accepted = bridge.issue(order, PackedInt32Array(selected), int(at.x * SCALE), int(at.z * SCALE))
+	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
 		order_mark.position = Vector3(at.x, 0.05, at.z)
 		order_age = 0
+		order_mark.visible = true
+		if network:
+			network_notice = ""
+			if network_smoke: _record_feedback.call_deferred(sequence, event_usec)
 		if smoke: print("VOIDFRONT_INPUT order=", order, " count=", selected.size(), " tick=", current.tick)
+
+func _record_feedback(sequence: int, input_usec: int) -> void:
+	await RenderingServer.frame_post_draw
+	feedback_samples.append({"sequence": sequence, "input_usec": input_usec, "feedback_rendered_usec": Time.get_ticks_usec()})
+
+func _network_smoke_tick() -> void:
+	if current.tick >= 3 and smoke_stage == 0:
+		_smoke_key(KEY_F2)
+		smoke_stage = 1
+	elif current.tick >= 5 and smoke_stage == 1:
+		_smoke_mouse(MOUSE_BUTTON_RIGHT, camera.unproject_position(Vector3(11 if local_player == 0 else 21, 0, 12)), true)
+		smoke_stage = 2
+	elif current.tick >= 45 and smoke_stage == 2:
+		_smoke_key(KEY_S)
+		smoke_stage = 3
+	elif current.tick >= 55 and smoke_stage == 3:
+		_smoke_key(KEY_A)
+		smoke_stage = 4
+	elif current.tick >= 56 and smoke_stage == 4:
+		_smoke_mouse(MOUSE_BUTTON_LEFT, camera.unproject_position(Vector3(26 if local_player == 0 else 6, 0, 12)), true)
+		smoke_stage = 5
+	if current.tick >= 150 and not early_capture_done and not capture_path.is_empty():
+		early_capture_done = true
+		_capture_battle.call_deferred()
+	for unit in current.units:
+		if unit.player == local_player and Vector2(unit.x, unit.z).distance_to(initial_positions[unit.id]) > SCALE: smoke_moves += 1
+		if unit.hp < max_hp: smoke_damage = true
+
+func _finish_network_smoke() -> void:
+	# Allow the final snapshot's interpolation and post-draw instrumentation to settle.
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	completed = true
+	var report_data: Dictionary = bridge.network_report() if network else {}
+	var replay: PackedByteArray = report_data.get("replay", PackedByteArray())
+	report_data.erase("replay")
+	var ok: bool = option_error.is_empty() and str(report_data.get("state", "")) == "complete" and own_selection_passed and smoke_stage == 5 and network_inputs.size() == 3 and feedback_samples.size() == 3 and execution_display_samples.size() == 3 and smoke_moves > 0 and 0 in accepted_orders and 1 in accepted_orders and 2 in accepted_orders
+	var report := {"ok": ok, "player": local_player, "network": report_data, "status_history": status_history, "option_error": option_error, "selection_own_player": own_selection_passed, "accepted_inputs": network_inputs, "feedback_samples": feedback_samples, "execution_display_samples": execution_display_samples, "rendered_snapshots": rendered_snapshots, "accepted_orders": accepted_orders, "input_stage": smoke_stage, "moved_samples": smoke_moves, "combat_damage": smoke_damage, "winner": current.get("winner", -1), "renderer": RenderingServer.get_video_adapter_name(), "frame_interval_ms_p95": _percentile(frame_times, 0.95), "frame_interval_ms_p99": _percentile(frame_times, 0.99), "network_poll_ms_p95": _percentile(sim_times, 0.95), "network_poll_ms_p99": _percentile(sim_times, 0.99), "note": "Programmatic InputEvent path on loopback. Post-draw measures submitted viewport rendering, not photons, human responsiveness, or a complete RTS match. Snapshot tick N first includes canonical execution tick N-1; displayed_usec includes first positive interpolation."}
+	if not report_path.is_empty() and not replay.is_empty():
+		var replay_path := report_path.get_basename() + ".vfr"
+		var replay_file := FileAccess.open(replay_path, FileAccess.WRITE)
+		if replay_file:
+			replay_file.store_buffer(replay)
+			replay_file.close()
+			report["replay_path"] = replay_path
+		else:
+			ok = false
+			report["replay_error"] = FileAccess.get_open_error()
+	elif replay.is_empty():
+		ok = false
+		report["replay_error"] = "No applied-prefix replay available."
+	if not capture_path.is_empty():
+		var capture_error := get_viewport().get_texture().get_image().save_png(capture_path)
+		if capture_error != OK:
+			ok = false
+			report["capture_error"] = capture_error
+	report["ok"] = ok
+	if not report_path.is_empty():
+		var report_file := FileAccess.open(report_path, FileAccess.WRITE)
+		if report_file:
+			report_file.store_string(JSON.stringify(report, "\t"))
+			report_file.close()
+		else:
+			ok = false
+			report["ok"] = false
+			report["report_error"] = FileAccess.get_open_error()
+	print("VOIDFRONT_NETWORK_SMOKE ", JSON.stringify(report))
+	get_tree().quit(0 if ok else 3)
 
 func _smoke_key(key: Key) -> void:
 	var event := InputEventKey.new()

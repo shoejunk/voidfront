@@ -33,7 +33,7 @@ if(VOIDFRONT_BUILD_CLIENT)
   set(GODOTCPP_DISABLE_EXCEPTIONS OFF CACHE BOOL "Use standard C++ exception support")
   add_subdirectory(third_party/godot-cpp)
   add_library(voidfront_bridge SHARED extension/bridge.cpp)
-  target_link_libraries(voidfront_bridge PRIVATE voidfront_sim godot-cpp)
+  target_link_libraries(voidfront_bridge PRIVATE voidfront_session godot-cpp)
   target_include_directories(voidfront_bridge PRIVATE sim)
   set_target_properties(voidfront_bridge PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/client/bin/$<CONFIG>"
