@@ -30,7 +30,7 @@ foreach ($length in @(0, 3, 20, 23, 24, ($golden.Length - 1))) {
 }
 foreach ($mutation in @(
     @{ Name='container-version'; Offset=3; Value=2 },
-    @{ Name='protocol-version'; Offset=4; Value=2 },
+    @{ Name='protocol-version'; Offset=4; Value=999 },
     @{ Name='zero-team-size'; Offset=12; Value=0 },
     @{ Name='zero-ticks'; Offset=16; Value=0 },
     @{ Name='frame-limit'; Offset=20; Value=100001 },

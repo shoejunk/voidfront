@@ -1,5 +1,6 @@
 #include "voidfront_sim.hpp"
 #include <cstdlib>
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 
@@ -72,6 +73,60 @@ void routing_and_stop() {
     for (int i = 0; i < 400; ++i) s.step();
     check(!s.blocked(s.units()[0].x/kScale,s.units()[0].z/kScale), "blocked goal enters terrain");
 }
+void any_angle_precision() {
+    const nav::World world({256,256,31*256,23*256},
+        {{15*256,3*256,17*256,9*256},{15*256,16*256,17*256,21*256}},64);
+    for (const auto goal : {nav::Point{3101,1109},nav::Point{3151,4473},nav::Point{6221,1173}}) {
+        Sim s(1,1);
+        Command c{0,1,0,Order::Move,{1},goal.x,goal.z};
+        check(s.submit(c), "precise movement rejected");
+        bool oblique=false;
+        for (int tick=0;tick<600;++tick) {
+            const nav::Point before{s.units()[0].x,s.units()[0].z};
+            s.step();
+            const nav::Point after{s.units()[0].x,s.units()[0].z};
+            const int64_t dx=after.x-before.x,dz=after.z-before.z;
+            check(world.clear(before,after), "movement swept terrain clearance");
+            check(dx*dx+dz*dz<=32*32, "diagonal movement exceeded speed");
+            if (dx && dz && std::abs(dx)!=std::abs(dz)) oblique=true;
+        }
+        check(oblique,"authoritative movement remained grid aligned");
+        check(s.units()[0].x==goal.x && s.units()[0].z==goal.z,"off-center destination not reached exactly");
+        check(s.units()[0].order==Order::Stop,"arrived move did not stop");
+    }
+    // Independent critic's valid tangent route: one-sided truncation used to
+    // stick at (4407,2390) because the next integer sample penetrated the ridge.
+    Sim tangent(1,1);
+    for (const auto goal : {nav::Point{3968,3920},nav::Point{4570,1835}}) {
+        check(tangent.submit(Command{tangent.tick(),tangent.tick()+1,0,Order::Move,{1},goal.x,goal.z}),"tangent order rejected");
+        for(int i=0;i<400;++i) {
+            const nav::Point before{tangent.units()[0].x,tangent.units()[0].z};
+            tangent.step();
+            check(world.clear(before,{tangent.units()[0].x,tangent.units()[0].z}),"tangent swept clearance violated");
+        }
+        check(tangent.units()[0].x==goal.x && tangent.units()[0].z==goal.z,"tangent lattice rounding permanently stalled");
+    }
+    // Retarget in mid-segment; the obsolete waypoint must not retain authority.
+    Sim s(1,1);
+    check(s.submit(Command{0,1,0,Order::Move,{1},3101,1109}),"first heading rejected");
+    for(int i=0;i<9;++i) s.step();
+    const auto before=s.units()[0];
+    check(s.submit(Command{s.tick(),2,0,Order::Move,{1},450,4001}),"retarget rejected");
+    s.step();
+    check(s.units()[0].x<before.x && s.units()[0].z>before.z,"retarget followed stale waypoint");
+}
+void attack_move_resumes_after_combat() {
+    Sim s(1,1);
+    check(s.submit(Command{0,1,0,Order::AttackMove,{1},7552,2432}),"resume attack-move rejected");
+    for(int i=0;i<250 && s.units()[0].x<6752;++i) s.step();
+    check(s.units()[0].x==6752,"resume fixture did not reach engagement staging point");
+    // Enemy steps into range while executing Move, giving the attacker the
+    // first shot so it survives and can exercise route resumption after combat.
+    check(s.submit(Command{s.tick(),1,1,Order::Move,{2},7488,2432}),"resume enemy staging rejected");
+    for(int i=0;i<350;++i) s.step();
+    check(s.units()[1].hp==0 && s.units()[0].hp>0,"resume fixture did not leave attacker alive");
+    check(s.units()[0].x==7552 && s.units()[0].z==2432,"attack-move lost route after combat pause");
+}
 void replay_combat_and_crowds() {
     Sim a(42), b(42);
     std::array<uint32_t,2> seq{};
@@ -114,7 +169,7 @@ void late_receipt_after_death() {
 }
 }
 int main() {
-    try { wire_validation(); command_validation(); routing_and_stop(); replay_combat_and_crowds(); late_receipt_after_death(); }
+    try { wire_validation(); command_validation(); routing_and_stop(); any_angle_precision(); attack_move_resumes_after_combat(); replay_combat_and_crowds(); late_receipt_after_death(); }
     catch(const std::exception& e) { std::cerr << "FAIL: " << e.what() << '\n'; return EXIT_FAILURE; }
     std::cout << "PASS: protocol, ownership, ordering, terrain, stop, crowds, AI combat, replay\n";
 }

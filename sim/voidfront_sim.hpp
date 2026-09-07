@@ -1,4 +1,5 @@
 #pragma once
+#include "navigation.hpp"
 #include <array>
 #include <cstdint>
 #include <span>
@@ -7,7 +8,7 @@
 namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
-inline constexpr uint32_t kProtocolVersion = 1;
+inline constexpr uint32_t kProtocolVersion = 2;
 enum class Order : uint8_t { Stop, Move, AttackMove, Hold };
 struct Command {
     uint32_t tick = 0, sequence = 0;
@@ -24,8 +25,10 @@ struct Unit {
     uint32_t target_id = 0;
     uint16_t cooldown = 0;
     bool moving = false;
-    // Goal and reserved destination are authoritative, included in hashes.
+    // Goal, current waypoint and remaining route are authoritative, included in hashes.
     int32_t goal_x = 0, goal_z = 0, next_x = 0, next_z = 0;
+    std::vector<nav::Point> path;
+    nav::Point route_goal{};
 };
 class Sim {
 public:
@@ -46,7 +49,7 @@ private:
     std::vector<Unit> units_;
     std::vector<Command> pending_;
     void apply(const Command& command);
-    int route(const Unit& unit, int goal) const;
+    nav::World navigation_;
 };
 std::vector<uint8_t> serialize_command(const Command& command);
 bool deserialize_command(std::span<const uint8_t> bytes, Command& command);
