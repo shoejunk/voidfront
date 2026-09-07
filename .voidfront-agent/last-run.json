@@ -1,16 +1,19 @@
 {
+  "run": "2026-09-07-nonblocking-session",
+  "checkpoint_utc": "2026-09-07T15:19:09.548802+00:00",
   "branch": "dev",
-  "verification": "C:/dev/voidfront/artifacts/pipeline-build-fixed-2026-09-06.log",
-  "readiness_build": "C:/dev/voidfront/artifacts/pipeline-readiness-build-2026-09-06.log",
+  "source_commit": "6b71a69d32273de7591d94a3ccf879b4ce6b1727",
   "remote_backup": true,
+  "state": "Reviewed nonblocking headless session; 22 separate-process cases pass; Godot multiplayer and shipping gates remain open",
+  "verification": "C:/dev/voidfront/artifacts/session-build-2026-09-07.log",
+  "network_report": "C:/dev/voidfront/artifacts/session-verified-2026-09-07/summary.json",
+  "baseline_report": "C:/dev/voidfront/artifacts/delay-baseline-2026-09-07/summary.json",
+  "review": "C:/dev/voidfront/.voidfront-agent/review-session-2026-09-07.md",
+  "runtime_rerun": false,
+  "runtime_evidence_date": "2026-09-06",
   "runtime_report": "C:/dev/voidfront/artifacts/packaged-pipeline-regression.json",
-  "state": "Reviewed paced headless lockstep and local regression; 160ms pacing, real client networking and shipping gates remain open",
+  "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
   "package_pck_sha256": "4F0C729801EE6D86ABD9B1C52A56DDF6F6D9AEEEDC0058EB730778E633E17379",
   "package_bridge_sha256": "BA0B56C92F0C0BDF94BD97A9642F8ECFF3B7268D6B14C161CCA9F6140BBE5D9F",
-  "network_report": "C:/dev/voidfront/artifacts/pipeline-ready-verified-2026-09-06/summary.json",
-  "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
-  "run": "2026-09-06-pipelined-readiness",
-  "next": "Test a larger agreed input delay at 160 ms RTT against a baseline with the same delay while preserving 80 ms response; extract a nonblocking session for two packaged clients; retain the required any-angle movement milestone",
-  "checkpoint_utc": "2026-09-06T19:16:25.7673958Z",
-  "source_commit": "e86b3753760fae4678d8795467285dfbeca80acd"
+  "next": "Attach Session to two packaged Godot clients with explicit lifecycle/delay UI and original input timestamps; retain offline play, protocol/replay tests and required any-angle movement milestone"
 }
