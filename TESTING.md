@@ -1,5 +1,29 @@
 # Verification ledger
 
+## 2026-09-11 spatial broadphase preservation
+
+`./tools/verify.ps1` passes integrated MSVC Debug/Release and 5/5 CTest per
+configuration, 15 malformed replay and seven output-alias cases/configuration,
+2,000-tick cross-configuration equality and ten repeat playbacks. Pinned engine,
+templates and godot-cpp checks pass. Log: `artifacts/broadphase-build-2026-09-12.log`.
+After adding exact boundary cases, the Debug spatial test was rebuilt/retested
+(`artifacts/broadphase-boundary-debug-2026-09-12.log`); Release included these.
+Spatial regressions exhaustively compare candidate coverage over 100 seeded
+500-unit layouts, including current target positions and conservative sweeps.
+Explicit cases cover map/query extremes, reversed insertion IDs, output clearing,
+collision offsets +/-191/192 and acquisition offsets +/-1568.
+
+Before editing, ran the Release headless executable for 2,000 ticks with
+`--units-per-team 100` and `250`, retaining full traces/logs/source in
+`artifacts/crowd-baseline-2026-09-12`. After builds/tests ended, repeated both
+commands into `artifacts/broadphase-2026-09-12`. `tools/compare_traces.py` passes
+all 2,000 hashes in each comparison. Baseline versus post-change p95/p99:
+200 units 2.440/2.933 -> 0.965/1.532 ms; 500 units 15.259/16.373 -> 3.898/5.240 ms.
+These are whole-harness active ticks on the 32x24 prototype map/development host,
+including AI/command work and excluding trace hash/write. Both scenarios remain
+ongoing at tick 2,000. No representative 128x128, crowd-progress, new packaged
+runtime or reference-hardware acceptance follows from this isolated optimization.
+
 Build and test instructions and measured results are added as working increments land. All commands run from C:\dev\voidfront in PowerShell. A compilation result proves only compilation. Headless simulation tests do not prove networking or visual quality. A screenshot does not prove input response or stable frame time.
 
 Required validation: MSVC Debug/Release sim regressions and cross-config traces; Godot version/import check; C++ extension in packaged build; Blender skeleton/clips and actual running animation; screenshots inspected at game distance; independent deterministic and visual/playability critics. Future milestones add separate-process network impairment, complete AI matches and representative battle profiling.

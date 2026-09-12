@@ -1,4 +1,5 @@
 #include "voidfront_sim.hpp"
+#include "spatial.hpp"
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
@@ -117,7 +118,12 @@ void Sim::step() {
     pending_.erase(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(applied));
     std::vector<int32_t> damage(units_.size(), 0);
     std::vector<nav::Point> tick_start;
-    for (const auto& u : units_) tick_start.push_back({u.x,u.z});
+    SpatialIndex spatial(kMapWidth,kMapHeight,kScale);
+    for (const auto& u : units_) {
+        tick_start.push_back({u.x,u.z});
+        if (u.hp>0) spatial.insert(u.id,{u.x,u.z});
+    }
+    std::vector<uint32_t> nearby;
     constexpr int64_t attack_range2 = int64_t(3 * kScale) * (3 * kScale);
     constexpr int64_t acquire_range2 = int64_t(6 * kScale) * (6 * kScale);
     for (auto& u : units_) {
@@ -127,7 +133,10 @@ void Sim::step() {
         const Unit* target = nullptr;
         int64_t nearest = acquire_range2 + 1;
         if (u.order != Order::Move) {
-            for (const auto& other : units_) {
+            constexpr int reach=6*kScale+movement_speed;
+            spatial.query({u.x-reach,u.z-reach,u.x+reach,u.z+reach},nearby);
+            for (const auto id : nearby) {
+                const auto& other=units_[id-1];
                 if (other.hp <= 0 || other.player == u.player) continue;
                 const auto d = distance2(u, other);
                 if (d < nearest) { nearest = d; target = &other; }
@@ -177,9 +186,16 @@ void Sim::step() {
                 return ea!=eb ? ea<eb : std::tie(a.x,a.z)<std::tie(b.x,b.z);
             });
         }
+        // Either participant can move by movement_speed in this tick. Query
+        // tick-start centers conservatively for every candidate and other sweep.
+        constexpr int reach=2*unit_radius+2*movement_speed;
+        spatial.query({u.x-reach,u.z-reach,u.x+reach,u.z+reach},nearby);
         for (const auto candidate : candidates) {
             bool free = navigation_.clear(here,candidate);
-            for (const auto& other : units_) if (free && other.hp>0 && other.id!=u.id) {
+            for (const auto id : nearby) {
+                if (!free) break;
+                const auto& other=units_[id-1];
+                if (other.id==u.id) continue;
                 const auto old=tick_start[other.id-1];
                 // Protect the entire other-unit sweep, including presentation interpolation.
                 const nav::Rect occupied{std::min(old.x,other.x)-2*unit_radius,

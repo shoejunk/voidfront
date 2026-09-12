@@ -7,7 +7,7 @@ add_library(voidfront_sim STATIC voidfront_sim.cpp lockstep.cpp navigation.cpp)
 # Content compatibility changes automatically when authoritative source changes.
 # Normalize line endings so a checkout's CRLF policy cannot change the identity.
 set(content_source "Voidfront authoritative content v1\n")
-foreach(source IN ITEMS voidfront_sim.hpp voidfront_sim.cpp lockstep.hpp lockstep.cpp navigation.hpp navigation.cpp)
+foreach(source IN ITEMS voidfront_sim.hpp voidfront_sim.cpp lockstep.hpp lockstep.cpp navigation.hpp navigation.cpp spatial.hpp)
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
   file(READ "${CMAKE_CURRENT_SOURCE_DIR}/${source}" content)
   string(REPLACE "\r\n" "\n" content "${content}")
@@ -36,3 +36,7 @@ target_link_libraries(voidfront_navigation_tests PRIVATE voidfront_sim)
 add_test(NAME voidfront_navigation_tests COMMAND voidfront_navigation_tests)
 add_executable(voidfront_navigation_probe navigation_probe.cpp)
 target_link_libraries(voidfront_navigation_probe PRIVATE voidfront_sim)
+
+add_executable(voidfront_spatial_tests spatial_tests.cpp)
+target_link_libraries(voidfront_spatial_tests PRIVATE voidfront_sim)
+add_test(NAME voidfront_spatial_tests COMMAND voidfront_spatial_tests)

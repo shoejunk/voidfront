@@ -1,5 +1,22 @@
 # Voidfront progress
 
+## 2026-09-11 - continued roadmap: spatial broadphase
+
+Baseline: clean dev ed38877, STOP and run marker absent. Exclusively acquired
+this task's run marker. Preserved the existing game, pinned tools and all gates.
+Reproduced the 500-unit performance defect before editing: current small-map
+2,000-tick p95/p99 15.259/16.373 ms (200 units 2.440/2.933 ms).
+
+Replaced full collision/target scans with a tick-start spatial index, conservative
+sweep/query expansion and sorted stable IDs. Integrated Debug/Release 5/5 CTest,
+malformed replay/output-alias regressions, cross-build traces and ten repeats
+pass. The amended boundary test was additionally rebuilt and passed in Debug.
+Both 200/500-unit 2,000-tick traces match the unmodified baseline byte for byte.
+Isolated post-change p95/p99: 0.965/1.532 ms and 3.898/5.240 ms respectively.
+This is a measured optimization on the existing 32x24 map, not representative
+128x128, dynamic progress, packaged gameplay or shipping acceptance. Both large
+battles remain ongoing at tick 2,000. Next: blocker and opposing-swap progress.
+
 ## 2026-09-03 19:39 America/Los_Angeles â€” first development run
 
 Baseline: empty checkout, no existing implementation, STOP or completion marker. Initialized local Git on dev. No development remote is configured. Verified Godot 4.7.2.stable.official.ed1daf0bf, matching template directory, MSVC VS2022 Professional and Blender 5.1.2. Hardware queries via CIM were denied; CPU registry reports Ryzen 7 3700X, GPU/RAM remain unverified.
