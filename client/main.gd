@@ -21,6 +21,8 @@ var order_mark: MeshInstance3D
 var order_age := 99.0
 var smoke := false
 var movement_smoke := false
+var crowd_smoke := false
+var crowd_fixture: RefCounted
 var movement_stage := 0
 var movement_inputs: Array[Dictionary] = []
 var movement_samples: Array[Dictionary] = []
@@ -87,6 +89,7 @@ func _ready() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--smoke": smoke = true
 		elif argument == "--movement-smoke": movement_smoke = true
+		elif argument == "--crowd-smoke": crowd_smoke = true
 		elif argument == "--network": network = true
 		elif argument == "--network-smoke":
 			network = true
@@ -105,6 +108,7 @@ func _ready() -> void:
 	if movement_smoke and not ticks_specified: finish_tick = 400
 	if movement_smoke and (smoke or network): option_error = "Movement smoke requires its own offline fixture."
 	if movement_smoke and finish_tick > 600: option_error = "Movement smoke is bounded to 600 ticks."
+	if crowd_smoke and (smoke or movement_smoke or network or finish_tick > 600): option_error = "Crowd smoke requires its own offline fixture of at most 600 ticks."
 	if network and not ticks_specified: finish_tick = 400 if network_smoke else 36000
 	if network and local_port == remote_port: option_error = "Local and remote ports must differ."
 	if network and smoke: option_error = "Choose --smoke or --network-smoke."
@@ -121,10 +125,14 @@ func _ready() -> void:
 	hud.game = self
 	canvas.add_child(hud)
 	_reset()
+	if crowd_smoke: crowd_fixture = preload("res://crowd_smoke.gd").new(self)
 	print("VOIDFRONT_RUNTIME extension=ready renderer=", RenderingServer.get_video_adapter_name())
 	if not option_error.is_empty():
 		push_error(option_error)
-		if movement_smoke:
+		if crowd_smoke:
+			completed = true
+			crowd_fixture.finish.call_deferred()
+		elif movement_smoke:
 			completed = true
 			_finish_movement_smoke.call_deferred()
 		elif smoke or network_smoke:
@@ -257,7 +265,7 @@ func _reset() -> void:
 	for entry in actors.values(): entry.root.queue_free()
 	actors.clear()
 	selected.clear()
-	bridge.reset(1, not movement_smoke)
+	bridge.reset(1, not (movement_smoke or crowd_smoke))
 	if network and option_error.is_empty():
 		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick):
 			network_notice = "Network session could not start."
@@ -333,7 +341,7 @@ func _subdue_corpse(node: Node) -> void:
 func _process(delta: float) -> void:
 	if current.is_empty() or completed: return
 	if not option_error.is_empty(): return
-	if smoke or network_smoke or movement_smoke:
+	if smoke or network_smoke or movement_smoke or crowd_smoke:
 		var now := Time.get_ticks_usec()
 		if last_frame_usec != 0 and (not movement_smoke or frame_times.size() < finish_tick * 12): frame_times.append((now - last_frame_usec) / 1000.0)
 		last_frame_usec = now
@@ -354,16 +362,17 @@ func _process(delta: float) -> void:
 	else:
 		accumulator += delta
 		var ticks := 0
-		while accumulator >= STEP and ticks < 8 and (not movement_smoke or current.tick < finish_tick):
+		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke) or current.tick < finish_tick):
 			previous = current
 			var start := Time.get_ticks_usec()
 			bridge.advance()
-			if smoke or movement_smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
+			if smoke or movement_smoke or crowd_smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
 			current = bridge.snapshot()
 			accumulator -= STEP
 			ticks += 1
 			if smoke: _smoke_tick()
 			if movement_smoke: _movement_smoke_tick()
+			if crowd_smoke: crowd_fixture.tick()
 	_present(clampf(accumulator / STEP, 0, 1), delta)
 	# The first positive interpolation includes the new authoritative state.
 	if network_smoke and accumulator > 0 and current.tick != presented_tick:
@@ -384,6 +393,9 @@ func _process(delta: float) -> void:
 	if movement_smoke and current.tick >= finish_tick and not completed:
 		completed = true
 		_finish_movement_smoke.call_deferred()
+	if crowd_smoke and current.tick >= finish_tick and not completed:
+		completed = true
+		crowd_fixture.finish.call_deferred()
 	if smoke and current.tick >= finish_tick and not completed:
 		completed = true
 		_finish_smoke.call_deferred()
@@ -558,6 +570,7 @@ func _issue(order: int, at: Vector3) -> void:
 	if movement_smoke:
 		movement_inputs.append({"label": movement_label, "accepted": accepted, "order": order, "units": selected.duplicate(), "x": int(at.x * SCALE), "z": int(at.z * SCALE), "event_tick": current.tick, "input_usec": event_usec})
 		if not accepted: movement_errors.append("Rejected input: " + movement_label)
+	if crowd_smoke: crowd_fixture.record_input(accepted, order, at)
 	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
 		order_mark.position = Vector3(at.x, 0.05, at.z)

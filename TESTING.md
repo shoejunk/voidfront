@@ -1,5 +1,127 @@
 # Verification ledger
 
+## 2026-09-11 local crowd detours
+
+### Final transport preservation
+
+`python tools/verify_network.py --ticks 1000 --jobs 1 --out artifacts/detour-network-2026-09-12`
+passes all 22 cases (21:12:29-21:20:46 America/Los_Angeles). Independent review
+checks 44 recordings, 316 applied local timing identities, 38 replayed nonempty
+traces, 20 repeated traces and four current fingerprints. Eight ordinary pairs
+confirm 1,000 ticks; mismatch, missing data/ACKs, desync, terminal loss and
+disconnect retain their required behavior. Delay2/4 trace SHA256:
+f047a902494e7e1ea2e7a2bf035b7fba6042ca50dba97eb591eb04be0423aa93 and
+a915503012ceb812d91f2236844b9fbc88a003d67d8b02d6babcecb8caa9da55.
+At 80 ms RTT with jitter/loss, generated-command p95 is101.391/101.8711 ms;
+rates19.98905/19.99997 Hz,226 actual random drops. Four-tick160 ms p95 is
+201.3565/202.6516 ms with rates19.99963/19.99987 Hz. Strict20 Hz remains unmet.
+
+The original combined exec session disappeared during the first rendered-client
+case; no owned processes or completion reports remained. Retained folder
+`artifacts/detour-client-network-2026-09-12` is inconclusive, not a passing run.
+A fresh `tools/verify_client_network.py` run at
+`artifacts/detour-client-network-retry-2026-09-12` passes all six cases
+(21:26:34-21:28:11 local). All 12 recordings, 28 applied inputs, 20 cross-build
+replay traces, ten repeats and five current fingerprints were independently
+verified. Four positive pairs confirm240 ticks, mismatch rejects0/0, and
+disconnect retains52/51-tick matching prefixes. At80 ms RTT event-to-execution
+p95 is133.881/134.063 ms; first render166.713/166.701 ms. At160 ms/delay4 these
+are233.902/233.827 ms and266.927/266.752 ms. Three synthetic inputs per player
+per profile; strict20 Hz, physical networking, human latency, complete economic
+matches and30-minute soak remain open. No build, capture or encoding overlapped
+the measured suites. Independent review is retained with the crowd review.
+
+The preserved pre-fix fixture (`artifacts/crowd-before-2026-09-12.{log,csv}`)
+fails stationary blocker, five-blocker chain, opposing swap and detour-Stop
+activation. Moving blockers and occupied-goal waiting already passed. The local
+maneuver implementation resolves all six. Independent review additionally
+reproduced pursuit invalidating avoidance every tick; the new moving-target
+fixture fails before the correction (`artifacts/crowd-attack-target-before.log`)
+and passes afterward. Pursuit retains local avoidance, while canonical new
+orders clear it. Abandoning or completing a maneuver refreshes its static route.
+The pursuit fixture proves activation and safety, not catching/killing its target.
+
+Final integrated `./tools/verify.ps1` passes Debug/Release 6/6 CTest each,
+malformed replay/output-alias regressions, 2,000-tick cross-build equality and ten
+repeats (`artifacts/detour-allocation-build-2026-09-12.log`). The late-receipt
+regression now selects a casualty from an independent canonical probe because
+movement changes can change the winning side; it still asserts that the actual
+subject is dead before late admission and compares early/late hashes through
+execution. Simulation compatibility 3 rejects older movement replays; VFC1 and
+lockstep transport protocol2 layouts are unchanged. Content identity updates
+automatically from authoritative sources.
+
+`python tools/verify_crowds.py --out artifacts/crowds-final-2026-09-12` passes
+seven fixtures x10/configuration, with identical full CSV ledgers and current
+executable fingerprints. The independent rational midpoint oracle checks every
+unit segment against terrain and every pair's relative interpolated motion;
+speed, unchanged blockers, exact arrivals, complete roster/ticks and Stop are
+asserted. Twelve evidence mutations reject, including speed-valid displacement
+and false arrival. Analytic corner-crossing and tangent controls validate the
+oracle. The C++ test explicitly compares the pre-Stop position with its first
+application tick. All observed moves remain <=32 coordinate units/tick.
+
+The unchanged static navigator passes 51 fixtures x10/configuration with zero
+observed route excess (`artifacts/detour-navigation-2026-09-12`). This suite
+predates the allocation-only rebuild; retained probe fingerprints are from that
+run, not the final binaries. Navigation source was unchanged by that refinement.
+
+### Allocation refinement and current-map cost
+
+Initial detour 200/500-unit diagnostics: active-tick p95/p99 1.153/1.305 ms and
+4.303/4.786 ms. The 500-unit p95 still failed the unchanged budget. Replaced
+per-bucket allocations with contiguous linked entries and reused candidate/query
+scratch buffers. Both complete 2,000-tick traces match before/after this refinement.
+Final isolated active-tick p95/p99: **200 units 0.924/1.097 ms; 500 units
+3.548/3.858 ms**. Logs/traces: `artifacts/detour-{,final-}{200,500}-2026-09-12.*`.
+The 200-unit skirmish reaches winner0 at tick1363; the 500-unit skirmish remains
+ongoing at tick2000. Whole-harness timing includes AI/command work and excludes
+trace hash/write. These are the 32x24 map and development host, not representative
+128x128/reference-hardware acceptance. Builds, capture and encoding were stopped
+before measurement; no target or sample filter changed.
+
+### Packaged crowd and preserved controls
+
+The package uses the verified Release bridge and pinned Godot4.7.2/templates.
+After the integrated build, the existing import/export commands were invoked
+directly through `tools/common.ps1`; log `artifacts/detour-package-final-2026-09-12.log`.
+The first helper import caught a missing GDScript type annotation; corrected
+before export. No runtime error remains except the previously documented root
+certificate-store diagnostic.
+
+`./tools/capture.ps1 -Packaged -Crowd -Ticks 400 -Name packaged-crowd-2026-09-12`
+passes real InputEvent selection, opposing swap, detour through a stationary
+chain, immediate Stop and resume. Independent
+`tools/verify_crowd_capture.py` checks all4,800 unit rows, all five canonical input
+attempts, every swept segment/pair, swap at tick32, nine stationary Stop ticks
+including the first application tick, and final exact chain arrival at tick113.
+Its eight corruptions reject. The independent critic found that comparing Stop
+only to its first post-application snapshot missed first-tick drift; the verifier
+now uses the event-tick position and rejects a deliberate +1 displacement across
+the whole Stop interval. Actual runtime evidence passes unchanged.
+
+Normal crowd report: `artifacts/packaged-crowd-verified-2026-09-12.json`;
+frame interval p95/p99 2.885/3.280 ms, bridge advance0.026/0.034 ms, resident peak
+247,181,312 bytes at1920x1080 with twelve walkers. These are software interval and
+bridge measurements, not full CPU frame or human/reference-hardware acceptance.
+Root and critic inspected all normal screenshots. Sideways movement and final
+position are visible, but overbright meshes/rings obscure close separation and
+Stop feedback still appears at map origin. No production visual approval.
+
+The `-Movie` crowd capture and independent verifier also pass all4,800 rows and
+eight mutations. Swap occurs at31 rather than32 because these are separately
+generated InputEvent streams; no equal-input/hash claim across recordings.
+`artifacts/packaged-crowd-2026-09-12.mp4` is1600x900,60fps,1,201frames,20.016667s.
+`artifacts/crowd-contact-2026-09-12.png` samples the first six seconds at2fps.
+Movie timing includes encoding and is excluded from performance evidence.
+
+Existing packaged movement and offline400tick controls/combat/restart tests pass:
+`artifacts/packaged-detour-movement-verified-2026-09-12.json` and
+`artifacts/packaged-detour-offline-2026-09-12.json`. Dedicated single-unit
+movement retains184 oblique steps, three exact arrivals, nine stationary Stop
+ticks and maximum integrated route excess0.018590%. No human input test or
+production animation/deformation approval is implied.
+
 ## 2026-09-11 spatial broadphase preservation
 
 `./tools/verify.ps1` passes integrated MSVC Debug/Release and 5/5 CTest per

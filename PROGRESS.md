@@ -1,5 +1,50 @@
 # Voidfront progress
 
+## 2026-09-11 - bounded local detours and packaged crowd evidence
+
+Final transport preservation passes and was independently audited: all22
+headless1000-tick cases and all6 rendered-client cases, with complete applied
+recordings, cross-build replay, repeated hashes and matching binary fingerprints.
+Client evidence is the fresh detour-client-network-retry-2026-09-12 folder; the
+first client attempt was interrupted and remains inconclusive. Strict20 Hz,
+physical networks and full matches are still unaccepted. See TESTING.md for
+measured latency, exact paths and the review's limits.
+
+Continued after the verified broadphase checkpoint d962f6b. Canonical fixtures
+reproduced stationary-blocker/chain and opposing-swap locks. Units now retain
+bounded local detours with integer costs, a right-hand tie preference, current
+swept clearance and immediate Stop/retarget. Independent review found and fixed
+pursuit resetting avoidance and stale global routes after maneuver abandonment.
+Compatibility version3 rejects older movement recordings; network wire layouts
+and pinned engine/art sources remain unchanged.
+
+Final Debug/Release 6/6 CTest, replay/alias checks, cross-build traces and ten
+repeats pass. Seven crowd fixtures x10/configuration have identical complete
+ledgers; the independent verifier rejects12 corruptions. The unchanged static
+navigator passed51 fixtures x10/config before the allocation-only refinement.
+Its source remains unchanged; that suite's binary fingerprints are explicitly
+dated to the earlier build. All sources/evidence limits are recorded in TESTING.md.
+
+Detour cost initially left500-unit p95 at4.303 ms. Contiguous spatial entries and
+shared scratch buffers preserve both2,000-tick traces and reduce the final
+current-map active p95/p99 to0.924/1.097 ms (200) and3.548/3.858 ms (500). The200-unit
+skirmish reaches winner0 at1363 ticks;500 remains ongoing at2000. This does not
+pass the required128x128 or general crowd-progress gate.
+
+Actual packaged InputEvents complete a two-unit swap, stationary chain, immediate
+Stop and resume. Independent normal/movie ledgers each verify all4800 unit rows,
+five orders, nine stationary Stop ticks and eight adversarial corruptions. Normal
+swap/chain arrival ticks32/113; movie31/112 because input dispatch is independently
+generated. Existing packaged single-unit movement and controls/combat/restart
+regressions pass. Movie: artifacts/packaged-crowd-2026-09-12.mp4. Root and critic
+inspected actual screenshots and contact frames; no animation smoothness or
+human-play acceptance. Review: .voidfront-agent/review-crowds-2026-09-12.md.
+
+Next movement work is explicit choke/opposing-stream progress and actual128x128
+Sim scenarios with group/repeated orders and replanning. The predeclared scale
+contract is .voidfront-agent/scale-contract.md. Full economy/AI, controls, complete
+matches, production content and shipping remain open; no COMPLETE.md.
+
 ## 2026-09-11 - continued roadmap: spatial broadphase
 
 Baseline: clean dev ed38877, STOP and run marker absent. Exclusively acquired

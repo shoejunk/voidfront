@@ -150,8 +150,21 @@ void replay_combat_and_crowds() {
     std::cout << "replay_hash=" << a.hash() << " winner=" << a.winner() << '\n';
 }
 void late_receipt_after_death() {
+    // Find a casualty using the same canonical stream. Improved movement can
+    // change which side wins; the regression requires a dead subject, not a
+    // particular combat outcome for unit 1.
+    Sim probe(42);
+    std::array<uint32_t,2> probe_seq{};
+    for (int tick=0;tick<950;++tick) {
+        for (uint8_t p=0;p<2;++p) for (const auto& c:make_ai_commands(probe,p,probe_seq[p]))
+            check(probe.submit(c),"casualty probe rejected command");
+        probe.step();
+    }
+    const auto dead=std::find_if(probe.units().begin(),probe.units().end(),[](const Unit& u) { return u.hp==0; });
+    check(dead!=probe.units().end(),"receipt fixture produced no casualty");
     Sim early(42), late(42);
     auto future = move(early, 10000, 10, 10);
+    future.player=dead->player; future.units={dead->id};
     future.tick = 1000;
     check(early.submit(future), "early future command rejected");
     std::array<uint32_t,2> seq{};
@@ -160,7 +173,7 @@ void late_receipt_after_death() {
             check(early.submit(c) && late.submit(c), "receipt regression AI rejected");
         early.step(); late.step();
     }
-    check(late.units()[0].hp == 0, "receipt regression did not kill command subject");
+    check(late.units()[dead->id-1].hp == 0, "receipt regression did not kill command subject");
     check(late.submit(future), "future command admission depends on receipt-time health");
     check(early.hash() == late.hash(), "late receipt changed pending state");
     for (int tick = 950; tick <= 1000; ++tick) {

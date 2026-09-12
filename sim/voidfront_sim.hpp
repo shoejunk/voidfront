@@ -8,7 +8,7 @@
 namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
-inline constexpr uint32_t kProtocolVersion = 2;
+inline constexpr uint32_t kProtocolVersion = 3;
 enum class Order : uint8_t { Stop, Move, AttackMove, Hold };
 struct Command {
     uint32_t tick = 0, sequence = 0;
@@ -29,6 +29,8 @@ struct Unit {
     int32_t goal_x = 0, goal_z = 0, next_x = 0, next_z = 0;
     std::vector<nav::Point> path;
     nav::Point route_goal{};
+    std::vector<nav::Point> detour;
+    uint16_t blocked_ticks = 0;
 };
 class Sim {
 public:

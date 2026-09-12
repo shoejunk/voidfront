@@ -40,3 +40,7 @@ target_link_libraries(voidfront_navigation_probe PRIVATE voidfront_sim)
 add_executable(voidfront_spatial_tests spatial_tests.cpp)
 target_link_libraries(voidfront_spatial_tests PRIVATE voidfront_sim)
 add_test(NAME voidfront_spatial_tests COMMAND voidfront_spatial_tests)
+
+add_executable(voidfront_crowd_tests crowd_tests.cpp)
+target_link_libraries(voidfront_crowd_tests PRIVATE voidfront_sim)
+add_test(NAME voidfront_crowd_tests COMMAND voidfront_crowd_tests)

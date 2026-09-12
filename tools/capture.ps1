@@ -1,8 +1,9 @@
-param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[int]$Ticks=400,[string]$Name='runtime')
+param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[switch]$Crowd,[int]$Ticks=400,[string]$Name='runtime')
 . "$PSScriptRoot/common.ps1"
 Assert-RunningAllowed
 Assert-Godot
 if ($Movement -and ($Ticks -lt 1 -or $Ticks -gt 600)) { throw 'Movement capture requires 1..600 ticks.' }
+if ($Crowd -and ($Movement -or $Ticks -lt 1 -or $Ticks -gt 600)) { throw 'Crowd capture requires its own 1..600 tick fixture.' }
 if ($Name -notmatch '^[a-zA-Z0-9_-]+$') { throw 'Capture name must contain only letters, digits, underscores and hyphens.' }
 $out = Join-Path $Repo 'artifacts'
 New-Item -ItemType Directory -Force $out | Out-Null
@@ -10,7 +11,7 @@ $executable = if ($Packaged) { "$Repo/artifacts/package/Voidfront.exe" } else { 
 $arguments = @('--log-file',"$out/$Name-engine.log",'--resolution','1920x1080')
 if (-not $Packaged) { $arguments += @('--path',"$Repo/client") }
 if ($Movie) { $arguments += @('--write-movie',"$out/$Name.avi",'--fixed-fps','60') }
-$smokeOption = if ($Movement) { '--movement-smoke' } else { '--smoke' }
+$smokeOption = if ($Movement) { '--movement-smoke' } elseif ($Crowd) { '--crowd-smoke' } else { '--smoke' }
 $arguments += @('--',$smokeOption,"--ticks=$Ticks","--capture=$out/$Name.png","--report=$out/$Name.json")
 $originalAppData = $env:APPDATA
 if (Test-Path "$out/$Name.json") { Remove-Item -LiteralPath "$out/$Name.json" }

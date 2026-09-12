@@ -36,6 +36,29 @@ bool command_less(const Command& a, const Command& b) {
 void append(std::vector<uint8_t>& out, uint32_t v) {
     for (int i = 0; i < 4; ++i) out.push_back(static_cast<uint8_t>(v >> (i * 8)));
 }
+void step_candidates(nav::Point here,nav::Point waypoint,std::vector<nav::Point>& result) {
+    result.clear();
+    const int64_t dx=int64_t(waypoint.x)-here.x,dz=int64_t(waypoint.z)-here.z;
+    const auto length=nav::ceil_sqrt(static_cast<uint64_t>(dx*dx+dz*dz));
+    if (length<=movement_speed) { result.push_back(waypoint); return; }
+    const int32_t sx=static_cast<int32_t>(dx*movement_speed/static_cast<int64_t>(length));
+    const int32_t sz=static_cast<int32_t>(dz*movement_speed/static_cast<int64_t>(length));
+    for (int x=-1;x<=1;++x) for (int z=-1;z<=1;++z) {
+        const int64_t nx=sx+x,nz=sz+z;
+        if (nx*nx+nz*nz<=movement_speed*movement_speed &&
+            (dx-nx)*(dx-nx)+(dz-nz)*(dz-nz)<dx*dx+dz*dz)
+            result.push_back({here.x+static_cast<int32_t>(nx),here.z+static_cast<int32_t>(nz)});
+    }
+    const auto error=[&](nav::Point p) {
+        const int64_t ex=(int64_t(p.x)-here.x)*static_cast<int64_t>(length)-dx*movement_speed;
+        const int64_t ez=(int64_t(p.z)-here.z)*static_cast<int64_t>(length)-dz*movement_speed;
+        return ex*ex+ez*ez;
+    };
+    std::sort(result.begin(),result.end(),[&](nav::Point a,nav::Point b) {
+        const auto ea=error(a),eb=error(b);
+        return ea!=eb?ea<eb:std::tie(a.x,a.z)<std::tie(b.x,b.z);
+    });
+}
 }
 
 Sim::Sim(uint32_t seed, uint32_t count) : rng_(seed ? seed : 1), navigation_(terrain_bounds(), terrain_rectangles(), unit_radius) {
@@ -89,6 +112,7 @@ void Sim::apply(const Command& c) {
         u.order = c.order;
         u.target_id = 0;
         u.path.clear(); u.next_x = u.x; u.next_z = u.z;
+        u.detour.clear(); u.blocked_ticks=0;
         u.route_goal = {-1,-1};
         if (c.order == Order::Stop || c.order == Order::Hold) {
             u.goal_x = u.x; u.goal_z = u.z;
@@ -118,12 +142,16 @@ void Sim::step() {
     pending_.erase(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(applied));
     std::vector<int32_t> damage(units_.size(), 0);
     std::vector<nav::Point> tick_start;
+    tick_start.reserve(units_.size());
     SpatialIndex spatial(kMapWidth,kMapHeight,kScale);
     for (const auto& u : units_) {
         tick_start.push_back({u.x,u.z});
         if (u.hp>0) spatial.insert(u.id,{u.x,u.z});
     }
     std::vector<uint32_t> nearby;
+    std::vector<uint32_t> local;
+    std::vector<nav::Point> candidates;
+    candidates.reserve(9);
     constexpr int64_t attack_range2 = int64_t(3 * kScale) * (3 * kScale);
     constexpr int64_t acquire_range2 = int64_t(6 * kScale) * (6 * kScale);
     for (auto& u : units_) {
@@ -152,58 +180,99 @@ void Sim::step() {
         }
         if (u.order == Order::Stop || u.order == Order::Hold) continue;
         const nav::Point here{u.x,u.z};
-        if (goal == here) { u.path.clear(); u.route_goal={-1,-1}; u.next_x=u.x; u.next_z=u.z; continue; }
+        if (goal == here) { u.path.clear(); u.detour.clear(); u.blocked_ticks=0; u.route_goal={-1,-1}; u.next_x=u.x; u.next_z=u.z; continue; }
         if (!(u.route_goal == goal)) {
             u.path = navigation_.route(here, goal); u.route_goal=goal;
+            // Pursuit updates the effective goal every tick. Keep a safe local
+            // maneuver and its wait history; explicit orders clear both in apply.
         }
         while (!u.path.empty() && u.path.front() == here) u.path.erase(u.path.begin());
         if (u.path.empty()) { u.next_x=u.x; u.next_z=u.z; continue; }
-        const auto waypoint = u.path.front();
-        u.next_x=waypoint.x; u.next_z=waypoint.z;
-        const int64_t dx = int64_t(waypoint.x)-u.x, dz = int64_t(waypoint.z)-u.z;
-        const auto length = nav::ceil_sqrt(static_cast<uint64_t>(dx*dx+dz*dz));
-        std::vector<nav::Point> candidates;
-        if (length <= movement_speed) candidates.push_back(waypoint);
-        else {
-            // Nearby lattice samples cover both sides of the exact projected
-            // step. A single component truncation can penetrate a tangent wall
-            // and stall forever even when the visibility segment is clear.
-            const int32_t step_x=static_cast<int32_t>(dx*movement_speed/static_cast<int64_t>(length));
-            const int32_t step_z=static_cast<int32_t>(dz*movement_speed/static_cast<int64_t>(length));
-            for (int x=-1;x<=1;++x) for (int z=-1;z<=1;++z) {
-                const int64_t sx=step_x+x, sz=step_z+z;
-                if (sx*sx+sz*sz<=movement_speed*movement_speed &&
-                    (dx-sx)*(dx-sx)+(dz-sz)*(dz-sz)<dx*dx+dz*dz)
-                    candidates.push_back({u.x+static_cast<int32_t>(sx),u.z+static_cast<int32_t>(sz)});
-            }
-            const auto error=[&](nav::Point p) {
-                const int64_t ex=(int64_t(p.x)-u.x)*static_cast<int64_t>(length)-dx*movement_speed;
-                const int64_t ez=(int64_t(p.z)-u.z)*static_cast<int64_t>(length)-dz*movement_speed;
-                return ex*ex+ez*ez;
-            };
-            std::sort(candidates.begin(),candidates.end(),[&](nav::Point a,nav::Point b) {
-                const auto ea=error(a),eb=error(b);
-                return ea!=eb ? ea<eb : std::tie(a.x,a.z)<std::tie(b.x,b.z);
-            });
+        const bool had_detour=!u.detour.empty();
+        while (!u.detour.empty() && u.detour.front()==here) u.detour.erase(u.detour.begin());
+        if (had_detour && u.detour.empty()) {
+            // The maneuver can end off the original visibility segment. Refresh
+            // from this position rather than following a stale terrain tangent.
+            u.path=navigation_.route(here,goal);
+            if (u.path.empty()) { u.next_x=u.x; u.next_z=u.z; continue; }
         }
+        const auto waypoint = u.detour.empty()?u.path.front():u.detour.front();
+        u.next_x=waypoint.x; u.next_z=waypoint.z;
+        step_candidates(here,waypoint,candidates);
         // Either participant can move by movement_speed in this tick. Query
         // tick-start centers conservatively for every candidate and other sweep.
         constexpr int reach=2*unit_radius+2*movement_speed;
         spatial.query({u.x-reach,u.z-reach,u.x+reach,u.z+reach},nearby);
+        uint32_t blocker=0;
+        const auto occupied=[&](const Unit& other,int padding=0) {
+            const auto old=tick_start[other.id-1];
+            return nav::Rect{std::min(old.x,other.x)-2*unit_radius-padding,
+                std::min(old.z,other.z)-2*unit_radius-padding,std::max(old.x,other.x)+2*unit_radius+padding,
+                std::max(old.z,other.z)+2*unit_radius+padding};
+        };
         for (const auto candidate : candidates) {
             bool free = navigation_.clear(here,candidate);
             for (const auto id : nearby) {
                 if (!free) break;
                 const auto& other=units_[id-1];
                 if (other.id==u.id) continue;
-                const auto old=tick_start[other.id-1];
                 // Protect the entire other-unit sweep, including presentation interpolation.
-                const nav::Rect occupied{std::min(old.x,other.x)-2*unit_radius,
-                    std::min(old.z,other.z)-2*unit_radius,std::max(old.x,other.x)+2*unit_radius,
-                    std::max(old.z,other.z)+2*unit_radius};
-                free=nav::segment_clear(here,candidate,occupied);
+                free=nav::segment_clear(here,candidate,occupied(other));
+                if (!free && !blocker) blocker=id;
             }
             if (free) { u.x=candidate.x; u.z=candidate.z; u.moving=!(candidate==here); break; }
+        }
+        if (u.moving) u.blocked_ticks=0;
+        else if (blocker && ++u.blocked_ticks>=2) {
+            // A bounded local maneuver around the first blocking sweep. At most
+            // four corners and two segments are considered, with a right-hand
+            // preference for equally short opposing encounters. Every actual
+            // step still rechecks current sweeps; future waypoints reserve nothing.
+            const auto& obstacle=units_[blocker-1];
+            const auto exact=occupied(obstacle);
+            const bool occupied_goal=goal.x>exact.min_x && goal.x<exact.max_x &&
+                goal.z>exact.min_z && goal.z<exact.max_z;
+            if (occupied_goal && (obstacle.order==Order::Stop || obstacle.order==Order::Hold)) {
+                if (!u.detour.empty()) u.route_goal={-1,-1};
+                u.detour.clear(); u.blocked_ticks=0;
+            } else if (u.detour.empty() || u.blocked_ticks>=8) {
+                const auto box=occupied(obstacle,16);
+                const std::array<nav::Point,4> corners{{{box.min_x,box.min_z},{box.max_x,box.min_z},
+                    {box.max_x,box.max_z},{box.min_x,box.max_z}}};
+                const auto clear=[&](nav::Point a,nav::Point b) {
+                    if (!navigation_.clear(a,b)) return false;
+                    constexpr int pad=2*unit_radius+movement_speed;
+                    spatial.query({std::min(a.x,b.x)-pad,std::min(a.z,b.z)-pad,
+                        std::max(a.x,b.x)+pad,std::max(a.z,b.z)+pad},local);
+                    for (const auto id:local) if (id!=u.id && !nav::segment_clear(a,b,occupied(units_[id-1]))) return false;
+                    return true;
+                };
+                const auto destination=u.path.front();
+                const int64_t dx=int64_t(destination.x)-here.x,dz=int64_t(destination.z)-here.z;
+                const auto length=[](nav::Point a,nav::Point b) {
+                    const int64_t x=int64_t(a.x)-b.x,z=int64_t(a.z)-b.z;
+                    return nav::ceil_sqrt(static_cast<uint64_t>(x*x+z*z));
+                };
+                std::vector<nav::Point> best;
+                uint64_t best_cost=std::numeric_limits<uint64_t>::max();
+                int best_side=2;
+                for (size_t a=0;a<4;++a) for (size_t b=0;b<4;++b) {
+                    if (a!=b && (a+2)%4==b) continue;
+                    const auto first=corners[a],last=corners[b];
+                    // Finish on the far half of the obstacle, avoiding repeated
+                    // near-corner maneuvers that make no progress past a blocker.
+                    if (dx*(int64_t(last.x)-obstacle.x)+dz*(int64_t(last.z)-obstacle.z)<0 ||
+                        last==here || !navigation_.clear(last,destination) || !clear(here,first) || !clear(first,last)) continue;
+                    const auto cost=length(here,first)+length(first,last)+length(last,destination);
+                    const int side=dx*(int64_t(first.z)-here.z)-dz*(int64_t(first.x)-here.x)<=0?0:1;
+                    if (std::tie(cost,side)<std::tie(best_cost,best_side)) {
+                        best_cost=cost; best_side=side; best={first};
+                        if (!(last==first)) best.push_back(last);
+                    }
+                }
+                if (best.empty() && !u.detour.empty()) u.route_goal={-1,-1};
+                u.detour=std::move(best); u.blocked_ticks=0;
+            }
         }
         if (u.order == Order::Move && u.x == u.goal_x && u.z == u.goal_z) u.order = Order::Stop;
     }
@@ -261,6 +330,8 @@ uint64_t Sim::state_hash() const {
         add(u.target_id); add(u.cooldown); add(u.moving); add(u.goal_x); add(u.goal_z); add(u.next_x); add(u.next_z);
         add(u.route_goal.x); add(u.route_goal.z); add(u.path.size());
         for (const auto& point : u.path) { add(point.x); add(point.z); }
+        add(u.blocked_ticks); add(u.detour.size());
+        for (const auto& point : u.detour) { add(point.x); add(point.z); }
     }
     return h;
 }
