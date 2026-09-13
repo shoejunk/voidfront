@@ -9,6 +9,29 @@
 
 Reorder work when measured defects justify it, preserving architecture and all quality gates. No deadline-based relaxation.
 
+## 2026-09-13 checkpoint refinement
+
+The existing Scale128 scenario is now available in the actual offline package
+with configurable 1..250 walkers per side, map-aware camera/orders/minimap and
+restart preservation. Packaged 200/500-unit InputEvents and full recorded tick
+hashes replay across builds/repeats; see TESTING.md. Large-map networking remains
+separate. This is diagnostic access to the same simulation, not complete matches.
+
+Early opposing-stream bias and bounded common lateral translations both failed
+the unchanged 500-unit crossing case and were removed. The critic proved legal
+lateral moves can merely oscillate and press neighbors against the ridge ends.
+Next movement work: purposeful backward decompression and a retained passing side,
+with explicit Stop/Hold/firing eligibility and the same full safety/progress gate.
+Do not repeat undirected lateral fallback or merely increase component limits.
+
+Large-map captures expose poor crowded readability and failed frame intervals.
+The same-run twelve-unit capture also slows under hidden-window conditions, so
+first profile ordinary foreground play with controlled presentation conditions;
+separate capture/fixture overhead, snapshot conversion, skeletons, draw calls and
+HUD cost before choosing an optimization. Preserve the original budgets and
+report actual product responsiveness separately. Production/content expansion
+still waits on the movement and complete-small-match requirements above.
+
 ## Required movement and pathfinding milestone
 
 The bounded current-map implementation now has arbitrary authoritative headings and static clearance routes. Finished movement must additionally satisfy the dynamic crowd, route quality and performance gates below, with direct travel toward unobstructed destinations and efficient routes around obstacles. Neither four/eight-direction movement nor presentation-only smoothing satisfies this requirement.

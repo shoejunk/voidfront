@@ -12,6 +12,19 @@ Launch `Voidfront.exe` beside its .pck and DLL. This is the first development sk
 
 The current prototype has no economy, construction, fog, queued orders or match setup menu. Enemy AI only fights. Units now travel at arbitrary headings with clearance-aware routes around the test terrain. Single-unit moves retain the exact clicked position; group destinations still use spaced cell centers. Crowded units can wait indefinitely because general deadlock recovery is unfinished. Art, animations and interface are foundation work; audio is not present yet.
 
+## Large offline field
+
+From the package directory, launch `./Voidfront.exe -- --scale128` for the
+128x128 terrain field with 250 walkers per side. Use `--units-per-team=100`
+with that option for 200 total walkers. Controls are the same; R preserves the
+large map and chosen population. The camera starts over your army; arrows pan
+across the field and the wheel zooms out for an overview. The minimap shows the
+whole map. Enemy combat AI starts after five seconds.
+
+This field exposes the existing scale scenario for offline play and diagnosis.
+Dense crowds still jam, and rendering budgets and complete RTS features remain
+unfinished. Large-map network sessions are not implemented.
+
 ## Experimental two-window loopback skirmish
 
 From the package directory, launch these commands in two PowerShell terminals:

@@ -6,10 +6,40 @@ Baseline: dev 8e557d6 with interrupted staged scale/control-group changes. Codex
 verified the prior marker owner inactive with an interrupted turn; reclaimed the
 marker exclusively. STOP and COMPLETE are absent. Preserve the pending work.
 
-Goals: revalidate and checkpoint the interrupted increment, investigate the
-retained 500-unit opposing-stream jam, and land only independently reviewed
-movement improvements that preserve swept safety, Stop/Hold and deterministic
-build/replay evidence. Dense progress and all SPEC quality gates remain open.
+Revalidated and published the interrupted scale/control-group increment as
+de74df7. Fresh integrated Debug/Release builds pass 7/7 CTest each, malformed
+replay/alias checks, 2,000 cross-build hashes and ten repeats; both configurations
+also pass the scale-input adversarial suite. Pins remain unchanged.
+
+Two new recovery experiments were rejected and removed. Early right-hand bias
+and bounded co-translation both produced zero arrivals in the unchanged
+500-unit/4,000-tick crossing case. The latter passed all 2,000,500 swept ledger
+rows but merely created lateral oscillation. Independent final-snapshot analysis
+found many legal small lateral actions; increasing the component cap alone is
+not justified. The next movement attempt needs purposeful backward decompression
+and a retained passing side. Exact evidence and the firing-eligibility finding
+are in .voidfront-agent/review-crowd-recovery-2026-09-13.md. Neither experiment
+remains in the simulation or changes its compatibility identity.
+
+The existing 128x128 Sim scenario is now accessible in the offline client using
+--scale128 and --units-per-team. Snapshot dimensions drive terrain, camera/order
+bounds and the minimap; restart preserves map and population. Canonical bridge
+validation is map-aware and a validated scale reset cannot replace an active
+network session. Existing Foundry/network setup remains the default. Scale
+health bars shrink with overview zoom and show selected or damaged units.
+
+New real InputEvent captures exercise 200/500 rendered actors, F2/control groups,
+far-map orders, first-tick Stop, resume and reset. Recorded commands reconstruct
+VFR3 replays and every tick hash is checked in Debug plus ten Release repeats;
+the independent geometry oracle audits replayed full ledgers. Initial captures
+exposed severe frame-interval and readability failures; final package verification
+is recorded in TESTING.md. These are one-sided diagnostic movement fixtures,
+not the opposing-stream gate, complete matches or reference performance proof.
+
+Next: profile ordinary large-map presentation separately from capture/fixture
+overhead (snapshot conversion, skeletons, draw calls and HUD), and implement
+purposeful crowd decompression against the unchanged crossing fixture. Economy,
+AI progression, content, physical networking and shipping gates remain open.
 
 
 ## 2026-09-11 - actual scale scenarios and control groups

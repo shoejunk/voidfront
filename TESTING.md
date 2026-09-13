@@ -1,5 +1,114 @@
 # Verification ledger
 
+## 2026-09-13 offline large-map client and rejected crowd experiments
+
+The interrupted scale/control-group source was revalidated and published as
+de74df7. `artifacts/weekly-baseline-build-2026-09-13.log` records integrated
+Debug/Release 7/7 CTest, replay/alias regressions, 2,000 cross-build tick hashes
+and ten repeats. Both `weekly-scale-inputs-{Debug,Release}-2026-09-13/summary.json`
+reports pass 25 malformed/setup cases, 18 output aliases, 14 corrupt ledgers and
+two analytic controls per configuration. Existing staged work was preserved.
+
+### Recovery experiments are rejected, not part of the final source
+
+Both probes retain the unchanged 128x128/500-unit/4,000-tick crossing scenario.
+Early right-hand steering (`artifacts/crowd-prevention-2026-09-13.*`) produced
+zero arrivals, p95/p99 3.7909/4.2554 ms and a 3,718-tick maximum idle tail.
+Coordinated equal-displacement groups (`artifacts/crowd-yield-2026-09-13.*`)
+also produced zero arrivals, p95/p99 1.8708/1.9892 ms and a 3,651-tick maximum
+idle tail. These are exploratory Release measurements, not cross-build acceptance.
+The latter's entire 2,000,500-row ledger passes the independent swept oracle;
+the former has no full ledger. Sources are retained alongside the artifacts.
+
+Independent review found many legal lateral actions in the final jam, but the
+last active units merely oscillate between two positions. Raising component
+limits cannot by itself establish progress. A postpass firing-eligibility bug
+was also identified. Both experiments were removed; final sim source is identical
+to de74df7 and simulation compatibility remains 4. See
+`.voidfront-agent/review-crowd-recovery-2026-09-13.md`. Purposeful backward
+decompression with a retained passing side is the next movement experiment.
+
+### Actual large-map adapter and package
+
+`--scale128 [--units-per-team=100]` instantiates the existing authoritative map
+offline; default population is 250 per side. Terrain, camera/order bounds and
+minimap derive from snapshot dimensions. R preserves the selected map/population.
+Network sessions remain Foundry; the validated scale reset rejects an active
+session. No authoritative movement, wire layout, engine, templates or art changed.
+
+`artifacts/scale-client-build-2026-09-13.log` records final integrated MSVC
+Debug/Release 7/7 CTest, malformed replay/alias tests, 2,000 cross-build hashes
+and ten repeats. Godot 4.7.2/template/godot-cpp pin guards pass. The new headless
+bridge contract passes 3,591 checks, including 200/500 actual units, far-map
+commands, rejected setup preserving queued inputs and active-session protection.
+Existing bridge network contract passes. Logs: `scale-bridge-test-2026-09-13.log`,
+`scale-client-final-bridge-2026-09-13.log` and
+`scale-bridge-network-regression-2026-09-13.log` under artifacts.
+
+Final rendered commands:
+
+```powershell
+./tools/capture.ps1 -Packaged -Scale -UnitsPerTeam 100 -Ticks 700 -Name scale-client-final-200-2026-09-13
+./tools/capture.ps1 -Packaged -Scale -UnitsPerTeam 250 -Ticks 700 -Name scale-client-final-500-2026-09-13
+python tools/verify_scale_capture.py artifacts/scale-client-final-200-2026-09-13.json --out artifacts/scale-client-final-200-replay-2026-09-13
+python tools/verify_scale_capture.py artifacts/scale-client-final-500-2026-09-13.json --out artifacts/scale-client-final-500-replay-2026-09-13
+```
+
+Both reports pass 23 checks: actual rendered populations, InputEvent F2/groups,
+right-click coordinates beyond both former bounds, motion, first-application
+Stop for nine/eleven ticks, resume and R restoring the exact initial map/state.
+R is checked at tick zero while the fixture freezes advancement; this does not
+prove subsequent rendered ticking after restart. Smoke enemy AI is disabled;
+these one-sided fixtures do not replace the failed opposing-stream scenario.
+
+The verifier reconstructs VFR3 from actual input coordinates/ticks, compares all
+700 client hashes in Debug plus ten Release replays per capture, and independently
+audits 490,700 replayed unit rows and six canonical commands. It checks final
+positions/HP and rejects eight evidence corruptions, including collapsed Stop
+duration and false first-application tick. Input dispatch differs across captures;
+only each recording's own replays are compared. Final binary fingerprints:
+`artifacts/scale-client-final-fingerprints-2026-09-13.json`.
+
+| Units | Frame interval p95 / p99 ms | Bridge advance p95 / p99 ms | Peak resident bytes |
+| --- | --- | --- | --- |
+| 200 | 77.408 / 101.006 | 0.264 / 0.355 | 282,304,512 |
+| 500 | 152.062 / 168.804 | 0.974 / 1.027 | 369,451,008 |
+
+Raw frame/bridge samples and Windows host observations are retained in each
+report and `-host.json`. No build, replay audit or other owned benchmark overlapped
+these final captures. The helper launches hidden windows; intervals include
+presentation, fixture, screenshot, scheduling and background-window behavior.
+The same-run twelve-unit Foundry control also records p95/p99 68.984/72.206 ms.
+Thus targets fail in these capture conditions, but these are not isolated CPU/GPU
+profiles or proof that scale alone caused the slowdown. Profile ordinary play
+and separate snapshot, skeleton, draw-call and HUD costs before optimizing.
+This is the development host, not reference-hardware acceptance.
+
+Primary and independent critic inspect the actual wide/choke 1920x1080 PNGs.
+Final health bars shrink with zoom and omit undamaged unselected units, removing
+the earlier overview stripes. Bright meshes, selection rings and dense choke
+overlap still obscure silhouettes. No movie, human responsiveness, production
+readability, full economy/AI match, large-map networking or shipping acceptance.
+Review: `.voidfront-agent/review-scale-client-2026-09-13.md`.
+
+### Final Foundry and network preservation
+
+`artifacts/scale-client-network-regression-2026-09-13/summary.json` passes all
+six rendered two-process cases: clean, 80/160 ms RTT, held frame, mismatched
+delay and disconnect, with opposite-build replay and ten clean repeats. This is
+Foundry loopback coverage, not large-map networking or a physical-network soak.
+The 22-case CLI transport suite was not rerun: final simulation/session sources
+are unchanged; its prior evidence remains dated to the earlier checkpoint.
+
+`scale-client-offline-regression-2026-09-13.json` passes the default 400-tick
+selection/move/Stop/combat/restart fixture, hash 1b35fbb0222cbc7b, winner 1.
+`scale-client-movement-verified-2026-09-13.json` checks all 400 positions,
+184 oblique steps, three exact arrivals, nine Stop ticks and <=0.018590% route
+excess. `scale-client-crowd-verified-2026-09-13.json` checks 4,800 unit rows,
+swap at tick 32, nine Stop ticks and eight rejected evidence mutations. These
+reports and their matching runtime artifacts are under artifacts/. No owned
+game, peer or build helper remains after verification.
+
 ## 2026-09-11 actual 128x128 map and control groups
 
 ### Final transport preservation

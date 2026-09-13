@@ -77,7 +77,7 @@ class VoidfrontBridge : public RefCounted {
     static bool command_from_input(vf::Command& command, const vf::Sim& state, uint8_t player,
             int64_t order, const PackedInt32Array& ids, int64_t x, int64_t z) {
         if (order < 0 || order > 3 || ids.size() == 0 || ids.size() > 256 ||
-            x < 0 || z < 0 || x >= vf::kMapWidth * vf::kScale || z >= vf::kMapHeight * vf::kScale) return false;
+            x < 0 || z < 0 || x >= state.width() * vf::kScale || z >= state.height() * vf::kScale) return false;
         command.player = player; command.order = static_cast<vf::Order>(order);
         command.x = static_cast<int32_t>(x); command.z = static_cast<int32_t>(z);
         for (int64_t i = 0; i < ids.size(); ++i) {
@@ -145,6 +145,7 @@ class VoidfrontBridge : public RefCounted {
 protected:
     static void _bind_methods() {
         ClassDB::bind_method(D_METHOD("reset", "seed", "ai"), &VoidfrontBridge::reset);
+        ClassDB::bind_method(D_METHOD("reset_scale", "seed", "units_per_team", "enemy_ai"), &VoidfrontBridge::reset_scale);
         ClassDB::bind_method(D_METHOD("advance"), &VoidfrontBridge::advance);
         ClassDB::bind_method(D_METHOD("snapshot"), &VoidfrontBridge::snapshot);
         ClassDB::bind_method(D_METHOD("issue", "order", "ids", "x", "z"), &VoidfrontBridge::issue);
@@ -162,6 +163,19 @@ public:
         simulation = vf::Sim(static_cast<uint32_t>(seed));
         human_sequence = 0; ai_sequence = 0; ai_enabled = ai;
     }
+    bool reset_scale(int64_t seed, int64_t units_per_team, bool enemy_ai) {
+        if (seed < 0 || seed > UINT32_MAX || units_per_team < 1 || units_per_team > 250 ||
+                (network && network->status() != vf::net::SessionStatus::Complete &&
+                    network->status() != vf::net::SessionStatus::Error)) return false;
+        try {
+            // Construct before replacing anything so failed setup preserves the current game.
+            vf::Sim replacement(static_cast<uint32_t>(seed), static_cast<uint32_t>(units_per_team), vf::Map::Scale128);
+            simulation = std::move(replacement);
+            clear_network();
+            human_sequence = 0; ai_sequence = 0; ai_enabled = enemy_ai;
+            return true;
+        } catch (...) { return false; }
+    }
     void advance() {
         if (network) return;
         if (ai_enabled && simulation.tick() >= 100 && simulation.tick() % 20 == 0) {
@@ -172,7 +186,7 @@ public:
     bool issue(int64_t order, PackedInt32Array ids, int64_t x, int64_t z) {
         if (network) return false;
         if (order < 0 || order > 3 || ids.size() == 0 || ids.size() > 256 ||
-            x < 0 || z < 0 || x >= vf::kMapWidth * vf::kScale || z >= vf::kMapHeight * vf::kScale) return false;
+            x < 0 || z < 0 || x >= simulation.width() * vf::kScale || z >= simulation.height() * vf::kScale) return false;
         vf::Command command{};
         command.tick = simulation.tick(); command.sequence = ++human_sequence;
         command.player = 0; command.order = static_cast<vf::Order>(order);
@@ -186,12 +200,16 @@ public:
         return simulation.submit(command);
     }
     bool is_blocked(int64_t x, int64_t z) const {
-        if (x < 0 || z < 0 || x >= vf::kMapWidth || z >= vf::kMapHeight) return true;
+        if (x < 0 || z < 0 || x >= current_sim().width() || z >= current_sim().height()) return true;
         return current_sim().blocked(static_cast<int>(x), static_cast<int>(z));
     }
     Dictionary snapshot() const {
         const auto& state = current_sim();
         Dictionary result;
+        result["map_id"] = static_cast<uint32_t>(state.map());
+        result["width"] = state.width(); result["height"] = state.height();
+        result["content_id"] = hash_string(vf::kLockstepContentId);
+        result["protocol"] = vf::kProtocolVersion;
         result["tick"] = state.tick(); result["winner"] = state.winner();
         result["hash"] = hash_string(network ? state.state_hash() : state.hash());
         Array units;

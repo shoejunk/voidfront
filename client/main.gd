@@ -26,6 +26,11 @@ var crowd_smoke := false
 var crowd_fixture: RefCounted
 var controls_smoke := false
 var controls_fixture: RefCounted
+var scale128 := false
+var scale_smoke := false
+var scale_count := 250
+var scale_fixture: RefCounted
+var map_size := Vector2i(32, 24)
 var movement_stage := 0
 var movement_inputs: Array[Dictionary] = []
 var movement_samples: Array[Dictionary] = []
@@ -94,6 +99,11 @@ func _ready() -> void:
 		elif argument == "--movement-smoke": movement_smoke = true
 		elif argument == "--crowd-smoke": crowd_smoke = true
 		elif argument == "--controls-smoke": controls_smoke = true
+		elif argument == "--scale128": scale128 = true
+		elif argument == "--scale-smoke":
+			scale128 = true
+			scale_smoke = true
+		elif argument.begins_with("--units-per-team="): scale_count = _integer_option(argument, 1, 250)
 		elif argument == "--network": network = true
 		elif argument == "--network-smoke":
 			network = true
@@ -118,11 +128,23 @@ func _ready() -> void:
 	if network and local_port == remote_port: option_error = "Local and remote ports must differ."
 	if network and smoke: option_error = "Choose --smoke or --network-smoke."
 	if network_smoke and finish_tick < 80: option_error = "Network smoke needs at least 80 ticks."
+	if scale128 and (network or smoke or movement_smoke or crowd_smoke or controls_smoke): option_error = "Scale mode requires its own offline match."
+	if scale_smoke and not ticks_specified: finish_tick = 700
+	if scale_smoke and (finish_tick < 200 or finish_tick > 1000): option_error = "Scale smoke requires 200..1000 ticks."
 	bridge = ClassDB.instantiate("VoidfrontBridge")
 	if bridge == null:
 		push_error("Required C++ simulation extension failed to load")
 		get_tree().quit(2)
 		return
+	if scale128:
+		if not option_error.is_empty() or not bridge.reset_scale(1, scale_count, not scale_smoke):
+			push_error(option_error if not option_error.is_empty() else "Scale setup rejected")
+			get_tree().quit(2)
+			return
+	var setup: Dictionary = bridge.snapshot()
+	map_size = Vector2i(setup.width, setup.height)
+	camera_target = Vector3(map_size.x / 2.0, 0, map_size.y / 2.0)
+	if scale128 and not scale_smoke: camera_target = Vector3(24, 0, 64)
 	_setup_world()
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
@@ -130,6 +152,9 @@ func _ready() -> void:
 	hud.game = self
 	canvas.add_child(hud)
 	_reset()
+	if scale_smoke:
+		scale_fixture = preload("res://scale_smoke.gd").new(self)
+		scale_fixture.run.call_deferred()
 	if crowd_smoke: crowd_fixture = preload("res://crowd_smoke.gd").new(self)
 	if controls_smoke and option_error.is_empty():
 		controls_fixture = preload("res://control_group_tests.gd").new(self)
@@ -216,25 +241,27 @@ func _setup_world() -> void:
 	add_child(fill)
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 27
-	camera.far = 150
+	camera.size = 96 if scale_smoke else 27
+	camera.far = 400 if scale128 else 150
 	add_child(camera)
 	_update_camera()
 	var floor_material := _material(Color("29383f"), 0.12)
-	_box(Vector3(32, 0.45, 24), Vector3(16, -0.3, 12), floor_material)
+	var w := map_size.x
+	var h := map_size.y
+	_box(Vector3(w, 0.45, h), Vector3(w / 2.0, -0.3, h / 2.0), floor_material)
 	var grid_material := _material(Color("334249"))
-	for x in range(0, 33, 2):
-		_box(Vector3(0.018, 0.012, 24), Vector3(x, -0.067, 12), grid_material)
-	for z in range(0, 25, 2):
-		_box(Vector3(32, 0.012, 0.018), Vector3(16, -0.067, z), grid_material)
+	for x in range(0, w + 1, 2):
+		_box(Vector3(0.018, 0.012, h), Vector3(x, -0.067, h / 2.0), grid_material)
+	for z in range(0, h + 1, 2):
+		_box(Vector3(w, 0.012, 0.018), Vector3(w / 2.0, -0.067, z), grid_material)
 	var border_material := _material(Color("253b43"), 0.4)
-	_box(Vector3(34, 0.6, 0.5), Vector3(16, -0.15, -0.4), border_material)
-	_box(Vector3(34, 0.6, 0.5), Vector3(16, -0.15, 24.4), border_material)
-	_box(Vector3(0.5, 0.6, 24), Vector3(-0.4, -0.15, 12), border_material)
-	_box(Vector3(0.5, 0.6, 24), Vector3(32.4, -0.15, 12), border_material)
+	_box(Vector3(w + 2, 0.6, 0.5), Vector3(w / 2.0, -0.15, -0.4), border_material)
+	_box(Vector3(w + 2, 0.6, 0.5), Vector3(w / 2.0, -0.15, h + 0.4), border_material)
+	_box(Vector3(0.5, 0.6, h), Vector3(-0.4, -0.15, h / 2.0), border_material)
+	_box(Vector3(0.5, 0.6, h), Vector3(w + 0.4, -0.15, h / 2.0), border_material)
 	var obstacle_material := _material(Color("263b44"), 0.25)
-	for x in range(32):
-		for z in range(24):
+	for x in range(w):
+		for z in range(h):
 			if bridge.is_blocked(x, z):
 				obstacle_cells.append(Vector2i(x, z))
 				var height := 0.75 + float((x * 7 + z * 3) % 5) * 0.12
@@ -244,7 +271,8 @@ func _setup_world() -> void:
 	for player in range(2):
 		var pad_color := Color("4d9caa") if player == 0 else Color("c78960")
 		var pad := _ring(3.5, pad_color)
-		pad.position = Vector3(5 if player == 0 else 27, -0.04, 12)
+		var pad_x: float = (20 if player == 0 else 108) if scale128 else (5 if player == 0 else 27)
+		pad.position = Vector3(pad_x, -0.04, h / 2.0)
 		pad.material_override = _material(pad_color * 0.42, 0.25)
 		add_child(pad)
 		var lettering := Label3D.new()
@@ -253,7 +281,7 @@ func _setup_world() -> void:
 		lettering.pixel_size = 0.008
 		lettering.modulate = pad_color
 		lettering.rotation_degrees.x = -90
-		lettering.position = Vector3(5 if player == 0 else 27, 0.005, 16.5)
+		lettering.position = Vector3(pad_x, 0.005, h / 2.0 + 4.5)
 		add_child(lettering)
 	order_mark = _ring(0.55, Color("a3ffea"))
 	order_mark.visible = false
@@ -276,7 +304,12 @@ func _reset() -> void:
 	actors.clear()
 	selected.clear()
 	control_groups.clear()
-	bridge.reset(1, not (movement_smoke or crowd_smoke))
+	if scale128:
+		if not bridge.reset_scale(1, scale_count, not scale_smoke):
+			push_error("Scale reset rejected")
+			get_tree().quit(2)
+			return
+	else: bridge.reset(1, not (movement_smoke or crowd_smoke))
 	if network and option_error.is_empty():
 		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick):
 			network_notice = "Network session could not start."
@@ -352,7 +385,7 @@ func _subdue_corpse(node: Node) -> void:
 func _process(delta: float) -> void:
 	if current.is_empty() or completed: return
 	if not option_error.is_empty(): return
-	if smoke or network_smoke or movement_smoke or crowd_smoke:
+	if smoke or network_smoke or movement_smoke or crowd_smoke or scale_smoke:
 		var now := Time.get_ticks_usec()
 		if last_frame_usec != 0 and (not movement_smoke or frame_times.size() < finish_tick * 12): frame_times.append((now - last_frame_usec) / 1000.0)
 		last_frame_usec = now
@@ -373,17 +406,18 @@ func _process(delta: float) -> void:
 	else:
 		accumulator += delta
 		var ticks := 0
-		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke) or current.tick < finish_tick):
+		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke or scale_smoke) or current.tick < finish_tick):
 			previous = current
 			var start := Time.get_ticks_usec()
 			bridge.advance()
-			if smoke or movement_smoke or crowd_smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
+			if smoke or movement_smoke or crowd_smoke or scale_smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
 			current = bridge.snapshot()
 			accumulator -= STEP
 			ticks += 1
 			if smoke: _smoke_tick()
 			if movement_smoke: _movement_smoke_tick()
 			if crowd_smoke: crowd_fixture.tick()
+			if scale_smoke: scale_fixture.tick()
 	_present(clampf(accumulator / STEP, 0, 1), delta)
 	# The first positive interpolation includes the new authoritative state.
 	if network_smoke and accumulator > 0 and current.tick != presented_tick:
@@ -395,8 +429,8 @@ func _process(delta: float) -> void:
 	if Input.is_physical_key_pressed(KEY_RIGHT): camera_axis.x += 1
 	if Input.is_physical_key_pressed(KEY_LEFT): camera_axis.x -= 1
 	camera_target += Vector3(camera_axis.x, 0, camera_axis.y) * delta * 13
-	camera_target.x = clampf(camera_target.x, 2, 30)
-	camera_target.z = clampf(camera_target.z, 2, 22)
+	camera_target.x = clampf(camera_target.x, 2, map_size.x - 2)
+	camera_target.z = clampf(camera_target.z, 2, map_size.y - 2)
 	_update_camera()
 	order_age += delta
 	order_mark.visible = order_age < 1.2
@@ -485,7 +519,7 @@ func _beam(from: Vector3, to: Vector3, player: int) -> void:
 	tween.tween_callback(beam.queue_free)
 
 func _update_camera() -> void:
-	camera.position = camera_target + Vector3(0, 25, 21)
+	camera.position = camera_target + (Vector3(0, 100, 84) if scale128 else Vector3(0, 25, 21))
 	camera.look_at(camera_target)
 
 func _world_at(point: Vector2) -> Vector3:
@@ -524,7 +558,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_H: _issue(3, Vector3(0, 0, 0))
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed: camera.size = maxf(14, camera.size - 1.5)
-		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed: camera.size = minf(36, camera.size + 1.5)
+		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed: camera.size = minf(160 if scale128 else 36, camera.size + 1.5)
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 			_issue(1, _world_at(event.position))
 			attack_pending = false
@@ -594,7 +628,7 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 
 func _issue(order: int, at: Vector3) -> void:
 	if selected.is_empty(): return
-	if at.x < 0 or at.x >= 32 or at.z < 0 or at.z >= 24: return
+	if at.x < 0 or at.x >= map_size.x or at.z < 0 or at.z >= map_size.y: return
 	var accepted := false
 	var sequence := -1
 	if network:
@@ -610,6 +644,7 @@ func _issue(order: int, at: Vector3) -> void:
 		movement_inputs.append({"label": movement_label, "accepted": accepted, "order": order, "units": selected.duplicate(), "x": int(at.x * SCALE), "z": int(at.z * SCALE), "event_tick": current.tick, "input_usec": event_usec})
 		if not accepted: movement_errors.append("Rejected input: " + movement_label)
 	if crowd_smoke: crowd_fixture.record_input(accepted, order, at)
+	if scale_smoke: scale_fixture.record_input(accepted, order, at)
 	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
 		var feedback_at := Vector3(at.x, 0.05, at.z)

@@ -46,6 +46,8 @@ func _process(_delta: float) -> void:
 	if game.attack_pending:
 		selection.text += "     —     SELECT ATTACK DESTINATION"
 	status.text = "THE GLASS REACH   /   FIELD TRIAL 01     •     %02d:%02d" % [int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
+	if game.scale128:
+		status.text = "SCALE FIELD   /   128 × 128   /   %d STRIDERS     •     %02d:%02d" % [game.current.units.size(), int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
 	connection.text = ""
 	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
 	result.size.x = 700 if game.network or not game.option_error.is_empty() else 500
@@ -100,22 +102,26 @@ func _draw() -> void:
 		var result_width := 740 if network_panel else 530
 		draw_rect(Rect2((view.x - result_width) / 2, view.y / 2 - 48, result_width, 128), Color(0.025, 0.047, 0.055, 0.94))
 	var map_rect := Rect2(view.x - 220, view.y - 174, 204, 153)
+	if game.map_size.x == game.map_size.y: map_rect = Rect2(view.x - 169, view.y - 174, 153, 153)
+	var map_scale := map_rect.size / Vector2(game.map_size)
 	draw_rect(map_rect.grow(6), Color("12252c"))
 	draw_rect(map_rect, Color("27373b"))
 	for cell in game.obstacle_cells:
-		draw_rect(Rect2(map_rect.position + Vector2(cell.x, cell.y) * 6.375, Vector2.ONE * 6.375), Color("101b22"))
+		draw_rect(Rect2(map_rect.position + Vector2(cell.x, cell.y) * map_scale, map_scale), Color("101b22"))
 	for u in game.current.units:
 		if u.hp <= 0:
 			continue
 		var color := Color("64e5df") if u.player == 0 else Color("fda06d")
-		var at := map_rect.position + Vector2(u.x, u.z) / 256.0 * 6.375
+		var at := map_rect.position + Vector2(u.x, u.z) / 256.0 * map_scale
 		draw_circle(at, 2.5, color)
 		if game.actors.has(u.id):
 			var actor: Node3D = game.actors[u.id].root
 			var screen: Vector2 = game.camera.unproject_position(actor.position + Vector3(0, 1.8, 0))
 			if not game.camera.is_position_behind(actor.position):
-				draw_rect(Rect2(screen - Vector2(18, 0), Vector2(36, 4)), Color("102128"))
-				draw_rect(Rect2(screen - Vector2(18, 0), Vector2(36 * clampf(float(u.hp) / game.max_hp, 0, 1), 3)), color)
+				var bar_width: float = clampf(24.0 * 27.0 / game.camera.size, 3, 24) if game.scale128 else 36.0
+				if not game.scale128 or u.id in game.selected or u.hp < game.max_hp:
+					draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width, 4)), Color("102128"))
+					draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width * clampf(float(u.hp) / game.max_hp, 0, 1), 3)), color)
 	if dragging:
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color(0.3, 0.85, 0.83, 0.1))
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color("64d8d0"), false, 1)
