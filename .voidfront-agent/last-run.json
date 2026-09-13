@@ -1,28 +1,34 @@
 {
-  "run": "2026-09-07-bounded-any-angle",
-  "checkpoint_utc": "2026-09-07T20:29:59.065620+00:00",
-  "branch": "dev",
-  "source_commit": "3f2ff0d8dd631f7464b8e4cd205869a3ca57836d",
-  "simulation_commit": "eb2fe03",
+  "frame_interval_p99_ms": {
+    "foundry12": 72.206,
+    "units500": 168.804,
+    "units200": 101.006
+  },
   "remote_backup": true,
-  "state": "Reviewed bounded any-angle movement and packaged/network regression; crowd and 500-unit performance gates fail or remain open",
-  "verification": "C:\\dev\\voidfront\\artifacts\\any-angle-build-fixed-2026-09-07.log",
-  "route_report": "C:\\dev\\voidfront\\artifacts\\navigation-verified-2026-09-07\\summary.json",
-  "movement_report": "C:\\dev\\voidfront\\artifacts\\packaged-movement-verified-2026-09-07.json",
-  "network_report": "C:\\dev\\voidfront\\artifacts\\any-angle-network-2026-09-07\\summary.json",
-  "client_report": "C:\\dev\\voidfront\\artifacts\\any-angle-client-network-2026-09-07\\summary.json",
-  "combat_report": "C:\\dev\\voidfront\\artifacts\\any-angle-client-combat-2026-09-07\\summary.json",
-  "review": "C:\\dev\\voidfront\\.voidfront-agent\\review-movement-2026-09-07.md",
-  "runtime_rerun": true,
-  "runtime_evidence_date": "2026-09-07",
-  "runtime_report": "C:\\dev\\voidfront\\artifacts\\packaged-any-angle-offline.json",
-  "package": "C:\\dev\\voidfront\\artifacts\\package\\Voidfront.exe",
-  "package_pck_sha256": "2d8c7698376124a29228bbfc167f6d37c90b04912c749c4b5eeeb2b248cde3b6",
-  "package_bridge_sha256": "ee10a5e682da747c557fa64cbb220bc015d5ec1ec3fe52e35e546027ca64fa73",
-  "movie": "C:\\dev\\voidfront\\artifacts\\packaged-movement-2026-09-07.mp4",
-  "current_map_500unit_p95_p99_ms": [
-    15.74,
-    16.815
+  "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
+  "runtime_report": "C:/dev/voidfront/artifacts/scale-client-offline-regression-2026-09-13.json",
+  "package_pck_sha256": "de490e84bda1da5dde900c0907b46bd5a8ed60531a5757ae9903d79c8b1b5e54",
+  "simulation_commit": "de74df7",
+  "source_commit": "9a284e05b65b902f901789eebae0c5797bd3ea78",
+  "runtime_evidence_date": "2026-09-13",
+  "scale_reports": [
+    "C:/dev/voidfront/artifacts/scale-client-final-200-replay-2026-09-13/summary.json",
+    "C:/dev/voidfront/artifacts/scale-client-final-500-replay-2026-09-13/summary.json"
   ],
-  "next": "Add stationary-blocker/opposing-swap progress fixtures, spatial broadphase and deterministically bounded collision/replanning work; then real 128x128 200/500-unit benchmarks. Preserve network/replay, pins and continuing full-game gates."
+  "run": "2026-09-13-offline-scale-client",
+  "verification": "C:/dev/voidfront/artifacts/scale-client-build-2026-09-13.log",
+  "reviews": [
+    "C:/dev/voidfront/.voidfront-agent/review-crowd-recovery-2026-09-13.md",
+    "C:/dev/voidfront/.voidfront-agent/review-scale-client-2026-09-13.md"
+  ],
+  "next": "Purposeful backward crowd decompression with retained passing side; foreground presentation profiling; preserve unchanged gates and full-game scope",
+  "checkpoint_utc": "2026-09-13T19:28:01.3366197Z",
+  "client_report": "C:/dev/voidfront/artifacts/scale-client-network-regression-2026-09-13/summary.json",
+  "branch": "dev",
+  "timing_limit": "Hidden-window capture includes presentation, fixture and scheduling costs; foreground CPU/GPU attribution unverified",
+  "state": "Reviewed offline 128x128 client access; dense crowd progress and frame budgets remain open",
+  "package_bridge_sha256": "e54cda999006c0571f6dc1fbb694c673e70d5166aa000daf0acf5f1b356272d9",
+  "new_movie": false,
+  "crowd_report": "C:/dev/voidfront/artifacts/scale-client-crowd-verified-2026-09-13.json",
+  "movement_report": "C:/dev/voidfront/artifacts/scale-client-movement-verified-2026-09-13.json"
 }

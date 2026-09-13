@@ -41,6 +41,13 @@ overhead (snapshot conversion, skeletons, draw calls and HUD), and implement
 purposeful crowd decompression against the unchanged crossing fixture. Economy,
 AI progression, content, physical networking and shipping gates remain open.
 
+Published source checkpoint: 9a284e0 is pushed to origin/dev. Final package
+preserves all six rendered-client network cases, default offline combat/restart,
+single-unit route and small-crowd regression. The initial publication review
+rejected the unverified destination; repository visibility/admin access was
+verified and the explicitly authorized push then succeeded. No COMPLETE.md;
+weekly development remains active.
+
 
 ## 2026-09-11 - actual scale scenarios and control groups
 
