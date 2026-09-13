@@ -60,6 +60,10 @@ void wire_validation() {
 void receipt_validation() {
     Lockstep lock;
     auto input = frame(lock.sim(), 0, 1);
+    for (const auto point:{nav::Point{kMapWidth*kScale,0},{0,kMapHeight*kScale}}) {
+        auto outside=input; outside.commands[0].x=point.x; outside.commands[0].z=point.z;
+        check(lock.receive(outside)==ReceiveResult::Invalid,"out-of-map frame admitted before advance");
+    }
     check(lock.receive(input) == ReceiveResult::Accepted, "frame rejected");
     check(lock.receive(input) == ReceiveResult::Duplicate, "duplicate not recognized");
     auto changed = input; changed.commands[0].x++;

@@ -4,12 +4,13 @@ Launch `Voidfront.exe` beside its .pck and DLL. This is the first development sk
 
 - Left click selects a friendly walker; drag selects a group. Shift adds/removes selection.
 - F2 selects all surviving friendly walkers.
+- Ctrl + 0-9 saves a control group; 0-9 recalls it. Ctrl + Shift + number adds selected walkers to a group. Shift + number adds a group to the current selection. Groups discard dead units and clear on restart.
 - Right click orders movement. A then left click issues attack-move.
 - S stops; H holds. Both stop movement immediately; nearby enemies can still be attacked.
 - Arrow keys pan the camera; wheel zooms.
 - R restarts the skirmish. Escape cancels attack targeting. Close the window to quit.
 
-The current prototype has no economy, construction, fog, queued orders, control groups or match setup menu. Enemy AI only fights. Units now travel at arbitrary headings with clearance-aware routes around the test terrain. Single-unit moves retain the exact clicked position; group destinations still use spaced cell centers. Crowded units can wait indefinitely because dynamic detours and deadlock recovery are unfinished. Art, animations and interface are foundation work; audio is not present yet.
+The current prototype has no economy, construction, fog, queued orders or match setup menu. Enemy AI only fights. Units now travel at arbitrary headings with clearance-aware routes around the test terrain. Single-unit moves retain the exact clicked position; group destinations still use spaced cell centers. Crowded units can wait indefinitely because general deadlock recovery is unfinished. Art, animations and interface are foundation work; audio is not present yet.
 
 ## Experimental two-window loopback skirmish
 

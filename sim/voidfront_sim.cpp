@@ -6,18 +6,23 @@
 #include <tuple>
 
 namespace vf {
-namespace {
-constexpr int cells = kMapWidth * kMapHeight;
-int cell_of(int x, int z) { return z / kScale * kMapWidth + x / kScale; }
-int center_x(int cell) { return cell % kMapWidth * kScale + kScale / 2; }
-int center_z(int cell) { return cell / kMapWidth * kScale + kScale / 2; }
-int manhattan(int a, int b) { return std::abs(a % kMapWidth - b % kMapWidth) + std::abs(a / kMapWidth - b / kMapWidth); }
-const std::vector<nav::Rect>& terrain_rectangles() {
-    static const std::vector<nav::Rect> result{{15*kScale,3*kScale,17*kScale,9*kScale},
-        {15*kScale,16*kScale,17*kScale,21*kScale}};
-    return result;
+int map_width(Map map) {
+    if (map==Map::Foundry) return kMapWidth;
+    if (map==Map::Scale128) return 128;
+    throw std::invalid_argument("unsupported map");
 }
-nav::Rect terrain_bounds() { return {kScale,kScale,(kMapWidth-1)*kScale,(kMapHeight-1)*kScale}; }
+int map_height(Map map) { return map==Map::Foundry?kMapHeight:map_width(map); }
+const std::vector<nav::Rect>& map_terrain(Map map) {
+    static const std::vector<nav::Rect> foundry{{15*kScale,3*kScale,17*kScale,9*kScale},
+        {15*kScale,16*kScale,17*kScale,21*kScale}};
+    static const std::vector<nav::Rect> scale{{63*kScale,8*kScale,65*kScale,60*kScale},
+        {63*kScale,68*kScale,65*kScale,120*kScale}};
+    if (map==Map::Foundry) return foundry;
+    if (map==Map::Scale128) return scale;
+    throw std::invalid_argument("unsupported map");
+}
+namespace {
+nav::Rect terrain_bounds(Map map) { return {kScale,kScale,(map_width(map)-1)*kScale,(map_height(map)-1)*kScale}; }
 constexpr int unit_radius = 64, movement_speed = 32;
 int64_t distance2(const Unit& a, const Unit& b) {
     const int64_t dx = a.x - b.x, dz = a.z - b.z;
@@ -26,7 +31,7 @@ int64_t distance2(const Unit& a, const Unit& b) {
 bool canonical(const Command& c) {
     return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 3 &&
         !c.units.empty() && c.units.size() <= 256 && c.x >= 0 && c.z >= 0 &&
-        c.x < kMapWidth * kScale && c.z < kMapHeight * kScale &&
+        c.x < kMaxMapSize * kScale && c.z < kMaxMapSize * kScale &&
         std::is_sorted(c.units.begin(), c.units.end()) &&
         std::adjacent_find(c.units.begin(), c.units.end()) == c.units.end() && c.units.front() > 0;
 }
@@ -61,15 +66,17 @@ void step_candidates(nav::Point here,nav::Point waypoint,std::vector<nav::Point>
 }
 }
 
-Sim::Sim(uint32_t seed, uint32_t count) : rng_(seed ? seed : 1), navigation_(terrain_bounds(), terrain_rectangles(), unit_radius) {
+Sim::Sim(uint32_t seed, uint32_t count, Map map) : map_(map), rng_(seed ? seed : 1), navigation_(terrain_bounds(map), map_terrain(map), unit_radius) {
     if (count < 1 || count > 250) throw std::invalid_argument("units_per_team must be 1..250");
     for (uint8_t p = 0; p < 2; ++p) {
         for (uint32_t n = 0; n < count; ++n) {
             Unit u;
             u.id = static_cast<uint32_t>(units_.size()) + 1;
             u.player = p;
-            const int x = p == 0 ? 2 + static_cast<int>(n / 20) : 29 - static_cast<int>(n / 20);
-            const int z = count <= 12 ? 9 + static_cast<int>(n) : 2 + static_cast<int>(n % 20);
+            const int x = map==Map::Foundry ? (p == 0 ? 2 + static_cast<int>(n / 20) : 29 - static_cast<int>(n / 20)) :
+                (p == 0 ? 16 + static_cast<int>(n / 20) : 111 - static_cast<int>(n / 20));
+            const int z = (count <= 12 ? 9 + static_cast<int>(n) : 2 + static_cast<int>(n % 20)) +
+                (map==Map::Scale128?52:0);
             u.x = u.goal_x = u.next_x = x * kScale + kScale / 2;
             u.z = u.goal_z = u.next_z = z * kScale + kScale / 2;
             rng_ ^= rng_ << 13; rng_ ^= rng_ >> 17; rng_ ^= rng_ << 5;
@@ -80,14 +87,16 @@ Sim::Sim(uint32_t seed, uint32_t count) : rng_(seed ? seed : 1), navigation_(ter
 }
 
 bool Sim::blocked(int x, int z) const {
-    if (x <= 0 || z <= 0 || x >= kMapWidth - 1 || z >= kMapHeight - 1) return true;
-    // Foundry ridges leave a broad central passage and two flanking corridors.
-    return (x == 15 || x == 16) && ((z >= 3 && z <= 8) || (z >= 16 && z <= 20));
+    if (x <= 0 || z <= 0 || x >= width() - 1 || z >= height() - 1) return true;
+    for (const auto& r:map_terrain(map_))
+        if (x*kScale>=r.min_x && x*kScale<r.max_x && z*kScale>=r.min_z && z*kScale<r.max_z) return true;
+    return false;
 }
 
 bool Sim::submit(Command command) {
     std::sort(command.units.begin(), command.units.end());
-    if (!canonical(command) || command.tick < tick_ || command.tick - tick_ > 1200 ||
+    if (!canonical(command) || command.x>=width()*kScale || command.z>=height()*kScale ||
+        command.tick < tick_ || command.tick - tick_ > 1200 ||
         command.sequence <= last_sequence_[command.player] || pending_.size() >= 4096) return false;
     for (const auto& c : pending_)
         if (c.player == command.player && c.sequence == command.sequence) return false;
@@ -104,8 +113,23 @@ bool Sim::submit(Command command) {
 
 void Sim::apply(const Command& c) {
     last_sequence_[c.player] = c.sequence;
-    std::array<bool, cells> assigned{};
-    const int requested = cell_of(c.x, c.z);
+    // Enumerate Manhattan rings once in row-major order. This preserves the
+    // original exhaustive search's exact distance/row/column ties without
+    // rescanning every map cell for each selected unit.
+    std::vector<nav::Point> slots;
+    if (c.order==Order::Move || c.order==Order::AttackMove) {
+        const int rx=c.x/kScale,rz=c.z/kScale;
+        for (int radius=0;radius<width()+height() && slots.size()<c.units.size();++radius) {
+            for (int z=std::max(0,rz-radius);z<=std::min(height()-1,rz+radius) && slots.size()<c.units.size();++z) {
+                const int dx=radius-std::abs(z-rz);
+                for (const int x : {rx-dx,rx+dx}) {
+                    if (!blocked(x,z)) slots.push_back({x*kScale+kScale/2,z*kScale+kScale/2});
+                    if (dx==0 || slots.size()==c.units.size()) break;
+                }
+            }
+        }
+    }
+    size_t next_slot=0;
     for (const auto id : c.units) {
         auto& u = units_[id - 1];
         if (u.hp <= 0) continue;
@@ -123,15 +147,8 @@ void Sim::apply(const Command& c) {
             u.goal_x = c.x; u.goal_z = c.z;
             continue;
         }
-        int best = -1, score = std::numeric_limits<int>::max();
-        for (int cell = 0; cell < cells; ++cell) {
-            if (assigned[cell] || blocked(cell % kMapWidth, cell / kMapWidth)) continue;
-            const int candidate = manhattan(cell, requested);
-            if (candidate < score) { best = cell; score = candidate; }
-        }
-        if (best >= 0) {
-            assigned[best] = true;
-            u.goal_x = center_x(best); u.goal_z = center_z(best);
+        if (next_slot<slots.size()) {
+            u.goal_x = slots[next_slot].x; u.goal_z = slots[next_slot++].z;
         }
     }
 }
@@ -143,7 +160,7 @@ void Sim::step() {
     std::vector<int32_t> damage(units_.size(), 0);
     std::vector<nav::Point> tick_start;
     tick_start.reserve(units_.size());
-    SpatialIndex spatial(kMapWidth,kMapHeight,kScale);
+    SpatialIndex spatial(width(),height(),kScale);
     for (const auto& u : units_) {
         tick_start.push_back({u.x,u.z});
         if (u.hp>0) spatial.insert(u.id,{u.x,u.z});
@@ -178,7 +195,7 @@ void Sim::step() {
                 goal = {u.x, u.z};
             } else if (u.order == Order::AttackMove) goal = {target->x, target->z};
         }
-        if (u.order == Order::Stop || u.order == Order::Hold) continue;
+        if (u.order == Order::Stop || u.order == Order::Hold) { continue; }
         const nav::Point here{u.x,u.z};
         if (goal == here) { u.path.clear(); u.detour.clear(); u.blocked_ticks=0; u.route_goal={-1,-1}; u.next_x=u.x; u.next_z=u.z; continue; }
         if (!(u.route_goal == goal)) {
@@ -222,7 +239,7 @@ void Sim::step() {
             }
             if (free) { u.x=candidate.x; u.z=candidate.z; u.moving=!(candidate==here); break; }
         }
-        if (u.moving) u.blocked_ticks=0;
+        if (u.moving) { u.blocked_ticks=0; }
         else if (blocker && ++u.blocked_ticks>=2) {
             // A bounded local maneuver around the first blocking sweep. At most
             // four corners and two segments are considered, with a right-hand
@@ -314,7 +331,7 @@ bool deserialize_command(std::span<const uint8_t> bytes, Command& out) {
     Command c;
     c.tick = read(); c.sequence = read(); c.player = bytes[pos++]; c.order = static_cast<Order>(bytes[pos++]);
     const auto x = read(), z = read(), count = read();
-    if (x >= kMapWidth * kScale || z >= kMapHeight * kScale || count == 0 || count > 256 || bytes.size() != 26 + count * 4) return false;
+    if (x >= kMaxMapSize * kScale || z >= kMaxMapSize * kScale || count == 0 || count > 256 || bytes.size() != 26 + count * 4) return false;
     c.x = static_cast<int32_t>(x); c.z = static_cast<int32_t>(z);
     for (uint32_t i = 0; i < count; ++i) c.units.push_back(read());
     if (!canonical(c)) return false;
@@ -324,7 +341,8 @@ bool deserialize_command(std::span<const uint8_t> bytes, Command& out) {
 uint64_t Sim::state_hash() const {
     uint64_t h = 14695981039346656037ull;
     const auto add = [&](uint64_t v) { for (int i = 0; i < 8; ++i) { h ^= (v >> (8 * i)) & 255; h *= 1099511628211ull; } };
-    add(kProtocolVersion); add(tick_); add(rng_); add(last_sequence_[0]); add(last_sequence_[1]); add(units_.size());
+    add(kProtocolVersion); add(static_cast<uint32_t>(map_)); add(width()); add(height());
+    add(tick_); add(rng_); add(last_sequence_[0]); add(last_sequence_[1]); add(units_.size());
     for (const auto& u : units_) {
         add(u.id); add(u.player); add(u.x); add(u.z); add(u.hp); add(static_cast<uint8_t>(u.order));
         add(u.target_id); add(u.cooldown); add(u.moving); add(u.goal_x); add(u.goal_z); add(u.next_x); add(u.next_z);

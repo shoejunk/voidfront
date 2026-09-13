@@ -1,5 +1,132 @@
 # Verification ledger
 
+## 2026-09-11 actual 128x128 map and control groups
+
+### Final transport preservation
+
+`artifacts/final-network-2026-09-12/summary.json` passes all 22 isolated
+1,000-tick headless cases with current fingerprints, cross-build replay and ten
+repeated traces (05:39:49-05:48:03 UTC). Delay-2 trace SHA256 is
+`a2f6495a941ca51596a52e559e669cb71cd0ef37a3fbd1fd67d44af2f7f53d06`;
+delay-4 is `9213be50d47da867e41a07eaf0470eec0d8ae4da2258f387a48cb1eddaec9fd1`.
+At 80 ms RTT, generated-command p95 is 101.7855/101.6848 ms and pacing is
+19.988537/19.996511 Hz; 231 actual random drops occurred. At 160 ms/delay 4,
+command p95 is 201.2201/201.8524 ms and pacing is 19.999483/19.999682 Hz.
+Strict 20 Hz remains unaccepted. This is sparse canonical-input loopback combat,
+not human latency, physical endpoints, a complete economic match or a soak.
+
+`artifacts/final-client-network-2026-09-12/summary.json` passes all six rendered
+client cases (05:48:03-05:49:39 UTC), with current package/headless fingerprints,
+cross-build replay and ten clean repeats. Clean, 80/160 ms RTT and held-frame
+pairs finish 240 ticks; mismatched delay rejects before advancement; disconnect
+retains matching 52-tick prefixes. At 80 ms RTT, event-to-execution p95 is
+133.969/133.830 ms and first display 166.769/166.671 ms. At 160 ms/delay 4,
+these are 267.304/233.971 ms and 300.166/266.691 ms. Each positive peer/profile
+contains only three synthetic inputs. Broad input phase/cadence, queued inputs
+during stalls, post-advance packaged desync, physical endpoints, complete matches
+and 30-minute soak remain separate gates. Independent review is retained in
+`.voidfront-agent/review-scale-controls-2026-09-12.md`.
+
+### Build, admission and independent evidence checks
+
+`artifacts/scale-integrated-build-2026-09-12.log` records integrated MSVC
+Debug/Release builds, 7/7 CTest each, legacy 15 malformed replay and seven alias
+cases per configuration, 2,000 cross-build hashes and ten repeated traces.
+Map tests independently sort exhaustive candidate cells to check distance-ring
+assignment for both maps, six boundary/ridge requests and 2/17/100/250 selected
+units, plus mixed live/dead selection. They cover 500 valid spawns, exact large
+routes, both coordinate axes and active-map admission in Sim and Lockstep.
+
+`tools/verify_scale_inputs.py` passes in both configurations:
+`artifacts/scale-inputs-{Debug,Release}-2026-09-12/summary.json` records 25 replay
+or override rejections, 18 output-alias preservation cases, 14 rejected ledger
+corruptions and two analytic controls each. VFR3 binds the actual map/content;
+replay setup overrides reject. Exact paths, Windows case aliases and hard links
+are checked before opening outputs. This covers the specified malformed files;
+it is not a claim that every semantic command rejection is preflighted.
+
+`artifacts/scale-crowds-2026-09-12/summary.json` preserves seven small crowd
+fixtures x10/configuration with identical full ledgers and 12 rejected mutations.
+The scale oracle separately verifies actual canonical commands and independently
+assigned goals, all ticks/IDs, speed, terrain/bounds and relative swept clearance.
+First-application Stop drift and frozen Move false arrivals are explicit negative
+controls. Timing and memory are measured only in the non-authoritative harness.
+
+The first final navigation invocation used `--self-test`, which returns before
+running probes; that log is oracle-only evidence. After the network suites
+completed, `python tools/verify_navigation.py --out artifacts/final-navigation-2026-09-12`
+passed all 51 fixtures x10/configuration with zero observed route excess,
+unchanged 1% plus two-coordinate-unit tolerance and current probe fingerprints.
+See its `summary.json` and `artifacts/final-navigation-full-2026-09-12.log`.
+
+### Full scale results, including failed progress
+
+Complete cases are the five entries in
+`artifacts/scale-verified-2026-09-12/summary.json` and the three entries in
+`artifacts/scale-retry-2026-09-12/summary.json`. The first runner disappeared after
+five completed cases; its partial 500-repeated files are excluded. The retry uses
+`python tools/verify_scale.py --counts 250 --profiles repeated moving-blockers ai
+--out artifacts/scale-retry-2026-09-12` with the same verified binaries. Combined:
+eight cases, 4,000 ticks each, one Release record + one Debug replay + ten Release
+replays per case, 384,000 matching tick hashes and 11,202,800 audited unit rows.
+Fingerprints, per-case hashes, timing ranges and outcome counts are retained in
+`.voidfront-agent/scale-results-2026-09-12.json` and independently reviewed.
+
+The table reports the worst p95/p99/max across ten Release replay executions,
+in milliseconds. Raw record and replay samples, including expensive command
+ticks and all stationary tails, remain in the evidence folders.
+
+| Units/profile | Worst p95 | Worst p99 | Maximum | Outcome at tick 4,000 |
+| --- | ---: | ---: | ---: | --- |
+| 200 crossing | 0.5990 | 0.6884 | 1.1985 | 0 arrivals, 200 alive |
+| 200 repeated | 0.8180 | 0.9644 | 1.3483 | 0 arrivals, 200 alive |
+| 200 Stop/resume | 0.6253 | 0.7288 | 1.1260 | 0 arrivals, 200 alive |
+| 200 combat AI | 0.9065 | 1.3892 | 6.8467 | winner 1, 10 alive |
+| 500 crossing | 1.7912 | 2.0169 | 4.4262 | 0 arrivals, 500 alive |
+| 500 repeated | 3.6451 | 4.7759 | 28.6680 | 0 arrivals, 500 alive |
+| 500 Stop/resume | 2.0260 | 2.3983 | 16.9730 | 0 arrivals, 500 alive |
+| 500 combat AI | 3.4603 | 3.8190 | 5.2639 | ongoing, 48 alive |
+
+All Release record/replay p95 <=4 ms, p99 <=8 ms and peak process resident
+memory <=2 GB (largest observed 4,677,632 bytes). Debug timings are retained and
+do not meet those budgets. These are real Sim scenarios on a 128x128 map, but
+stationary traffic and primitive combat do not establish a representative
+production battle. First-motion tick is once per run, not per-command response.
+Stop/resume verifies application and safety, not a causal proof of successful
+replanning. The traffic scenarios fail progress with maximum pending idle tails
+of 3,653/3,709 ticks. No builds, captures, encoding or other benchmarks overlapped
+these final measured suites. Earlier rejected experiments are excluded and
+documented in `.voidfront-agent/crowd-failure-2026-09-12.md`.
+
+### Exported controls and preserved gameplay
+
+The normal `--controls-smoke` entry runs the actual client scene in source and
+export. `artifacts/controls-final-source.json` passes 16 checks;
+`artifacts/controls-final-packaged.json` passes 17 including screenshot capture.
+Real keyboard InputEvents cover replace/add/recall/empty/echo groups 0-9,
+selection filtering, Stop/Hold marker position, casualty ID 1 at tick 346 and
+actual restart. Expected surviving IDs are derived independently of the helper
+being tested. Both reports contain zero errors. The earlier exported `--script`
+attempts hung and were stopped by owned-process watchdogs; they are not passing
+evidence. The normal entry is the verified supported test path.
+
+Primary and independent critic inspected
+`artifacts/controls-final-packaged.png` at 1920x1080: three shortcut rows are
+visible inside the panel and the marker is by the selected actors. Overlapping
+selection rings, marker contrast and blockout art remain visual debt. No new
+manual/animation-quality acceptance is implied.
+
+Final exported package regressions:
+`artifacts/final-crowd-verified-2026-09-12.json` verifies 4,800 unit rows, swap at
+tick 32, nine stationary Stop ticks and eight rejected mutations.
+`artifacts/final-movement-verified-2026-09-12.json` verifies 400 positions,
+184 oblique steps, three exact arrivals with <=0.019% reference route excess,
+and nine stationary Stop ticks. `artifacts/final-offline-2026-09-12.json` passes
+selection/move/Stop/combat/restart, winner 1, hash `1b35fbb0222cbc7b`.
+Its twelve-unit vsync frame interval p95/p99 is 16.957/17.272 ms and bridge step
+0.043/0.054 ms; frame p99 misses 16.67 ms. These are neither complete CPU-frame
+nor representative/reference-hardware measurements. Package pins are unchanged.
+
 ## 2026-09-11 local crowd detours
 
 ### Final transport preservation

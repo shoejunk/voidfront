@@ -1,5 +1,67 @@
 # Voidfront progress
 
+## 2026-09-13 12:02 America/Los_Angeles - weekly crowd recovery
+
+Baseline: dev 8e557d6 with interrupted staged scale/control-group changes. Codex
+verified the prior marker owner inactive with an interrupted turn; reclaimed the
+marker exclusively. STOP and COMPLETE are absent. Preserve the pending work.
+
+Goals: revalidate and checkpoint the interrupted increment, investigate the
+retained 500-unit opposing-stream jam, and land only independently reviewed
+movement improvements that preserve swept safety, Stop/Hold and deterministic
+build/replay evidence. Dense progress and all SPEC quality gates remain open.
+
+
+## 2026-09-11 - actual scale scenarios and control groups
+
+Added an authoritative 128x128 terrain map, map-aware canonical admission and
+VFR3 replay setup, preserving the default Foundry map. Simulation compatibility
+is now 4; command wire layout 1 and transport protocol 2 are unchanged. Group
+destination assignment enumerates distance rings with the original row-major
+ties, verified against an independent exhaustive reference. No engine callbacks,
+floating point or clocks enter authoritative state.
+
+Eight 4,000-tick scenarios cover 200/500 units, crossing groups, repeated orders,
+Stop/resume blockers and combat AI. Across 96 executions, all 384,000 tick hashes
+match their corresponding recorded inputs across Debug/Release and ten Release
+repeats. The independent sweep/command oracle checks 11,202,800 unit rows. All
+Release record/replay p95/p99 and process-memory observations meet the numeric
+budgets on this development host; maxima and raw samples remain recorded.
+**Crowd progress fails:** all six traffic scenarios finish with zero arrivals
+and every unit alive. Long stationary tails make timing insufficient evidence
+of useful movement. The 200-unit combat ends with ten survivors; 500-unit combat
+remains ongoing with 48 survivors at tick 4,000. This is not full RTS acceptance.
+
+Three approaches to dense crowd recovery were investigated and rejected after
+failing the retained crossing fixture. None remains in the shipped simulation.
+The exact mutual-blocking evidence and continuation are in
+`.voidfront-agent/crowd-failure-2026-09-12.md`; compact verified case results are
+in `.voidfront-agent/scale-results-2026-09-12.json`. The first scale batch was
+interrupted after five complete cases; a separate three-case retry completes
+coverage. Its partial original sixth case is excluded.
+
+Control groups 0-9 now support save, recall and additive membership/selection.
+Groups filter dead, foreign, missing and duplicate IDs and clear on restart.
+Stop/Hold feedback appears at the selected actors' center. Source and actual
+exported-package InputEvent tests pass 16/17 checks, including an independently
+identified combat casualty and reset. Primary and independent critic inspected
+the final 1920x1080 screenshot; all shortcut rows fit. These are automated
+presentation checks, not human responsiveness or production visual acceptance.
+
+Integrated Debug/Release builds pass 7/7 CTest each, legacy replay checks and
+cross-build/repeated hashes. New replay/alias and adversarial ledger tests pass
+in both configurations. Packaged crowd, single-unit routes and offline
+combat/restart regressions pass. Final transport passes all 22 headless and six
+rendered-client cases; the full static-route suite passes 51 fixtures x10/build
+with zero observed route excess. Current fingerprints match the evidence.
+Exact results and limitations are recorded in TESTING.md.
+
+Next: coordinated yielding or preventative avoidance for the unchanged dense
+crossing fixture, preserving swept clearance, Stop/Hold and bounded work. Then
+continue queued/context orders and the gather/build/produce/tech/fog complete
+match milestone. Dynamic construction, per-command response, physical networks,
+reference hardware, full content and shipping gates remain open. No COMPLETE.md.
+
 ## 2026-09-11 - bounded local detours and packaged crowd evidence
 
 Final transport preservation passes and was independently audited: all22

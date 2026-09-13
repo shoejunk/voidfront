@@ -23,7 +23,7 @@ func _ready() -> void:
 	connection.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	selection = _label(Vector2(36, 785), 22, Color("eaf1e9"))
 	tip = _label(Vector2(36, 825), 14, Color("a4b9b6"))
-	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nF2  select army    arrows  camera    wheel  zoom    R  restart"
+	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
 	result = _label(Vector2(590, 350), 34, Color("f0d19b"))
 	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
@@ -41,13 +41,13 @@ func _process(_delta: float) -> void:
 		return
 	var view := get_viewport_rect().size
 	selection.position.y = view.y - 112
-	tip.position.y = view.y - 70
+	tip.position.y = view.y - 88
 	selection.text = "%02d  /  CAIRN STRIDERS" % game.selected.size()
 	if game.attack_pending:
 		selection.text += "     —     SELECT ATTACK DESTINATION"
 	status.text = "THE GLASS REACH   /   FIELD TRIAL 01     •     %02d:%02d" % [int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
 	connection.text = ""
-	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nF2  select army    arrows  camera    wheel  zoom    R  restart"
+	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
 	result.size.x = 700 if game.network or not game.option_error.is_empty() else 500
 	result.position = Vector2((view.x - result.size.x) / 2, view.y / 2 - 30)
 	if game.current.winner == game.local_player:
@@ -64,7 +64,7 @@ func _process(_delta: float) -> void:
 			result.text = result.text.get_slice("\n", 0) + "\nAwaiting session confirmation"
 		status.text = "EXPERIMENTAL LOOPBACK 1v1   /   PLAYER %d   /   DELAY %d TICKS (%d ms)" % [game.local_player + 1, game.input_delay, game.input_delay * 50]
 		connection.text = "%s   •   tick %d   /   confirmed %d   •   UDP %d → %d" % [state.to_upper(), game.current.tick, game.network_state.get("confirmed_ticks", 0), game.local_port, game.remote_port]
-		tip.text = "LMB / drag  select own units    RMB  move    A + click  attack-move    S  stop    H  hold\nF2  select army    arrows  camera    wheel  zoom    shared match — restart after session ends"
+		tip.text = "LMB / drag  select own units    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    shared match — restart after session ends"
 		if state in ["handshake", "readiness"]:
 			result.text = "CONNECTING TO PEER" if state == "handshake" else "PREPARING INPUT BUFFER"
 			result.text += "\nOrders unlock when ready"

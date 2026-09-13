@@ -11,6 +11,7 @@ var current: Dictionary = {}
 var previous: Dictionary = {}
 var actors: Dictionary = {}
 var selected: Array[int] = []
+var control_groups: Dictionary = {}
 var obstacle_cells: Array[Vector2i] = []
 var accumulator := 0.0
 var max_hp := 100.0
@@ -23,6 +24,8 @@ var smoke := false
 var movement_smoke := false
 var crowd_smoke := false
 var crowd_fixture: RefCounted
+var controls_smoke := false
+var controls_fixture: RefCounted
 var movement_stage := 0
 var movement_inputs: Array[Dictionary] = []
 var movement_samples: Array[Dictionary] = []
@@ -90,6 +93,7 @@ func _ready() -> void:
 		if argument == "--smoke": smoke = true
 		elif argument == "--movement-smoke": movement_smoke = true
 		elif argument == "--crowd-smoke": crowd_smoke = true
+		elif argument == "--controls-smoke": controls_smoke = true
 		elif argument == "--network": network = true
 		elif argument == "--network-smoke":
 			network = true
@@ -109,6 +113,7 @@ func _ready() -> void:
 	if movement_smoke and (smoke or network): option_error = "Movement smoke requires its own offline fixture."
 	if movement_smoke and finish_tick > 600: option_error = "Movement smoke is bounded to 600 ticks."
 	if crowd_smoke and (smoke or movement_smoke or network or finish_tick > 600): option_error = "Crowd smoke requires its own offline fixture of at most 600 ticks."
+	if controls_smoke and (smoke or movement_smoke or crowd_smoke or network): option_error = "Controls smoke requires its own offline fixture."
 	if network and not ticks_specified: finish_tick = 400 if network_smoke else 36000
 	if network and local_port == remote_port: option_error = "Local and remote ports must differ."
 	if network and smoke: option_error = "Choose --smoke or --network-smoke."
@@ -126,10 +131,15 @@ func _ready() -> void:
 	canvas.add_child(hud)
 	_reset()
 	if crowd_smoke: crowd_fixture = preload("res://crowd_smoke.gd").new(self)
+	if controls_smoke and option_error.is_empty():
+		controls_fixture = preload("res://control_group_tests.gd").new(self)
+		controls_fixture.run.call_deferred()
 	print("VOIDFRONT_RUNTIME extension=ready renderer=", RenderingServer.get_video_adapter_name())
 	if not option_error.is_empty():
 		push_error(option_error)
-		if crowd_smoke:
+		if controls_smoke:
+			get_tree().quit(2)
+		elif crowd_smoke:
 			completed = true
 			crowd_fixture.finish.call_deferred()
 		elif movement_smoke:
@@ -265,6 +275,7 @@ func _reset() -> void:
 	for entry in actors.values(): entry.root.queue_free()
 	actors.clear()
 	selected.clear()
+	control_groups.clear()
 	bridge.reset(1, not (movement_smoke or crowd_smoke))
 	if network and option_error.is_empty():
 		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick):
@@ -495,6 +506,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not option_error.is_empty(): return
 	if network and (not network_state.get("ready", false) or str(network_state.get("state", "")) not in ["running", "stalled"]): return
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode >= KEY_0 and event.physical_keycode <= KEY_9:
+			_control_group(event.physical_keycode - KEY_0, event.ctrl_pressed, event.shift_pressed)
+			return
 		match event.physical_keycode:
 			KEY_F2:
 				selected.clear()
@@ -528,6 +542,31 @@ func _unhandled_input(event: InputEvent) -> void:
 				hud.dragging = false
 				_select(drag_start, event.position, event.shift_pressed)
 	if event is InputEventMouseMotion and hud.dragging: hud.drag_to = event.position
+
+func _live_own_ids(ids: Array) -> Array[int]:
+	var result: Array[int] = []
+	for unit in current.units:
+		if unit.hp > 0 and unit.player == local_player and unit.id in ids:
+			result.append(int(unit.id))
+	result.sort()
+	return result
+
+func _control_group(number: int, store_group: bool, additive: bool) -> void:
+	if number < 0 or number > 9: return
+	var members: Array[int] = _live_own_ids(control_groups.get(number, []))
+	if store_group:
+		if additive: members.append_array(selected)
+		else: members = selected.duplicate()
+		members = _live_own_ids(members)
+		if members.is_empty(): control_groups.erase(number)
+		else: control_groups[number] = members
+		return
+	if members.is_empty():
+		control_groups.erase(number)
+		return
+	control_groups[number] = members.duplicate()
+	if additive: members.append_array(selected)
+	selected = _live_own_ids(members)
 
 func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 	if not additive: selected.clear()
@@ -573,7 +612,16 @@ func _issue(order: int, at: Vector3) -> void:
 	if crowd_smoke: crowd_fixture.record_input(accepted, order, at)
 	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
-		order_mark.position = Vector3(at.x, 0.05, at.z)
+		var feedback_at := Vector3(at.x, 0.05, at.z)
+		if order == 0 or order == 3:
+			var center := Vector3.ZERO
+			var count := 0
+			for id in _live_own_ids(selected):
+				if actors.has(id):
+					center += actors[id].root.position
+					count += 1
+			if count > 0: feedback_at = Vector3(center.x / count, 0.05, center.z / count)
+		order_mark.position = feedback_at
 		order_age = 0
 		order_mark.visible = true
 		if network:

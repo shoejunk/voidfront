@@ -72,9 +72,12 @@ ReceiveResult Lockstep::receive(const TickFrame& frame) {
     if (!canonical(frame)) return ReceiveResult::Invalid;
     if (frame.tick < sim_.tick()) return ReceiveResult::Stale;
     if (frame.tick - sim_.tick() > kMaxFutureTicks) return ReceiveResult::TooFar;
-    for (const auto& c : frame.commands) for (const auto id : c.units) {
-        if (id > sim_.units().size() || sim_.units()[id - 1].player != frame.player)
-            return ReceiveResult::Invalid;
+    for (const auto& c : frame.commands) {
+        if (c.x>=sim_.width()*kScale || c.z>=sim_.height()*kScale) return ReceiveResult::Invalid;
+        for (const auto id : c.units) {
+            if (id > sim_.units().size() || sim_.units()[id - 1].player != frame.player)
+                return ReceiveResult::Invalid;
+        }
     }
     auto& slot = frames_[frame.tick][frame.player];
     if (slot) return serialize_frame(*slot) == serialize_frame(frame) ? ReceiveResult::Duplicate : ReceiveResult::Conflict;

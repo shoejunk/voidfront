@@ -8,7 +8,12 @@
 namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
-inline constexpr uint32_t kProtocolVersion = 3;
+inline constexpr int kMaxMapSize = 128;
+inline constexpr uint32_t kProtocolVersion = 4;
+enum class Map : uint32_t { Foundry = 0, Scale128 = 1 };
+int map_width(Map map);
+int map_height(Map map);
+const std::vector<nav::Rect>& map_terrain(Map map);
 enum class Order : uint8_t { Stop, Move, AttackMove, Hold };
 struct Command {
     uint32_t tick = 0, sequence = 0;
@@ -34,11 +39,14 @@ struct Unit {
 };
 class Sim {
 public:
-    explicit Sim(uint32_t seed = 1, uint32_t units_per_team = 6);
+    explicit Sim(uint32_t seed = 1, uint32_t units_per_team = 6, Map map = Map::Foundry);
     bool submit(Command command);
     void step();
     uint32_t tick() const { return tick_; }
     const std::vector<Unit>& units() const { return units_; }
+    Map map() const { return map_; }
+    int width() const { return map_width(map_); }
+    int height() const { return map_height(map_); }
     bool blocked(int x, int z) const;
     uint64_t hash() const;
     // Executed authoritative state only; independent of future input arrival order.
@@ -46,6 +54,7 @@ public:
     // -1 ongoing, 0/1 winning player, 2 draw.
     int winner() const;
 private:
+    Map map_;
     uint32_t tick_ = 0, rng_ = 1;
     std::array<uint32_t, 2> last_sequence_{};
     std::vector<Unit> units_;

@@ -1,0 +1,357 @@
+{
+  "scope": "Actual 128x128 authoritative map; development host; crowd progress FAILED",
+  "ticks_per_execution": 4000,
+  "executions_per_case": 12,
+  "binaries": {
+    "Debug": "ab053ba3923c8c3e9ffc397ea5b1c19733c678e95410eaa25b6d8149acf9d8d1",
+    "Release": "bb5aeaa3df6c19f425a3f8fa72bd9f48f9b5a97a9fec9c06d4bdc03dec7079b9"
+  },
+  "cases": {
+    "200-crossing": {
+      "source_summary": "artifacts/scale-verified-2026-09-12/summary.json",
+      "ledger": {
+        "rows": 800200,
+        "oblique_steps": 47028,
+        "stationary_stop_samples": 0,
+        "verified_commands": 2,
+        "stop_hold_subjects": 0,
+        "full_swept_clearance": true
+      },
+      "trace_sha256": "73a6ea006356a9a157ee4ee3dfe6fe3cdce170e5fda829de804679aba5b8c7c1",
+      "replay_sha256": "11afe8c3a1accfd1673ffa2175f1ca2ea054fb52400f6e9c142e950247658a9c",
+      "ledger_sha256": "672b0a96b4df30d088a313059a9efe534e5f3bffa42343875b37f9faa506049a",
+      "release_record_step_ms": {
+        "p95_ms": 0.6028,
+        "p99_ms": 0.6329,
+        "max_ms": 1.1037
+      },
+      "release_replay_step_ms_ranges": {
+        "p95_ms": [
+          0.5835,
+          0.599
+        ],
+        "p99_ms": [
+          0.6134,
+          0.6884
+        ],
+        "max_ms": [
+          0.7541,
+          1.1985
+        ]
+      },
+      "release_record_and_replay_budgets_pass": true,
+      "release_peak_resident_bytes": 4235264,
+      "alive": 200,
+      "dead": 0,
+      "goal_matched_alive": 0,
+      "unfinished_alive": 200,
+      "max_pending_idle_tail": 3653,
+      "winner": -1,
+      "active_ticks": 4000
+    },
+    "200-repeated": {
+      "source_summary": "artifacts/scale-verified-2026-09-12/summary.json",
+      "ledger": {
+        "rows": 800200,
+        "oblique_steps": 47219,
+        "stationary_stop_samples": 0,
+        "verified_commands": 22,
+        "stop_hold_subjects": 0,
+        "full_swept_clearance": true
+      },
+      "trace_sha256": "2a5e292affea8cf7af4de6a9cde4214c56e2274d6e94d0d6694baf2732cf1c32",
+      "replay_sha256": "8765485c1f93c5c5f8f146251489b0585ab37a9a24c97c2aefd5a3afc16fdc12",
+      "ledger_sha256": "54dfd572bda97b9f89e7b9c48772e92abb62e812baca4ff63c888a8404c80585",
+      "release_record_step_ms": {
+        "p95_ms": 0.8303,
+        "p99_ms": 0.8651,
+        "max_ms": 1.1566
+      },
+      "release_replay_step_ms_ranges": {
+        "p95_ms": [
+          0.7948,
+          0.818
+        ],
+        "p99_ms": [
+          0.8393,
+          0.9644
+        ],
+        "max_ms": [
+          1.0011,
+          1.3483
+        ]
+      },
+      "release_record_and_replay_budgets_pass": true,
+      "release_peak_resident_bytes": 4251648,
+      "alive": 200,
+      "dead": 0,
+      "goal_matched_alive": 0,
+      "unfinished_alive": 200,
+      "max_pending_idle_tail": 3653,
+      "winner": -1,
+      "active_ticks": 4000
+    },
+    "200-moving-blockers": {
+      "source_summary": "artifacts/scale-verified-2026-09-12/summary.json",
+      "ledger": {
+        "rows": 800200,
+        "oblique_steps": 47366,
+        "stationary_stop_samples": 1600,
+        "verified_commands": 4,
+        "stop_hold_subjects": 16,
+        "full_swept_clearance": true
+      },
+      "trace_sha256": "5833b6574ad8d5d19dbd0d69089f3e0a9314c73c136015948a8558263c57f8de",
+      "replay_sha256": "07d2f6a8ee15ad754f4810a4e0783f94db2e65879b8952cb892e878d9d7f8688",
+      "ledger_sha256": "c7ba5e75ac00349c88e4870a4704337f5ad391c428b36bec0844f5aa7aa29428",
+      "release_record_step_ms": {
+        "p95_ms": 0.5936,
+        "p99_ms": 0.6673,
+        "max_ms": 1.1003
+      },
+      "release_replay_step_ms_ranges": {
+        "p95_ms": [
+          0.5863,
+          0.6253
+        ],
+        "p99_ms": [
+          0.6445,
+          0.7288
+        ],
+        "max_ms": [
+          0.7684,
+          1.126
+        ]
+      },
+      "release_record_and_replay_budgets_pass": true,
+      "release_peak_resident_bytes": 4231168,
+      "alive": 200,
+      "dead": 0,
+      "goal_matched_alive": 0,
+      "unfinished_alive": 200,
+      "max_pending_idle_tail": 3653,
+      "winner": -1,
+      "active_ticks": 4000
+    },
+    "200-ai": {
+      "source_summary": "artifacts/scale-verified-2026-09-12/summary.json",
+      "ledger": {
+        "rows": 800200,
+        "oblique_steps": 63875,
+        "stationary_stop_samples": 0,
+        "verified_commands": 226,
+        "stop_hold_subjects": 0,
+        "full_swept_clearance": true
+      },
+      "trace_sha256": "79624937757a0432a33df7b5dd1ff0ab8ff30ab945c4765b8d70e55d6ffa84c2",
+      "replay_sha256": "c96734c6a5a1e8dd7a9a703a24e5a1939471430d01402bf95b3f584dcba7ff8b",
+      "ledger_sha256": "33c2dce7004a3f4f0fbc16bd7049a010e0abc507bf422e1cd6c6774a59bccd70",
+      "release_record_step_ms": {
+        "p95_ms": 0.7279,
+        "p99_ms": 0.9625,
+        "max_ms": 1.1761
+      },
+      "release_replay_step_ms_ranges": {
+        "p95_ms": [
+          0.7562,
+          0.9065
+        ],
+        "p99_ms": [
+          0.9741,
+          1.3892
+        ],
+        "max_ms": [
+          1.1047,
+          6.8467
+        ]
+      },
+      "release_record_and_replay_budgets_pass": true,
+      "release_peak_resident_bytes": 4272128,
+      "alive": 10,
+      "dead": 190,
+      "goal_matched_alive": 2,
+      "unfinished_alive": 8,
+      "max_pending_idle_tail": 1739,
+      "winner": 1,
+      "active_ticks": 2251
+    },
+    "500-crossing": {
+      "source_summary": "artifacts/scale-verified-2026-09-12/summary.json",
+      "ledger": {
+        "rows": 2000500,
+        "oblique_steps": 118406,
+        "stationary_stop_samples": 0,
+        "verified_commands": 2,
+        "stop_hold_subjects": 0,
+        "full_swept_clearance": true
+      },
+      "trace_sha256": "5e41dd644e3c7bd94b4ad2d6a8da5099ca342c022bafac784703bd8689d0a2cd",
+      "replay_sha256": "2e9a9208bcf4c15ed1cc8660071ab21003766620b264044a166fa73d005c129c",
+      "ledger_sha256": "00eb8becae11642b2f876a4306d12988b42eea2be8b98995a3dd79d1c8fb7618",
+      "release_record_step_ms": {
+        "p95_ms": 1.9261,
+        "p99_ms": 2.093,
+        "max_ms": 3.3311
+      },
+      "release_replay_step_ms_ranges": {
+        "p95_ms": [
+          1.6038,
+          1.7912
+        ],
+        "p99_ms": [
+          1.8243,
+          2.0169
+        ],
+        "max_ms": [
+          2.1497,
+          4.4262
+        ]
+      },
+      "release_record_and_replay_budgets_pass": true,
+      "release_peak_resident_bytes": 4362240,
+      "alive": 500,
+      "dead": 0,
+      "goal_matched_alive": 0,
+      "unfinished_alive": 500,
+      "max_pending_idle_tail": 3709,
+      "winner": -1,
+      "active_ticks": 4000
+    },
+    "500-repeated": {
+      "source_summary": "artifacts/scale-retry-2026-09-12/summary.json",
+      "ledger": {
+        "rows": 2000500,
+        "oblique_steps": 118717,
+        "stationary_stop_samples": 0,
+        "verified_commands": 22,
+        "stop_hold_subjects": 0,
+        "full_swept_clearance": true
+      },
+      "trace_sha256": "d0f8481f6802db2ba53fb8681480fdabeeb92315cc47f151231c35edb50f120c",
+      "replay_sha256": "138a8ee039b1c2e90194208e81e3b674662d6b28bd2398b11192ddf662aad6db",
+      "ledger_sha256": "ec2001a1db686bad0cc4d3154fc70009d0a6d4e0f5ca3418343b308a99ed9f07",
+      "release_record_step_ms": {
+        "p95_ms": 2.2743,
+        "p99_ms": 2.6292,
+        "max_ms": 3.4116
+      },
+      "release_replay_step_ms_ranges": {
+        "p95_ms": [
+          2.3472,
+          3.6451
+        ],
+        "p99_ms": [
+          2.7525,
+          4.7759
+        ],
+        "max_ms": [
+          3.2585,
+          28.668
+        ]
+      },
+      "release_record_and_replay_budgets_pass": true,
+      "release_peak_resident_bytes": 4378624,
+      "alive": 500,
+      "dead": 0,
+      "goal_matched_alive": 0,
+      "unfinished_alive": 500,
+      "max_pending_idle_tail": 3709,
+      "winner": -1,
+      "active_ticks": 4000
+    },
+    "500-moving-blockers": {
+      "source_summary": "artifacts/scale-retry-2026-09-12/summary.json",
+      "ledger": {
+        "rows": 2000500,
+        "oblique_steps": 118585,
+        "stationary_stop_samples": 1600,
+        "verified_commands": 4,
+        "stop_hold_subjects": 16,
+        "full_swept_clearance": true
+      },
+      "trace_sha256": "26b2f61bce22f4d435edaf6ddf1d1d166fc540c621653e91667505def60ea69e",
+      "replay_sha256": "96bfa99429d11d3442e2f0dc5945e4683919e4aa5e2a7c27b29c85888d83f28c",
+      "ledger_sha256": "133898d28c804091206132ae411a08c371a50417ce6d7ac3557c715ef1487960",
+      "release_record_step_ms": {
+        "p95_ms": 2.3593,
+        "p99_ms": 3.0915,
+        "max_ms": 6.7814
+      },
+      "release_replay_step_ms_ranges": {
+        "p95_ms": [
+          1.7401,
+          2.026
+        ],
+        "p99_ms": [
+          1.9895,
+          2.3983
+        ],
+        "max_ms": [
+          2.7548,
+          16.973
+        ]
+      },
+      "release_record_and_replay_budgets_pass": true,
+      "release_peak_resident_bytes": 4349952,
+      "alive": 500,
+      "dead": 0,
+      "goal_matched_alive": 0,
+      "unfinished_alive": 500,
+      "max_pending_idle_tail": 3709,
+      "winner": -1,
+      "active_ticks": 4000
+    },
+    "500-ai": {
+      "source_summary": "artifacts/scale-retry-2026-09-12/summary.json",
+      "ledger": {
+        "rows": 2000500,
+        "oblique_steps": 143747,
+        "stationary_stop_samples": 0,
+        "verified_commands": 400,
+        "stop_hold_subjects": 0,
+        "full_swept_clearance": true
+      },
+      "trace_sha256": "4ae777c0b829854b39e8eafb3ec8996d3afc3a69e2a65970456e7e5d0f198119",
+      "replay_sha256": "eaefd8732608c6c994b62e3c926a660dcd7c9af05d29d422825528c89820959b",
+      "ledger_sha256": "0899d42a7f15c90ac8e18dff9c613ba7e821d45dcf89f60cb1dd3844355dfc1c",
+      "release_record_step_ms": {
+        "p95_ms": 3.4533,
+        "p99_ms": 3.8708,
+        "max_ms": 6.7158
+      },
+      "release_replay_step_ms_ranges": {
+        "p95_ms": [
+          3.3129,
+          3.4603
+        ],
+        "p99_ms": [
+          3.6632,
+          3.819
+        ],
+        "max_ms": [
+          4.047,
+          5.2639
+        ]
+      },
+      "release_record_and_replay_budgets_pass": true,
+      "release_peak_resident_bytes": 4677632,
+      "alive": 48,
+      "dead": 452,
+      "goal_matched_alive": 0,
+      "unfinished_alive": 48,
+      "max_pending_idle_tail": 766,
+      "winner": -1,
+      "active_ticks": 4000
+    }
+  },
+  "complete_executions": 96,
+  "compared_tick_hashes": 384000,
+  "independently_audited_unit_rows": 11202800,
+  "limits": [
+    "Original first batch interrupted after five completed cases; its partial 500-repeated run is excluded.",
+    "Six crossing/repeated/Stop-resume scenarios have zero arrivals with all units alive. Performance during a stationary tail does not pass movement progress.",
+    "Combat goal matching is not an arrival criterion; 500-unit combat remains ongoing at tick 4000.",
+    "No production-map representativeness, dynamic construction, per-command response, rendered large-map or reference-hardware acceptance.",
+    "Full raw timing, unit IDs, commands and ledgers remain in source evidence folders."
+  ]
+}
