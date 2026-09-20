@@ -45,6 +45,11 @@ measurements; retain the failed dense crossing fixture for purposeful backward
 decompression with a retained passing side. Crowd progress, complete economy/AI,
 production content, physical networking and shipping gates remain open.
 
+Published source checkpoint: e404e21 is pushed to origin/dev. The verified
+package remains artifacts/package/Voidfront.exe. Weekly development stays active;
+no COMPLETE.md and no shipping claim. Final metadata preserves prior separately
+dated movement evidence.
+
 ## 2026-09-13 12:02 America/Los_Angeles - weekly crowd recovery
 
 Baseline: dev 8e557d6 with interrupted staged scale/control-group changes. Codex

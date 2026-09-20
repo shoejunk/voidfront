@@ -1,34 +1,38 @@
 {
   "frame_interval_p99_ms": {
-    "foundry12": 72.206,
-    "units500": 168.804,
-    "units200": 101.006
+    "foundry12": 3.249,
+    "units200": 20.4,
+    "units500": 63.897
   },
   "remote_backup": true,
   "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
-  "runtime_report": "C:/dev/voidfront/artifacts/scale-client-offline-regression-2026-09-13.json",
-  "package_pck_sha256": "de490e84bda1da5dde900c0907b46bd5a8ed60531a5757ae9903d79c8b1b5e54",
+  "runtime_report": "C:\\dev\\voidfront\\artifacts\\presentation-offline-final-2026-09-20.json",
+  "package_pck_sha256": "57289ae84e0899d4c8ead947e0ed4000a1d097c5a0f4b8dbed252de6101c2c7c",
   "simulation_commit": "de74df7",
-  "source_commit": "9a284e05b65b902f901789eebae0c5797bd3ea78",
-  "runtime_evidence_date": "2026-09-13",
+  "source_commit": "e404e213f7d6a8af2e6036a895289ccbbfaa72b3",
+  "runtime_evidence_date": "2026-09-20",
   "scale_reports": [
-    "C:/dev/voidfront/artifacts/scale-client-final-200-replay-2026-09-13/summary.json",
-    "C:/dev/voidfront/artifacts/scale-client-final-500-replay-2026-09-13/summary.json"
+    "C:\\dev\\voidfront\\artifacts\\presentation-scale-replay-2026-09-20\\summary.json"
   ],
-  "run": "2026-09-13-offline-scale-client",
-  "verification": "C:/dev/voidfront/artifacts/scale-client-build-2026-09-13.log",
+  "run": "2026-09-20-presentation-profile-hud",
+  "verification": "C:\\dev\\voidfront\\artifacts\\weekly-build-2026-09-20.log",
   "reviews": [
-    "C:/dev/voidfront/.voidfront-agent/review-crowd-recovery-2026-09-13.md",
-    "C:/dev/voidfront/.voidfront-agent/review-scale-client-2026-09-13.md"
+    "C:\\dev\\voidfront\\.voidfront-agent\\review-presentation-2026-09-20.md"
   ],
-  "next": "Purposeful backward crowd decompression with retained passing side; foreground presentation profiling; preserve unchanged gates and full-game scope",
-  "checkpoint_utc": "2026-09-13T19:28:01.3366197Z",
-  "client_report": "C:/dev/voidfront/artifacts/scale-client-network-regression-2026-09-13/summary.json",
+  "next": "Purposeful backward crowd decompression with retained passing side on unchanged fixture; controlled same-state animation/skeleton/render attribution; preserve full-game scope",
+  "checkpoint_utc": "2026-09-20T19:19:36.936837+00:00",
+  "client_report": "C:\\dev\\voidfront\\artifacts\\presentation-network-final-2026-09-20\\summary.json",
   "branch": "dev",
-  "timing_limit": "Hidden-window capture includes presentation, fixture and scheduling costs; foreground CPU/GPU attribution unverified",
-  "state": "Reviewed offline 128x128 client access; dense crowd progress and frame budgets remain open",
-  "package_bridge_sha256": "e54cda999006c0571f6dc1fbb694c673e70d5166aa000daf0acf5f1b356272d9",
+  "timing_limit": "Focused hidden-launch observations with unequal short tick/time windows; no same-state causal full-frame improvement, GPU attribution or reference acceptance",
+  "state": "Reviewed ordinary-play profiler and HUD optimization; large-army frames and dense crossing remain failed",
+  "package_bridge_sha256": "c315fed8635b4a1643970cb2bcd427906604bf541dcb3f1948ec46bf3c64945a",
   "new_movie": false,
   "crowd_report": "C:/dev/voidfront/artifacts/scale-client-crowd-verified-2026-09-13.json",
-  "movement_report": "C:/dev/voidfront/artifacts/scale-client-movement-verified-2026-09-13.json"
+  "movement_report": "C:/dev/voidfront/artifacts/scale-client-movement-verified-2026-09-13.json",
+  "profile_reports": [
+    "C:\\dev\\voidfront\\artifacts\\presentation-package12-final-2026-09-20.json",
+    "C:\\dev\\voidfront\\artifacts\\presentation-package200-final-2026-09-20.json",
+    "C:\\dev\\voidfront\\artifacts\\presentation-package500-final-2026-09-20.json"
+  ],
+  "profile_integrity": "C:\\dev\\voidfront\\artifacts\\presentation-final-integrity-2026-09-20.json"
 }
