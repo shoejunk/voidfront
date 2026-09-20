@@ -91,11 +91,21 @@ var status_history: Array[Dictionary] = []
 var own_selection_passed := false
 var pending_execution_display: Array[Dictionary] = []
 var execution_display_samples: Array[Dictionary] = []
+var profile_presentation := false
+var presentation_profiler: RefCounted
 
 func _ready() -> void:
 	var ticks_specified := false
+	var profile_options := false
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--smoke": smoke = true
+		elif argument == "--profile-presentation": profile_presentation = true
+		elif argument.begins_with("--profile-frames="):
+			profile_options = true
+			_integer_option(argument, 1, 3600)
+		elif argument.begins_with("--profile-warmup="):
+			profile_options = true
+			_integer_option(argument, 0, 1200)
 		elif argument == "--movement-smoke": movement_smoke = true
 		elif argument == "--crowd-smoke": crowd_smoke = true
 		elif argument == "--controls-smoke": controls_smoke = true
@@ -131,6 +141,13 @@ func _ready() -> void:
 	if scale128 and (network or smoke or movement_smoke or crowd_smoke or controls_smoke): option_error = "Scale mode requires its own offline match."
 	if scale_smoke and not ticks_specified: finish_tick = 700
 	if scale_smoke and (finish_tick < 200 or finish_tick > 1000): option_error = "Scale smoke requires 200..1000 ticks."
+	if profile_presentation and (smoke or movement_smoke or crowd_smoke or controls_smoke or scale_smoke or network): option_error = "Presentation profiling requires ordinary offline play."
+	if profile_options and not profile_presentation: option_error = "Profile frame options require --profile-presentation."
+	if profile_presentation and report_path.is_empty(): option_error = "Presentation profiling requires --report=<path>."
+	if (profile_presentation or profile_options) and not option_error.is_empty():
+		push_error(option_error)
+		get_tree().quit(2)
+		return
 	bridge = ClassDB.instantiate("VoidfrontBridge")
 	if bridge == null:
 		push_error("Required C++ simulation extension failed to load")
@@ -152,6 +169,9 @@ func _ready() -> void:
 	hud.game = self
 	canvas.add_child(hud)
 	_reset()
+	if profile_presentation and option_error.is_empty():
+		presentation_profiler = preload("res://presentation_profile.gd").new(self)
+		presentation_profiler.start()
 	if scale_smoke:
 		scale_fixture = preload("res://scale_smoke.gd").new(self)
 		scale_fixture.run.call_deferred()
@@ -385,6 +405,7 @@ func _subdue_corpse(node: Node) -> void:
 func _process(delta: float) -> void:
 	if current.is_empty() or completed: return
 	if not option_error.is_empty(): return
+	var profile_start := Time.get_ticks_usec() if presentation_profiler else 0
 	if smoke or network_smoke or movement_smoke or crowd_smoke or scale_smoke:
 		var now := Time.get_ticks_usec()
 		if last_frame_usec != 0 and (not movement_smoke or frame_times.size() < finish_tick * 12): frame_times.append((now - last_frame_usec) / 1000.0)
@@ -410,15 +431,20 @@ func _process(delta: float) -> void:
 			previous = current
 			var start := Time.get_ticks_usec()
 			bridge.advance()
+			if presentation_profiler: presentation_profiler.record("bridge", Time.get_ticks_usec() - start)
 			if smoke or movement_smoke or crowd_smoke or scale_smoke: sim_times.append((Time.get_ticks_usec() - start) / 1000.0)
+			var snapshot_start := Time.get_ticks_usec() if presentation_profiler else 0
 			current = bridge.snapshot()
+			if presentation_profiler: presentation_profiler.record("snapshot", Time.get_ticks_usec() - snapshot_start)
 			accumulator -= STEP
 			ticks += 1
 			if smoke: _smoke_tick()
 			if movement_smoke: _movement_smoke_tick()
 			if crowd_smoke: crowd_fixture.tick()
 			if scale_smoke: scale_fixture.tick()
+	var present_start := Time.get_ticks_usec() if presentation_profiler else 0
 	_present(clampf(accumulator / STEP, 0, 1), delta)
+	if presentation_profiler: presentation_profiler.record("present", Time.get_ticks_usec() - present_start)
 	# The first positive interpolation includes the new authoritative state.
 	if network_smoke and accumulator > 0 and current.tick != presented_tick:
 		presented_tick = current.tick
@@ -435,6 +461,9 @@ func _process(delta: float) -> void:
 	order_age += delta
 	order_mark.visible = order_age < 1.2
 	order_mark.scale = Vector3.ONE * (1.0 + minf(order_age, 1.2) * 0.5)
+	if presentation_profiler:
+		presentation_profiler.record("main_process", Time.get_ticks_usec() - profile_start)
+		presentation_profiler.frame(delta)
 	if movement_smoke and current.tick >= finish_tick and not completed:
 		completed = true
 		_finish_movement_smoke.call_deferred()

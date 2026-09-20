@@ -34,6 +34,16 @@ still waits on the movement and complete-small-match requirements above.
 
 ## Required movement and pathfinding milestone
 
+2026-09-20 evidence refinement: ordinary-play stage profiling is now available
+in `tools/profile.ps1`, with raw focus/window/stage samples, payload fingerprints
+and an independent verifier. A measured HUD optimization batches static minimap
+cells and avoids hidden-bar projections; final 500-unit HUD p95 is 4.501 ms.
+Whole-frame p99 remains 20.400/63.897 ms for 200/500 units on the development
+host. Focus flags pass in hidden launches, but unoccluded human foreground play,
+same-state engine animation/skeleton/render attribution and representative frame
+acceptance remain open. Preserve the independent evidence in TESTING.md. This
+does not change the failed crowd-progress gate or production prerequisites.
+
 The bounded current-map implementation now has arbitrary authoritative headings and static clearance routes. Finished movement must additionally satisfy the dynamic crowd, route quality and performance gates below, with direct travel toward unobstructed destinations and efficient routes around obstacles. Neither four/eight-direction movement nor presentation-only smoothing satisfies this requirement.
 
 The algorithm and navigation representation remain open: constrained Delaunay triangulation is not required. Choose the strategy using measured route quality, runtime cost, memory use and deterministic behavior. All authoritative routing, collision and avoidance remain in the standalone integer/fixed-point simulation, with stable ordering and identical Debug/Release replay results.

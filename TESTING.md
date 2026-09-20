@@ -1,5 +1,91 @@
 # Verification ledger
 
+## 2026-09-20 ordinary presentation profiling and HUD submission
+
+`artifacts/weekly-build-2026-09-20.log` records pinned Godot 4.7.2/templates/
+godot-cpp verification, integrated MSVC Debug/Release **7/7 CTest** each,
+15 malformed replay and seven output-alias cases per configuration, 2,000
+cross-build tick hashes and ten repeats. Authoritative sim/net/bridge, assets,
+engine pins and compatibility identity are unchanged in this increment.
+
+`tools/profile.ps1` profiles ordinary offline AI play without smoke commands or
+in-window screenshots. Default warmup/measurement counts are 120/600; these
+bounded observations explicitly used 60/360. Raw warmup is retained separately,
+with no outlier/focus filtering. Script durations include main callback, bridge
+advance, snapshot (hash plus marshaling), actor presentation and HUD callbacks.
+HUD draw has independent redraw cadence; engine counters can describe prior work.
+These are not GPU timings or complete CPU frame measurements. The helper rejects
+reused artifact names, fingerprints sources/payload before launch and samples
+Windows process counters. Console source launches may be wrappers: game RSS/CPU
+is accepted only when the reported runtime PID equals the sampled PID. Timeout
+cleanup kills only the owned process tree. Explicit `-Visible` is available for
+a user-operated window; hidden is the default and focus is observed separately.
+
+```powershell
+./tools/profile.ps1 -Packaged -UnitsPerTeam 250 -Frames 360 -Warmup 60 -Capture -Name presentation-package500-final-2026-09-20
+./tools/profile.ps1 -Packaged -UnitsPerTeam 100 -Frames 360 -Warmup 60 -Capture -Name presentation-package200-final-2026-09-20
+./tools/profile.ps1 -Packaged -Map Foundry -Frames 360 -Warmup 60 -Capture -Name presentation-package12-final-2026-09-20
+python tools/verify_presentation_profile.py artifacts/presentation-package12-final-2026-09-20.json artifacts/presentation-package200-final-2026-09-20.json artifacts/presentation-package500-final-2026-09-20.json --out artifacts/presentation-final-integrity-2026-09-20.json
+```
+
+Choose fresh names when repeating. The independent verifier passes all three
+final reports and ten deliberate corruptions per report; it checks raw counts,
+wall telescoping, tick/catch-up correspondence, stage containment, snapshot
+boundaries and independently recomputed nearest-rank statistics. All final
+payload fingerprints and runtime/host PIDs match. Each final measurement has
+360 focused, nonminimized frames and enabled AI/animation with zero selection.
+
+| Units | Measured seconds / ticks | Frame p95 / p99 ms | HUD draw p95 ms | Peak resident bytes |
+| --- | --- | --- | --- | --- |
+| 12 Foundry | 0.802 / 7..23 | 2.794 / 3.249 | 0.165 | 222,687,232 |
+| 200 Scale128 | 6.400 / 26..154 | 19.787 / 20.400 | 1.948 | 255,201,280 |
+| 500 Scale128 | 20.038 / 62..462 | 61.222 / 63.897 | 4.501 | 321,359,872 |
+
+The 12-unit sample is particularly short and does not establish sustained combat
+performance. No reference-hardware, human response, unoccluded foreground or full
+match acceptance. 200/500 still fail the 16.67 ms frame target. Source profiling
+loads the Debug bridge and is separately dated; it is not a Release baseline.
+
+Before HUD changes, `presentation-package500-before-2026-09-20.json` records HUD
+p95 6.097 ms and frame p95/p99 62.607/66.953 ms; the first after report records
+4.573 and 60.745/63.859 ms. Their tick windows differ (65..476 versus 61..460),
+so these are observed distributions, not an identical-state causal full-frame
+speedup. Final repeat above uses the final option-validation package. The
+optimization batches static obstacle cells into a cached 2D MultiMesh and skips
+projection for hidden full-health unselected Scale128 bars. Measured GPU draw
+calls did not decrease. Static minimap regions (24,206 pixels) are identical
+before/after; selected bars, unit dots and square/rectangular maps are inspected
+in final captures. Runtime resizing remains untested. Future dynamic terrain
+must invalidate the static batch. No art/animation/readability acceptance.
+
+Baseline source/PCK/bridge are retained in
+`artifacts/presentation-before-source-2026-09-20/`; compact metrics/hashes are
+`.voidfront-agent/presentation-results-2026-09-20.json`. Independent findings:
+`.voidfront-agent/review-presentation-2026-09-20.md`. Final import/export log:
+`artifacts/presentation-final-package-2026-09-20.log`.
+
+`./tools/capture.ps1 -Packaged -Scale -UnitsPerTeam 250 -Ticks 700 -Name presentation-scale-controls-2026-09-20`
+passes 23 checks: selection/groups, far-map orders, first-tick Stop, 11 stationary
+Stop samples, resume and restart state. `tools/verify_scale_capture.py` writes
+`artifacts/presentation-scale-replay-2026-09-20/summary.json`: all 700 hashes
+match Debug and ten Release replays, 350,500 swept rows pass the independent
+oracle, and eight corruptions reject. This remains a one-sided fixture, not the
+failed opposing-stream progress gate or proof of ticking after restart.
+`presentation-offline-final-2026-09-20.json` passes the default 400-tick
+controls/combat/restart fixture, winner 1 and unchanged hash 1b35fbb0222cbc7b.
+No new movement/network simulation logic or Blender sources changed. No movie,
+human playtest, full RTS match, shipping review or COMPLETE.md this run.
+
+Final `python tools/verify_client_network.py --out artifacts/presentation-network-final-2026-09-20`
+passes all six rendered separate-process cases (clean, 80/160 ms RTT with
+jitter/loss, withheld frame, mismatched input delay and disconnect), opposite-build
+recording replays and ten clean repeats. All five final package/replayer hashes
+match the summary. This preserves Foundry loopback coverage, not physical networks,
+complete matches or a 30-minute soak. The 22-case headless transport and static
+navigation/full crowd suites were not rerun; their source is unchanged and prior
+evidence remains dated. Four malformed profile option combinations exit 2 before
+world setup; report `artifacts/presentation-invalid-options-2026-09-20.json`.
+
 ## 2026-09-13 offline large-map client and rejected crowd experiments
 
 The interrupted scale/control-group source was revalidated and published as

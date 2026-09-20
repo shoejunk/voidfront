@@ -1,0 +1,475 @@
+{
+  "cases": [
+    {
+      "case": "500-before",
+      "report": "C:\\dev\\voidfront\\artifacts\\presentation-package500-before-2026-09-20.json",
+      "sha256": "e02ef1fec8113cab2e96a8f2b13528896f913f0f0b88ecdc96eb2ac93c25251d",
+      "frames": 360,
+      "warmup": 60,
+      "ticks": [
+        65,
+        476
+      ],
+      "seconds": 20.5886,
+      "focused": 360,
+      "camera_size": 27.0,
+      "metrics": {
+        "focused_frames": 360,
+        "frames": 360,
+        "process_delta_usec": {
+          "count": 360,
+          "maximum": 79292.3333333333,
+          "mean": 57146.6372895623,
+          "p50": 58333.3333333333,
+          "p95": 61111.1111111111,
+          "p99": 66666.6666666667,
+          "total": 20572789.4242424
+        },
+        "stage_calls_usec": {
+          "bridge": {
+            "count": 411,
+            "maximum": 2553,
+            "mean": 1462.76155717762,
+            "p50": 1512,
+            "p95": 2018,
+            "p99": 2328,
+            "total": 601195.0
+          },
+          "hud_draw": {
+            "count": 360,
+            "maximum": 8568,
+            "mean": 5396.99722222222,
+            "p50": 5256,
+            "p95": 6097,
+            "p99": 7950,
+            "total": 1942919.0
+          },
+          "hud_process": {
+            "count": 360,
+            "maximum": 146,
+            "mean": 44.0111111111111,
+            "p50": 42,
+            "p95": 53,
+            "p99": 108,
+            "total": 15844.0
+          },
+          "main_process": {
+            "count": 360,
+            "maximum": 19292,
+            "mean": 8264.86111111111,
+            "p50": 8333,
+            "p95": 12287,
+            "p99": 12851,
+            "total": 2975350.0
+          },
+          "present": {
+            "count": 360,
+            "maximum": 16266,
+            "mean": 4953.05277777778,
+            "p50": 5154,
+            "p95": 6740,
+            "p99": 7307,
+            "total": 1783099.0
+          },
+          "snapshot": {
+            "count": 411,
+            "maximum": 1686,
+            "mean": 906.734793187348,
+            "p50": 871,
+            "p95": 1125,
+            "p99": 1299,
+            "total": 372668.0
+          }
+        },
+        "wall_interval_usec": {
+          "count": 360,
+          "maximum": 73665,
+          "mean": 57190.5555555556,
+          "p50": 57931,
+          "p95": 62607,
+          "p99": 66953,
+          "total": 20588600.0
+        }
+      },
+      "peak_resident_bytes": null,
+      "host_valid": false
+    },
+    {
+      "case": "500-after",
+      "report": "C:\\dev\\voidfront\\artifacts\\presentation-package500-after-2026-09-20.json",
+      "sha256": "066ae5ad1c6a215fbc3b61aca7ab0ee74f5de86e50183963449c4f08c7600929",
+      "frames": 360,
+      "warmup": 60,
+      "ticks": [
+        61,
+        460
+      ],
+      "seconds": 19.966802,
+      "focused": 360,
+      "camera_size": 27.0,
+      "metrics": {
+        "focused_frames": 360,
+        "frames": 360,
+        "process_delta_usec": {
+          "count": 360,
+          "maximum": 66666.6666666667,
+          "mean": 55434.2887566138,
+          "p50": 57310.6666666667,
+          "p95": 59259.2592592593,
+          "p99": 62595.0,
+          "total": 19956343.952381
+        },
+        "stage_calls_usec": {
+          "bridge": {
+            "count": 399,
+            "maximum": 3223,
+            "mean": 1459.67418546366,
+            "p50": 1512,
+            "p95": 2055,
+            "p99": 2666,
+            "total": 582410.0
+          },
+          "hud_draw": {
+            "count": 360,
+            "maximum": 5470,
+            "mean": 4164.19166666667,
+            "p50": 4094,
+            "p95": 4573,
+            "p99": 5051,
+            "total": 1499109.0
+          },
+          "hud_process": {
+            "count": 360,
+            "maximum": 104,
+            "mean": 43.7833333333333,
+            "p50": 42,
+            "p95": 49,
+            "p99": 69,
+            "total": 15762.0
+          },
+          "main_process": {
+            "count": 360,
+            "maximum": 20102,
+            "mean": 8083.27777777778,
+            "p50": 8279,
+            "p95": 12120,
+            "p99": 13519,
+            "total": 2909980.0
+          },
+          "present": {
+            "count": 360,
+            "maximum": 17028,
+            "mean": 4874.18055555556,
+            "p50": 5133,
+            "p95": 6745,
+            "p99": 7663,
+            "total": 1754705.0
+          },
+          "snapshot": {
+            "count": 399,
+            "maximum": 1549,
+            "mean": 923.872180451128,
+            "p50": 895,
+            "p95": 1133,
+            "p99": 1366,
+            "total": 368625.0
+          }
+        },
+        "wall_interval_usec": {
+          "count": 360,
+          "maximum": 67209,
+          "mean": 55463.3388888889,
+          "p50": 56476,
+          "p95": 60745,
+          "p99": 63859,
+          "total": 19966802.0
+        }
+      },
+      "peak_resident_bytes": 364187648,
+      "host_valid": true
+    },
+    {
+      "case": "12-final",
+      "report": "C:\\dev\\voidfront\\artifacts\\presentation-package12-final-2026-09-20.json",
+      "sha256": "125369ce6d9406aedad22d078e417b4e569d6e8686a7a75aca762416d60081ec",
+      "frames": 360,
+      "warmup": 60,
+      "ticks": [
+        7,
+        23
+      ],
+      "seconds": 0.801756,
+      "focused": 360,
+      "camera_size": 27.0,
+      "metrics": {
+        "focused_frames": 360,
+        "frames": 360,
+        "process_delta_usec": {
+          "count": 360,
+          "maximum": 2788.09523809524,
+          "mean": 2228.1200617284,
+          "p50": 2102.0,
+          "p95": 2380.95238095238,
+          "p99": 2777.77777777778,
+          "total": 802123.222222225
+        },
+        "stage_calls_usec": {
+          "bridge": {
+            "count": 16,
+            "maximum": 24,
+            "mean": 20.375,
+            "p50": 20,
+            "p95": 24,
+            "p99": 24,
+            "total": 326.0
+          },
+          "hud_draw": {
+            "count": 360,
+            "maximum": 245,
+            "mean": 128.325,
+            "p50": 121,
+            "p95": 165,
+            "p99": 202,
+            "total": 46197.0
+          },
+          "hud_process": {
+            "count": 360,
+            "maximum": 55,
+            "mean": 15.4194444444444,
+            "p50": 13,
+            "p95": 25,
+            "p99": 38,
+            "total": 5551.0
+          },
+          "main_process": {
+            "count": 360,
+            "maximum": 197,
+            "mean": 65.2777777777778,
+            "p50": 55,
+            "p95": 132,
+            "p99": 156,
+            "total": 23500.0
+          },
+          "present": {
+            "count": 360,
+            "maximum": 173,
+            "mean": 54.8111111111111,
+            "p50": 48,
+            "p95": 82,
+            "p99": 127,
+            "total": 19732.0
+          },
+          "snapshot": {
+            "count": 16,
+            "maximum": 48,
+            "mean": 40.125,
+            "p50": 40,
+            "p95": 48,
+            "p99": 48,
+            "total": 642.0
+          }
+        },
+        "wall_interval_usec": {
+          "count": 360,
+          "maximum": 3607,
+          "mean": 2227.1,
+          "p50": 2116,
+          "p95": 2794,
+          "p99": 3249,
+          "total": 801756.0
+        }
+      },
+      "peak_resident_bytes": 222687232,
+      "host_valid": true
+    },
+    {
+      "case": "200-final",
+      "report": "C:\\dev\\voidfront\\artifacts\\presentation-package200-final-2026-09-20.json",
+      "sha256": "bfb012c7fd427cc4102fe3a78e486a2e7b7220b894bef7eb3191f895927b48ad",
+      "frames": 360,
+      "warmup": 60,
+      "ticks": [
+        26,
+        154
+      ],
+      "seconds": 6.399793,
+      "focused": 360,
+      "camera_size": 27.0,
+      "metrics": {
+        "focused_frames": 360,
+        "frames": 360,
+        "process_delta_usec": {
+          "count": 360,
+          "maximum": 21061.6666666666,
+          "mean": 17750.0101851853,
+          "p50": 18055.5555555556,
+          "p95": 18055.5555555556,
+          "p99": 19776.0,
+          "total": 6390003.6666667
+        },
+        "stage_calls_usec": {
+          "bridge": {
+            "count": 128,
+            "maximum": 492,
+            "mean": 199.71875,
+            "p50": 182,
+            "p95": 305,
+            "p99": 456,
+            "total": 25564.0
+          },
+          "hud_draw": {
+            "count": 360,
+            "maximum": 2362,
+            "mean": 1600.26111111111,
+            "p50": 1555,
+            "p95": 1948,
+            "p99": 2319,
+            "total": 576094.0
+          },
+          "hud_process": {
+            "count": 360,
+            "maximum": 57,
+            "mean": 41.5194444444444,
+            "p50": 41,
+            "p95": 49,
+            "p99": 53,
+            "total": 14947.0
+          },
+          "main_process": {
+            "count": 360,
+            "maximum": 4623,
+            "mean": 1631.31666666667,
+            "p50": 1460,
+            "p95": 2331,
+            "p99": 2683,
+            "total": 587274.0
+          },
+          "present": {
+            "count": 360,
+            "maximum": 3590,
+            "mean": 1317.26944444444,
+            "p50": 1302,
+            "p95": 1615,
+            "p99": 1833,
+            "total": 474217.0
+          },
+          "snapshot": {
+            "count": 128,
+            "maximum": 614,
+            "mean": 412.4921875,
+            "p50": 387,
+            "p95": 545,
+            "p99": 571,
+            "total": 52799.0
+          }
+        },
+        "wall_interval_usec": {
+          "count": 360,
+          "maximum": 21845,
+          "mean": 17777.2027777778,
+          "p50": 17583,
+          "p95": 19787,
+          "p99": 20400,
+          "total": 6399793.0
+        }
+      },
+      "peak_resident_bytes": 255201280,
+      "host_valid": true
+    },
+    {
+      "case": "500-final",
+      "report": "C:\\dev\\voidfront\\artifacts\\presentation-package500-final-2026-09-20.json",
+      "sha256": "4e2a6276cc1519d1fa447271f05b9a93c48a4812c73322dcae0af4e0a6d23dfe",
+      "frames": 360,
+      "warmup": 60,
+      "ticks": [
+        62,
+        462
+      ],
+      "seconds": 20.038359,
+      "focused": 360,
+      "camera_size": 27.0,
+      "metrics": {
+        "focused_frames": 360,
+        "frames": 360,
+        "process_delta_usec": {
+          "count": 360,
+          "maximum": 67024.0,
+          "mean": 55671.8482323232,
+          "p50": 57142.8571428571,
+          "p95": 60481.0,
+          "p99": 62275.3333333333,
+          "total": 20041865.3636363
+        },
+        "stage_calls_usec": {
+          "bridge": {
+            "count": 400,
+            "maximum": 2925,
+            "mean": 1436.4225,
+            "p50": 1495,
+            "p95": 1863,
+            "p99": 2241,
+            "total": 574569.0
+          },
+          "hud_draw": {
+            "count": 360,
+            "maximum": 6647,
+            "mean": 4154.46666666667,
+            "p50": 4086,
+            "p95": 4501,
+            "p99": 5636,
+            "total": 1495608.0
+          },
+          "hud_process": {
+            "count": 360,
+            "maximum": 91,
+            "mean": 42.4472222222222,
+            "p50": 41,
+            "p95": 50,
+            "p99": 79,
+            "total": 15281.0
+          },
+          "main_process": {
+            "count": 360,
+            "maximum": 19400,
+            "mean": 8045.63888888889,
+            "p50": 8238,
+            "p95": 12062,
+            "p99": 13269,
+            "total": 2896430.0
+          },
+          "present": {
+            "count": 360,
+            "maximum": 16421,
+            "mean": 4879.49444444444,
+            "p50": 5126,
+            "p95": 6906,
+            "p99": 7850,
+            "total": 1756618.0
+          },
+          "snapshot": {
+            "count": 400,
+            "maximum": 1829,
+            "mean": 897.625,
+            "p50": 877,
+            "p95": 1025,
+            "p99": 1243,
+            "total": 359050.0
+          }
+        },
+        "wall_interval_usec": {
+          "count": 360,
+          "maximum": 67245,
+          "mean": 55662.1083333333,
+          "p50": 56751,
+          "p95": 61222,
+          "p99": 63897,
+          "total": 20038359.0
+        }
+      },
+      "peak_resident_bytes": 321359872,
+      "host_valid": true
+    }
+  ],
+  "limits": "Fixed-frame observations cover differing tick/time spans; no matched-state causal whole-frame comparison, GPU attribution, sustained combat, reference hardware, human response or shipping acceptance. Earlier unverified host counters are excluded."
+}

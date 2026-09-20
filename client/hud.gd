@@ -10,6 +10,7 @@ var selection: Label
 var tip: Label
 var result: Label
 var connection: Label
+var minimap_obstacles: MultiMesh
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -26,6 +27,19 @@ func _ready() -> void:
 	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
 	result = _label(Vector2(590, 350), 34, Color("f0d19b"))
 	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Static authoritative terrain is submitted once as a canvas batch. Unit dots
+	# and camera-dependent health bars remain dynamic on every rendered frame.
+	minimap_obstacles = MultiMesh.new()
+	minimap_obstacles.transform_format = MultiMesh.TRANSFORM_2D
+	minimap_obstacles.use_colors = true
+	var cell_mesh := QuadMesh.new()
+	cell_mesh.size = Vector2.ONE
+	minimap_obstacles.mesh = cell_mesh
+	minimap_obstacles.instance_count = game.obstacle_cells.size()
+	for index in game.obstacle_cells.size():
+		var cell: Vector2i = game.obstacle_cells[index]
+		minimap_obstacles.set_instance_transform_2d(index, Transform2D(0, Vector2(cell) + Vector2(0.5, 0.5)))
+		minimap_obstacles.set_instance_color(index, Color("101b22"))
 
 func _label(at: Vector2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -39,6 +53,7 @@ func _label(at: Vector2, font_size: int, color: Color) -> Label:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(game) or game.current.is_empty():
 		return
+	var profile_start := Time.get_ticks_usec() if game.presentation_profiler else 0
 	var view := get_viewport_rect().size
 	selection.position.y = view.y - 112
 	tip.position.y = view.y - 88
@@ -87,8 +102,10 @@ func _process(_delta: float) -> void:
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
 	queue_redraw()
+	if game.presentation_profiler: game.presentation_profiler.record("hud_process", Time.get_ticks_usec() - profile_start)
 
 func _draw() -> void:
+	var profile_start := Time.get_ticks_usec() if is_instance_valid(game) and game.presentation_profiler else 0
 	var view := get_viewport_rect().size
 	var network_panel: bool = is_instance_valid(game) and (game.network or not game.option_error.is_empty())
 	var panel_size := Vector2(920, 128) if network_panel else Vector2(548, 80)
@@ -106,22 +123,25 @@ func _draw() -> void:
 	var map_scale := map_rect.size / Vector2(game.map_size)
 	draw_rect(map_rect.grow(6), Color("12252c"))
 	draw_rect(map_rect, Color("27373b"))
-	for cell in game.obstacle_cells:
-		draw_rect(Rect2(map_rect.position + Vector2(cell.x, cell.y) * map_scale, map_scale), Color("101b22"))
+	draw_set_transform(map_rect.position, 0, map_scale)
+	draw_multimesh(minimap_obstacles, null)
+	draw_set_transform(Vector2.ZERO)
+	var selected_ids := {}
+	for id in game.selected: selected_ids[id] = true
 	for u in game.current.units:
 		if u.hp <= 0:
 			continue
 		var color := Color("64e5df") if u.player == 0 else Color("fda06d")
 		var at := map_rect.position + Vector2(u.x, u.z) / 256.0 * map_scale
 		draw_circle(at, 2.5, color)
-		if game.actors.has(u.id):
+		if game.actors.has(u.id) and (not game.scale128 or selected_ids.has(u.id) or u.hp < game.max_hp):
 			var actor: Node3D = game.actors[u.id].root
 			var screen: Vector2 = game.camera.unproject_position(actor.position + Vector3(0, 1.8, 0))
 			if not game.camera.is_position_behind(actor.position):
 				var bar_width: float = clampf(24.0 * 27.0 / game.camera.size, 3, 24) if game.scale128 else 36.0
-				if not game.scale128 or u.id in game.selected or u.hp < game.max_hp:
-					draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width, 4)), Color("102128"))
-					draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width * clampf(float(u.hp) / game.max_hp, 0, 1), 3)), color)
+				draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width, 4)), Color("102128"))
+				draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width * clampf(float(u.hp) / game.max_hp, 0, 1), 3)), color)
 	if dragging:
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color(0.3, 0.85, 0.83, 0.1))
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color("64d8d0"), false, 1)
+	if game.presentation_profiler: game.presentation_profiler.record("hud_draw", Time.get_ticks_usec() - profile_start)

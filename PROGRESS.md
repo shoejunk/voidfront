@@ -1,5 +1,50 @@
 # Voidfront progress
 
+## 2026-09-20 America/Los_Angeles - ordinary-play presentation profiling
+
+Baseline: clean dev 900be2e; STOP, COMPLETE and prior run marker absent.
+Exclusively acquired marker for task 01a0c032-253b-7af1-adc2-79f6c4cb00fd.
+This run targets the demonstrated frame-interval failure: establish bounded,
+opt-in ordinary-play stage measurements without smoke fixture/capture work in
+the measured interval, then address measured presentation overhead and preserve
+packaged controls/replay/network behavior. Independent tooling and evidence
+review agents own separate files. Dense opposing-stream progress and all full
+match, production and shipping requirements remain open. Budgets are unchanged.
+
+Added opt-in ordinary offline profiling with separate bridge, inclusive snapshot,
+actor-presentation, HUD process/draw and main callback timings. Raw warmup and
+measurement rows retain focus, camera, catch-up ticks, state hashes and engine
+counters; screenshots occur after measurement. The helper fingerprints the
+payload before launch and rejects stale artifact paths. Independent review caught
+console-wrapper CPU/RSS attribution; host metrics now require runtime PID equality,
+and the watchdog kills the owned process tree. An independent verifier recomputes
+statistics/accounting and rejects ten evidence corruptions per report.
+
+Measured HUD work justified batching static minimap cells and checking health-bar
+eligibility before projection. The sampled 500-unit HUD p95 fell from 6.097 ms to
+4.573 ms (final package repeat 4.501 ms); 24,206 compared static minimap pixels
+are unchanged. This reduces CPU submission work, not measured GPU draw calls.
+Final ordinary 200/500 frame p95/p99 are 19.787/20.400 and 61.222/63.897 ms on
+this development host. The frame gate still fails. Fixed-frame runs cover
+different simulation intervals; neither causally matched full-frame speedup nor
+GPU/animation attribution is claimed. All measured frames reported focus, but
+the hidden-launch flag plus engine focus is not proof of foreground human play.
+
+Integrated Debug/Release 7/7 CTest, malformed replay/output-alias checks,
+2,000 cross-build hashes and ten repeats pass. Final packaged 500-unit controls
+pass 23 checks; all 700 input-derived hashes match Debug plus ten Release replays,
+and the independent oracle audits 350,500 swept unit rows. Default offline
+400-tick controls/combat/restart passes with unchanged hash 1b35fbb0222cbc7b.
+All six final rendered two-process network cases, opposite-build recordings and
+ten clean repeats pass with matching package fingerprints.
+Primary and critic inspect final ordinary and selected-army screenshots. Full
+commands, raw results and limitations are in TESTING.md and the dated review.
+
+Next: isolate animation/skeleton/render work with controlled, identical-state
+measurements; retain the failed dense crossing fixture for purposeful backward
+decompression with a retained passing side. Crowd progress, complete economy/AI,
+production content, physical networking and shipping gates remain open.
+
 ## 2026-09-13 12:02 America/Los_Angeles - weekly crowd recovery
 
 Baseline: dev 8e557d6 with interrupted staged scale/control-group changes. Codex
