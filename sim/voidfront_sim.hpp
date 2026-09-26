@@ -9,12 +9,24 @@ namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
 inline constexpr int kMaxMapSize = 128;
-inline constexpr uint32_t kProtocolVersion = 5;
-enum class Map : uint32_t { Foundry = 0, Scale128 = 1 };
+inline constexpr uint32_t kProtocolVersion = 6;
+enum class Map : uint32_t { Foundry = 0, Scale128 = 1, Economy = 2 };
 int map_width(Map map);
 int map_height(Map map);
 const std::vector<nav::Rect>& map_terrain(Map map);
-enum class Order : uint8_t { Stop, Move, AttackMove, Hold };
+enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build };
+enum class UnitKind : uint8_t { Strider, Worker };
+enum class StructureKind : uint8_t { Anchor, Foundry };
+enum class CommandResult : uint8_t { None, Accepted, InvalidTarget, InsufficientSalvage, InvalidPlacement, InvalidWorker };
+inline constexpr int kFoundryCost=100, kBuildTicks=100, kCargoCapacity=10, kGatherTicks=10;
+struct Structure {
+    uint32_t id=0;
+    uint8_t player=0;
+    StructureKind kind=StructureKind::Anchor;
+    int32_t x=0,z=0,hp=1000;
+    uint32_t build_ticks=kBuildTicks;
+};
+struct Deposit { uint32_t id=0; int32_t x=0,z=0,remaining=2000; };
 struct Command {
     uint32_t tick = 0, sequence = 0;
     uint8_t player = 0;
@@ -30,6 +42,10 @@ struct Unit {
     uint32_t target_id = 0;
     uint16_t cooldown = 0;
     bool moving = false;
+    UnitKind kind=UnitKind::Strider;
+    int32_t cargo=0;
+    uint32_t resource_id=0,build_id=0,work_ticks=0;
+    bool returning=false;
     // Goal, current waypoint and remaining route are authoritative, included in hashes.
     int32_t goal_x = 0, goal_z = 0, next_x = 0, next_z = 0;
     std::vector<nav::Point> path;
@@ -45,6 +61,12 @@ public:
     uint32_t tick() const { return tick_; }
     const std::vector<Unit>& units() const { return units_; }
     Map map() const { return map_; }
+    const std::vector<Structure>& structures() const { return structures_; }
+    const std::vector<Deposit>& deposits() const { return deposits_; }
+    int32_t salvage(uint8_t player) const { return player<2?salvage_[player]:0; }
+    CommandResult command_result(uint8_t player) const { return player<2?results_[player]:CommandResult::None; }
+    uint32_t result_sequence(uint8_t player) const { return player<2?result_sequences_[player]:0; }
+    bool can_build(uint8_t player,int32_t x,int32_t z) const;
     int width() const { return map_width(map_); }
     int height() const { return map_height(map_); }
     bool blocked(int x, int z) const;
@@ -59,7 +81,17 @@ private:
     std::array<uint32_t, 2> last_sequence_{};
     std::vector<Unit> units_;
     std::vector<Command> pending_;
+    std::vector<Structure> structures_;
+    std::vector<Deposit> deposits_;
+    std::array<int32_t,2> salvage_{};
+    std::array<CommandResult,2> results_{};
+    std::array<uint32_t,2> result_sequences_{};
     void apply(const Command& command);
+    void apply_economy(const Command& command);
+    void economy_step();
+    void rebuild_navigation();
+    void set_goal(Unit& unit,nav::Point goal);
+    nav::Point service_point(const Unit& unit,int32_t x,int32_t z,int32_t extent,const nav::World* world=nullptr) const;
     nav::World navigation_;
 };
 std::vector<uint8_t> serialize_command(const Command& command);

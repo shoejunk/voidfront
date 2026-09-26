@@ -1,5 +1,83 @@
 # Verification ledger
 
+## 2026-09-26 first playable economy verification
+
+Final source uses simulation protocol 6 and a new Map::Economy=2. Existing
+Foundry/Scale128 and VFC1 wire layout remain; older simulation recordings reject.
+`artifacts/economy-final-build-2026-09-26.log`: `./tools/verify.ps1` verifies
+pinned Godot 4.7.2/templates/godot-cpp and builds MSVC Debug/Release, 8/8 CTest
+each, 15 malformed replays and seven output alias cases each, 2,000 matching
+cross-build hashes and ten Release repeats. The initial in-flight build's
+service-slot regression failure remains at `economy-build-2026-09-26.log`;
+the fresh focused and final integrated runs pass the completed recovery fix.
+
+Final package is `artifacts/package/Voidfront.exe`; prior package preserved at
+`artifacts/economy-prior-package-2026-09-26`. After the full build, the pinned
+console completed `--headless --path client --editor --import` and
+`--headless --path client --export-release "Windows Desktop" artifacts/package/Voidfront.exe`.
+`./tools/package.ps1` remains the full reproducible build/import/export command.
+No source changed after these builds or the successful final export.
+
+`./tools/capture.ps1 -Packaged -Economy -Ticks 1600 -Name economy-package-2026-09-26`
+passes **25** software InputEvent checks, ending at tick1045, full hash
+`805025cf101424f6`. Real selection, gather, explicit cargo return, repeated
+harvesting, Stop, invalid placement/no debit, placement cancellation, paid
+construction, Stop/resume without repayment, progress selection and identical
+restart are exercised. Initial balance0, cost100 and finite reserves unchanged.
+The earlier source fixture allowed insufficient funding time: salvage91 at
+tick779 with active workers. Failed `economy-source-probe-2026-09-26.*` is kept;
+probe2 and package pass after extending fixture time, without economic tuning.
+
+`python tools/verify_economy_capture.py artifacts/economy-package-2026-09-26.json --out artifacts/economy-replay-2026-09-26`
+audits all1,046 snapshots /6,276 worker rows, preserves4,000 total salvage across
+reserves/cargo/bank/spent cost, validates100 construction increments and exact
+rational swept unit/terrain/structure/deposit clearance. Eight actual inputs bind
+to VFR3 bytes. All1,045 client hashes and final economic fields match one Debug
+and ten Release replays. Seven intentionally corrupted reports reject. Mutation
+rejection does not imply each validator branch is independently isolated.
+
+`artifacts/economy-startup-2026-09-26.json` verifies default package starts six
+workers, --skirmish starts12 combat units, and --economy --network rejects exit2.
+`economy-combat-regression-2026-09-26.json` passes existing400-tick packaged
+selection/move/Stop/combat/restart, winner1, hash55e093f505012de9.
+`economy-replay-inputs-2026-09-26/summary.json` passes25 malformed/setup cases,
+18 preserved aliases,14 ledger corruptions and two analytic sweep controls.
+`economy-crowds-2026-09-26/summary.json` preserves17 small crowd fixtures,
+20 executions,30,254 audited rows and22 mutation rejections. No full Scale128
+arrival/performance rerun or new general crowd acceptance is claimed.
+
+`python tools/verify_network.py --out artifacts/economy-network-2026-09-26 --jobs 3`
+passes22 actual separate-process headless cases, impairment/fault/replay checks
+and ten repeats per delay. Concurrent jobs and runtime captures make timings
+regression diagnostics, not isolated acceptance measurements.
+`python tools/verify_client_network.py --out artifacts/economy-client-network-2026-09-26`
+passes six rendered package cases plus cross-build replay and ten clean repeats.
+At80msRTT the three software inputs per peer yield execution p95
+141.754/150.161ms, display154.164/161.233ms, feedback4.143/3.968ms. The second
+peer exceeds150ms; no response or strict-pacing gate is accepted. These sessions
+remain combat-skirmish loopback, not economy multiplayer or full matches.
+
+Primary and independent critic inspected final harvesting/construction/completed
+1920x1080 PNGs. Cost/cargo/resources/progress are legible; health bars overlap
+labels, workers reuse scaled striders and cargo/deposits/buildings are blockouts.
+No authored worker assets, construction animation, sound, human play, balance,
+reference hardware or SC2 visual approval follows. Package sampled resident peak
+267,206,656 bytes is a process observation, not performance acceptance. Review:
+`.voidfront-agent/review-economy-2026-09-26.md`.
+
+A second packaged `-Movie -Economy -Ticks 1600` capture also passes; its separate
+command schedule replays across Debug and ten Release repeats with the same
+1,045-tick/6,276-row safety/conservation audit (`economy-movie-replay-2026-09-26`).
+`economy-movie-2026-09-26.mp4` is52.3seconds,3,138frames,60fps,1600x900. AVI retained;
+FFmpeg produced H.264 and a five-second-spaced contact sheet. Primary inspected
+the contact sheet showing harvest trips and construction; this is sampled-state
+review, not continuous playback, detailed deformation or responsiveness proof.
+Movie timings are encoding-distorted and excluded from performance acceptance.
+
+Exact next capability: resource-funded unit production with queues/population,
+then economic AI/anchor victory, flux/tech/fog/setup and complete matches. All
+previous dense-stream, frame/response, art/audio/content and shipping gaps remain.
+
 ## 2026-09-26 cooperative follower verification
 
 Source checkpoint `704e293` implements bounded atomic follower retries and

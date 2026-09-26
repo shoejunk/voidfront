@@ -44,7 +44,7 @@ void maps() {
         check(!sim.submit(outside) && sim.hash()==before,"out-of-map z accepted or mutated state");
     }
     bool rejected=false;
-    try { vf::Sim invalid(42,6,static_cast<vf::Map>(2)); } catch (const std::invalid_argument&) { rejected=true; }
+    try { vf::Sim invalid(42,6,static_cast<vf::Map>(3)); } catch (const std::invalid_argument&) { rejected=true; }
     check(rejected,"invalid map accepted");
     vf::Sim small(42,1),large(42,1,vf::Map::Scale128);
     check(small.state_hash()!=large.state_hash(),"map not distinguished in state hash");

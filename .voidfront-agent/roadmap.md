@@ -1,5 +1,16 @@
 # Continuing roadmap
 
+## 2026-09-26 economy checkpoint: production is next
+
+The first packaged worker/salvage/construction increment is verified; see the
+latest PROGRESS.md, TESTING.md and economy review. Continue the small-match
+sequence below at step2: resource-funded unit production, queues and population
+limits, with visible purchase/queue/spawn feedback and canonical replay tests.
+Then deliver economic AI and anchor victory. The earlier instruction to deliver
+the first economy increment has been fulfilled for its bounded scope. Existing
+large-crowd/performance/production-quality failures remain required final gates.
+This checkpoint preserves the user's gameplay-first sequencing change below.
+
 1. **Foundation / playable skirmish (first increment verified):** independent deterministic sim, canonical commands/persistent replays/tests, pinned extension, camera/selection/move/combat, original animated Blender unit and packaged runtime evidence exist. Production art, crowd routing and manual responsiveness remain open.
 2. **Real network lockstep (packaged loopback client path verified):** protocol 2 scheduled frames and independent executed checksums now drive two rendered Godot packages through the reusable Session. Players select their own army; readiness/stalls/errors/final confirmation and explicit input delay are visible. The six-case client suite covers clean/80/160 ms RTT, withheld input, mismatched delay and disconnect, with exact applied-prefix replay and original event-to-execution/render timing. Offline mode remains intact. This is loopback combat-skirmish evidence, not LAN/Internet or full RTS multiplayer acceptance. Only three synthetic commands per peer/profile were measured; strict pacing and frame targets remain unmet. Follow-up network gates: broad input phase/cadence and queued-during-stall/tail tests, packaged post-advance desync recording, physical endpoints, coordinated match setup/restart and complete-match/30-minute soak. Preserve all CLI/API/client regressions and tool pins.
 3. **Complete small match (next development milestone):** gather/build/produce/tech/fog/victory/restart; command-driven economy AI; queued orders and enemy context targeting; finish the movement requirements below before production content expansion. **Current increment:** static visibility routes, arbitrary fixed-point headings, exact destinations, spatial broadphase, bounded local swept detours and control groups 0-9 are implemented. Seven repeated crowd fixtures, packaged InputEvent swap/chain/Stop/resume and control-group tests pass. An actual 128x128 Sim harness now covers eight 200/500-unit traffic/combat scenarios with 96 executions and 11,202,800 independently audited unit rows; all Release p95/p99 observations meet 4/8 ms on this host, but every noncombat crossing/repeated/Stop-resume case has zero arrivals. **Exact next step:** coordinated yielding or preventative avoidance for the retained dense opposing-stream fixture, following crowd-failure-2026-09-12.md and scale-contract.md. Preserve all replay/network, static-route and packaged tests. General crowd progress, dynamic construction, per-command response, representative production battles, reference performance and human responsiveness remain unaccepted.

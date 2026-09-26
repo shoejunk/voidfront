@@ -2,7 +2,7 @@
 
 `voidfront_sim` is C++20 with no Godot dependency. Coordinates are integer 1/256 world units; one `step()` is exactly 1/20 second. The default 32x24 Foundry map has two ridges and three passages, with six walkers per side. Construct a new `Sim(seed,count)` to restart; 1..250 units per side are supported. `Sim(seed,count,Map::Scale128)` constructs a real 128x128 terrain scenario with opposing formations and an eight-cell central passage. Map identity is fixed for the lifetime of a simulation and included in state hashes. The offline client exposes Scale128 through --scale128 and --units-per-team; network session setup still selects Foundry and large-map session negotiation remains separate work.
 
-Submit commands for the current or a future tick before advancing it. IDs must exist and belong to the issuing player. Admission does not depend on unit health at receipt time; commands skip dead units at execution time. Submission sorts IDs; duplicate IDs are rejected. Positive sequence numbers are unique per player; tick order and sequence order must agree. Arrival order may vary. All commands execute in `(tick,player,sequence)` order. `state_hash()` serializes map identity, last applied sequences, RNG state and every executed authoritative field into FNV-1a, excluding pending receipts. `hash()` extends that checksum with queued commands. Simulation compatibility version 5 invalidates previous recordings; VFC command wire layout remains version 1. Wire coordinates are bounded to 0..32767 on each axis; Sim and lockstep receipt additionally enforce the selected map's bounds. Neither hash is a cryptographic integrity check.
+Submit commands for the current or a future tick before advancing it. IDs must exist and belong to the issuing player. Admission does not depend on unit health at receipt time; commands skip dead units at execution time. Submission sorts IDs; duplicate IDs are rejected. Positive sequence numbers are unique per player; tick order and sequence order must agree. Arrival order may vary. All commands execute in `(tick,player,sequence)` order. `state_hash()` serializes map identity, last applied sequences, RNG state and every executed authoritative field into FNV-1a, excluding pending receipts. `hash()` extends that checksum with queued commands. Simulation compatibility version 6 invalidates previous recordings; VFC command wire layout remains version 1. Wire coordinates are bounded to 0..32767 on each axis; Sim and lockstep receipt additionally enforce the selected map's bounds. Neither hash is a cryptographic integrity check.
 
 The canonical command byte format is little-endian: magic bytes `56 46 43 01`, u32 tick, u32 sequence, u8 player, u8 order, u32 x, u32 z, u32 count, then count u32 IDs in strictly increasing order. Exact length, version, ID ordering, coordinate bounds, player/order values and list limits are validated before output is changed. Maximum list size is 256, future horizon 1200 ticks, pending queue 4096 commands. The lockstep wrapper closes commands into one immutable frame per player/tick, including empty input. Protocol 2 separates executed-state checksums from future input frames: a sender cannot know a future state hash when scheduling input. Both players' commands validate on a copy before a tick is committed, so an invalid second player cannot partially apply the first. Frames are bounded to 16 commands and 64 future ticks, with static ownership checks, strict canonical ordering and conflicting-duplicate rejection. The transport verifies tick-tagged executed-state hashes with bounded lag; the independent simulation contains no pacing clock. See `net/README.md` for separate-process transport and source content compatibility.
 
@@ -48,3 +48,39 @@ directions, blocked Stop/Hold leaders and mid-convoy canonical retargeting.
 `voidfront_crowd_tests <ledger.csv> --redistribution` is a deliberately separate
 acceptance probe for six reversed goals; failure keeps that requirement open.
 Transaction-cap exhaustion and arbitrary dependency cycles are not claimed solved.
+
+## First playable economy increment
+
+`Sim(seed, count, Map::Economy)` uses the 32x24 field with exactly three workers
+per player, two command anchors and finite 2,000-salvage deposits. Count remains
+validated but does not alter this authored setup. Headless `--map economy` and
+VFR3 replay map ID 2 select it; the packaged offline client defaults to it.
+Network sessions still select the combat Foundry map. Economy multiplayer,
+unit production, economic AI, technology, fog and anchor victory remain open.
+
+Orders 4/5/6 are Gather, ReturnCargo and Build, using existing canonical x/z
+coordinates. Resource and placement conditions are evaluated at application,
+so an unaffordable or occupied-site command is a deterministic reported no-op.
+Workers extract one salvage per ten work ticks, carry ten, return to their own
+anchor and repeat. Stop/Move keep carried resources. Explicit ReturnCargo banks
+cargo then stops. Resource state, worker tasks, deposits, structures and last
+execution result/sequence are hashed; protocol 6 rejects old recordings.
+
+Build snaps to cell center, checks own-anchor range (eight units), resource
+cost (100), bounds, terrain/deposit/structure spacing, live unit clearance and
+reachable worker access before creating a blocking two-unit-square foundation.
+At most 30 structures are accepted. The lowest living selected worker builds
+for 100 adjacent work ticks; other selected workers keep their tasks. Stop
+leaves progress intact. Build on the same unfinished site resumes without a
+second cost. Navigation is rebuilt and all routes invalidated on insertion.
+Occupied service slots are reconsidered on staggered deterministic 20-tick
+checks; no worker is pushed or teleported. General crowd liveness remains open.
+
+`voidfront_economy_tests` covers conservation, depletion, ownership/stale input,
+apply-time failure, competing same-tick purchases, interruption/resume,
+held service blockers, dynamic-foundation routing and receipt-time independence.
+The dynamic-route test starts its Move after the foundation exists; insertion
+midway through an existing route is source-reviewed, not a dedicated regression.
+`tools/verify_economy_capture.py` audits packaged snapshot conservation and
+independent full-tick sweeps, binds actual InputEvents to VFR3 commands, and
+compares every hash with Debug playback and ten Release repeats.

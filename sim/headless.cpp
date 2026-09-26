@@ -142,8 +142,8 @@ int main(int argc, char** argv) {
             else if (arg == "--samples") samples_path = argv[++i];
             else if (arg == "--map") {
                 const std::string name=argv[++i]; explicit_setup=true;
-                if (name!="foundry" && name!="scale128") throw std::invalid_argument("map must be foundry or scale128");
-                map=name=="foundry"?vf::Map::Foundry:vf::Map::Scale128;
+                if (name!="foundry" && name!="scale128" && name!="economy") throw std::invalid_argument("map must be foundry, scale128 or economy");
+                map=name=="foundry"?vf::Map::Foundry:name=="scale128"?vf::Map::Scale128:vf::Map::Economy;
             }
             else if (arg == "--profile") {
                 profile=argv[++i]; explicit_setup=true;
@@ -167,6 +167,7 @@ int main(int argc, char** argv) {
         if (ticks < 1 || ticks > max_ticks) throw std::invalid_argument("ticks must be 1..10000000");
         if (profile!="ai" && map!=vf::Map::Scale128) throw std::invalid_argument("traffic profiles require scale128 map");
         vf::Sim sim(seed,count,map);
+        if (map==vf::Map::Economy) count=3;
         const auto initial=sim.units();
         std::array<uint32_t,2> sequence{};
         std::ofstream trace;
@@ -195,8 +196,8 @@ int main(int argc, char** argv) {
         std::vector<int64_t> active_durations;
         std::vector<int64_t> step_ns;
         std::vector<int64_t> harness_ns;
-        std::vector<int64_t> first_motion(count*2,-1);
-        std::vector<uint32_t> idle(count*2),max_idle(count*2),last_motion(count*2);
+        std::vector<int64_t> first_motion(sim.units().size(),-1);
+        std::vector<uint32_t> idle(sim.units().size()),max_idle(sim.units().size()),last_motion(sim.units().size());
         std::vector<vf::nav::Point> previous;
         for (const auto& u:sim.units()) previous.push_back({u.x,u.z});
         durations.reserve(ticks); active_durations.reserve(ticks);
@@ -254,7 +255,20 @@ int main(int argc, char** argv) {
             metrics<<"{\"schema\":1,\"map\":"<<static_cast<uint32_t>(map)<<",\"width\":"<<sim.width()<<",\"height\":"<<sim.height()
                 <<",\"seed\":"<<seed<<",\"ticks\":"<<ticks<<",\"units_per_team\":"<<count<<",\"protocol\":"<<vf::kProtocolVersion
                 <<",\"content_id\":\""<<vf::kLockstepContentId<<"\",\"replay\":"<<(!replay_path.empty()?"true":"false")
-                <<",\"winner\":"<<sim.winner()<<",\"peak_resident_bytes\":"<<peak<<",\"terrain\":[";
+                <<",\"winner\":"<<sim.winner()<<",\"peak_resident_bytes\":"<<peak
+                <<",\"salvage\":["<<sim.salvage(0)<<','<<sim.salvage(1)<<"],\"structures\":[";
+            bool economy_comma=false;
+            for (const auto& s:sim.structures()) {
+                if(economy_comma) metrics<<','; economy_comma=true;
+                metrics<<"{\"id\":"<<s.id<<",\"player\":"<<static_cast<int>(s.player)<<",\"kind\":"<<static_cast<int>(s.kind)
+                    <<",\"x\":"<<s.x<<",\"z\":"<<s.z<<",\"hp\":"<<s.hp<<",\"build_ticks\":"<<s.build_ticks<<'}';
+            }
+            metrics<<"],\"deposits\":["; economy_comma=false;
+            for (const auto& d:sim.deposits()) {
+                if(economy_comma) metrics<<','; economy_comma=true;
+                metrics<<"{\"id\":"<<d.id<<",\"x\":"<<d.x<<",\"z\":"<<d.z<<",\"remaining\":"<<d.remaining<<'}';
+            }
+            metrics<<"],\"terrain\":[";
             bool comma=false;
             for (const auto& r:vf::map_terrain(map)) { if(comma) metrics<<','; comma=true;
                 metrics<<'['<<r.min_x<<','<<r.min_z<<','<<r.max_x<<','<<r.max_z<<']'; }
@@ -262,7 +276,8 @@ int main(int argc, char** argv) {
             for (const auto& u:sim.units()) { const auto i=u.id-1; if(comma) metrics<<','; comma=true;
                 metrics<<"{\"id\":"<<u.id<<",\"player\":"<<static_cast<int>(u.player)<<",\"start\":["<<initial[i].x<<','<<initial[i].z
                     <<"],\"end\":["<<u.x<<','<<u.z<<"],\"goal\":["<<u.goal_x<<','<<u.goal_z<<"],\"hp\":"<<u.hp
-                    <<",\"order\":"<<static_cast<int>(u.order)<<",\"first_motion_tick\":"<<first_motion[i]<<",\"last_motion_tick\":"<<last_motion[i]
+                    <<",\"order\":"<<static_cast<int>(u.order)<<",\"kind\":"<<static_cast<int>(u.kind)<<",\"cargo\":"<<u.cargo
+                    <<",\"first_motion_tick\":"<<first_motion[i]<<",\"last_motion_tick\":"<<last_motion[i]
                     <<",\"pending_idle_tail\":"<<idle[i]<<",\"max_pending_idle\":"<<max_idle[i]
                     <<",\"routing\":{\"next\":["<<u.next_x<<','<<u.next_z
                     <<"],\"route_goal\":["<<u.route_goal.x<<','<<u.route_goal.z

@@ -1,16 +1,21 @@
-# Voidfront â€” field trial 01
+# Voidfront — salvage outpost
 
-Launch `Voidfront.exe` beside its .pck and DLL. This is the first development skirmish, not the finished game. Windows x64; six Cairn walkers fight six opposing walkers on the Glass Reach test field. Enemy attack orders start after five seconds. Eliminate the opposing team to secure the sector.
+Launch `Voidfront.exe` beside its .pck and DLL. The default offline mode starts with three workers, a command anchor and a finite salvage deposit for each side. The opposing outpost is passive in this first economy increment. Gather salvage and construct a Foundry; production, economic AI, technology, fog and match victory are still being developed.
 
-- Left click selects a friendly walker; drag selects a group. Shift adds/removes selection.
-- F2 selects all surviving friendly walkers.
-- Ctrl + 0-9 saves a control group; 0-9 recalls it. Ctrl + Shift + number adds selected walkers to a group. Shift + number adds a group to the current selection. Groups discard dead units and clear on restart.
-- Right click orders movement. A then left click issues attack-move.
-- S stops; H holds. Both stop movement immediately; nearby enemies can still be attacked.
-- Arrow keys pan the camera; wheel zooms.
-- R restarts the skirmish. Escape cancels attack targeting. Close the window to quit.
+- Left click selects a worker, anchor, deposit or Foundry. Drag selects workers; F2 selects all your workers.
+- Select workers and right click a salvage deposit. They mine, carry up to 10 salvage each, return it to your anchor, and repeat until the deposit is depleted.
+- Right click your anchor to return carried salvage immediately and stop.
+- With workers selected, press B and click a valid site to construct a Foundry for 100 salvage. Green preview means affordable and geometrically valid; red means blocked or unaffordable. Sites must be within eight world units of your anchor and leave clearance around structures, deposits and terrain. Construction takes five seconds of worker activity after arrival.
+- S stops work without losing carried salvage or an unfinished foundation. Right click an unfinished Foundry with workers selected to resume it without paying again.
+- Escape or right click cancels placement. R restarts the economy.
+- Ctrl + 0–9 saves a control group; 0–9 recalls it. Ctrl + Shift + number adds to a group; Shift + number adds a group to selection. Groups clear on restart.
+- Arrow keys pan; wheel zooms. Close the window to quit.
 
-The current prototype has no economy, construction, fog, queued orders or match setup menu. Enemy AI only fights. Units now travel at arbitrary headings with clearance-aware routes around the test terrain. Single-unit moves retain the exact clicked position; group destinations still use spaced cell centers. Crowded units can wait indefinitely because general deadlock recovery is unfinished. Art, animations and interface are foundation work; audio is not present yet.
+The resource total, carried salvage, build cost and selected construction progress are visible in the HUD. A Foundry does not yet produce units. Workers reuse the existing walker mesh, and buildings/deposits are readable blockouts, not finished production art. Crowds, audio, animation polish and performance acceptance remain unfinished.
+
+## Combat skirmish
+
+Launch `./Voidfront.exe -- --skirmish` for the existing six-versus-six offline combat trial. Enemy attack orders begin after five seconds; eliminate the opposing team. Right click moves, A then left click attack-moves, S stops and H holds. R restarts that skirmish.
 
 ## Large offline field
 

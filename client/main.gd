@@ -93,6 +93,16 @@ var pending_execution_display: Array[Dictionary] = []
 var execution_display_samples: Array[Dictionary] = []
 var profile_presentation := false
 var presentation_profiler: RefCounted
+var economy := false
+var skirmish := false
+var economy_smoke := false
+var economy_fixture: RefCounted
+var build_pending := false
+var economy_actors: Dictionary = {}
+var selected_entity: Dictionary = {}
+var economy_notice := ""
+var build_preview: MeshInstance3D
+var economy_result_sequence := -1
 
 func _ready() -> void:
 	var ticks_specified := false
@@ -102,6 +112,11 @@ func _ready() -> void:
 	var profile_camera_specified := false
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--smoke": smoke = true
+		elif argument == "--skirmish": skirmish = true
+		elif argument == "--economy": economy = true
+		elif argument == "--economy-smoke":
+			economy = true
+			economy_smoke = true
 		elif argument == "--profile-presentation": profile_presentation = true
 		elif argument.begins_with("--profile-frames="):
 			profile_options = true
@@ -146,6 +161,15 @@ func _ready() -> void:
 		elif argument.begins_with("--session="): session_id = _integer_option(argument, 1, 2147483647)
 		elif argument.begins_with("--delay="): input_delay = _integer_option(argument, 1, 16)
 		else: option_error = "Unknown option: " + argument
+	var legacy_mode := skirmish or smoke or movement_smoke or crowd_smoke or controls_smoke or scale128 or profile_presentation or network
+	if economy and legacy_mode: option_error = "Economy requires its own offline match."
+	if not legacy_mode: economy = true
+	if economy_smoke and not ticks_specified: finish_tick = 1600
+	if economy_smoke and (finish_tick < 300 or finish_tick > 2400): option_error = "Economy smoke requires 300..2400 ticks."
+	if economy and not option_error.is_empty():
+		push_error(option_error)
+		get_tree().quit(2)
+		return
 	if movement_smoke and not ticks_specified: finish_tick = 400
 	if movement_smoke and (smoke or network): option_error = "Movement smoke requires its own offline fixture."
 	if movement_smoke and finish_tick > 600: option_error = "Movement smoke is bounded to 600 ticks."
@@ -172,6 +196,7 @@ func _ready() -> void:
 		push_error("Required C++ simulation extension failed to load")
 		get_tree().quit(2)
 		return
+	if economy: bridge.reset_economy(1)
 	if scale128:
 		if not option_error.is_empty() or not bridge.reset_scale(1, scale_count, not scale_smoke):
 			push_error(option_error if not option_error.is_empty() else "Scale setup rejected")
@@ -188,6 +213,9 @@ func _ready() -> void:
 	hud.game = self
 	canvas.add_child(hud)
 	_reset()
+	if economy_smoke:
+		economy_fixture = preload("res://economy_smoke.gd").new(self)
+		economy_fixture.run.call_deferred()
 	if profile_presentation and option_error.is_empty():
 		presentation_profiler = preload("res://presentation_profile.gd").new(self)
 		presentation_profiler.start()
@@ -358,8 +386,21 @@ func _setup_world() -> void:
 	_box(Vector3(0.5, 0.6, h), Vector3(-0.4, -0.15, h / 2.0), border_material)
 	_box(Vector3(0.5, 0.6, h), Vector3(w + 0.4, -0.15, h / 2.0), border_material)
 	var obstacle_material := _material(Color("263b44"), 0.25)
+	var initial_structures: Array = bridge.snapshot().get("structures", []) if economy else []
+	var initial_deposits: Array = bridge.snapshot().get("deposits", []) if economy else []
 	for x in range(w):
 		for z in range(h):
+			# Economy structures have their own dynamic visuals and minimap markers.
+			# Do not bake them into permanent terrain at startup.
+			if economy:
+				var dynamic_footprint := false
+				for structure in initial_structures:
+					if absi(x * 256 + 128 - int(structure.x)) <= 256 and absi(z * 256 + 128 - int(structure.z)) <= 256:
+						dynamic_footprint = true
+				for deposit in initial_deposits:
+					if absi(x * 256 + 128 - int(deposit.x)) <= 128 and absi(z * 256 + 128 - int(deposit.z)) <= 128:
+						dynamic_footprint = true
+				if dynamic_footprint: continue
 			if bridge.is_blocked(x, z):
 				obstacle_cells.append(Vector2i(x, z))
 				var height := 0.75 + float((x * 7 + z * 3) % 5) * 0.12
@@ -405,6 +446,13 @@ func _reset() -> void:
 		option_error = ""
 	for entry in actors.values(): entry.root.queue_free()
 	actors.clear()
+	for entry in economy_actors.values(): entry.root.queue_free()
+	economy_actors.clear()
+	selected_entity.clear()
+	build_pending = false
+	if build_preview: build_preview.visible = false
+	economy_notice = ""
+	economy_result_sequence = -1
 	selected.clear()
 	control_groups.clear()
 	if scale128:
@@ -412,6 +460,7 @@ func _reset() -> void:
 			push_error("Scale reset rejected")
 			get_tree().quit(2)
 			return
+	elif economy: bridge.reset_economy(1)
 	else: bridge.reset(1, not (movement_smoke or crowd_smoke))
 	if network and option_error.is_empty():
 		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick):
@@ -422,11 +471,14 @@ func _reset() -> void:
 	initial_hash = current.hash
 	accumulator = 0
 	attack_pending = false
+	order_age = 99.0
+	order_mark.visible = false
 	initial_positions.clear()
 	for unit in current.units:
 		max_hp = maxf(max_hp, unit.hp)
 		_spawn_actor(unit)
 		initial_positions[unit.id] = Vector2(unit.x, unit.z)
+	if economy: _present_economy()
 	print("VOIDFRONT_MATCH tick=0 hash=", initial_hash, " units=", actors.size())
 
 func _spawn_actor(unit: Dictionary) -> void:
@@ -435,6 +487,17 @@ func _spawn_actor(unit: Dictionary) -> void:
 	root.position = Vector3(unit.x / SCALE, 0, unit.z / SCALE)
 	var model: Node3D = WALKER.instantiate()
 	root.add_child(model)
+	if int(unit.get("kind", 0)) == 1:
+		# Temporary smaller salvage rig; authored worker art remains a production gate.
+		model.scale = Vector3(0.65, 0.7, 0.65)
+		var cargo := MeshInstance3D.new()
+		var cargo_mesh := BoxMesh.new()
+		cargo_mesh.size = Vector3(0.52, 0.28, 0.52)
+		cargo.mesh = cargo_mesh
+		cargo.position = Vector3(0, 0.95, 0)
+		cargo.material_override = _material(Color("d6b869"), 0.25)
+		cargo.name = "SalvageCargo"
+		root.add_child(cargo)
 	var color := Color("62d7d1") if unit.player == 0 else Color("ef9259")
 	_apply_team(model, color)
 	var ring := _ring(0.62, color)
@@ -452,6 +515,90 @@ func _find_animation(node: Node) -> AnimationPlayer:
 		var found := _find_animation(child)
 		if found: return found
 	return null
+
+func _selected_workers() -> int:
+	var count := 0
+	for unit in current.get("units", []):
+		if unit.id in selected and int(unit.get("kind", 0)) == 1 and unit.hp > 0: count += 1
+	return count
+
+func _economy_entity_at(screen: Vector2) -> Dictionary:
+	var result := {}
+	var nearest := 50.0
+	for category in ["structures", "deposits"]:
+		for entity in current.get(category, []):
+			if int(entity.get("hp", 1)) <= 0: continue
+			var point := camera.unproject_position(Vector3(entity.x / SCALE, 0.5, entity.z / SCALE))
+			var distance := point.distance_to(screen)
+			if distance < nearest:
+				nearest = distance
+				result = entity.duplicate()
+				result["category"] = "deposit" if category == "deposits" else "structure"
+	return result
+
+func _present_economy() -> void:
+	var sequence: int = current.get("result_sequences", [-1, -1])[local_player]
+	if sequence != economy_result_sequence:
+		economy_result_sequence = sequence
+		match int(current.get("command_results", [0, 0])[local_player]):
+			1: economy_notice = "Order accepted by simulation"
+			2: economy_notice = "Invalid target: select a salvage deposit or your command anchor"
+			3: economy_notice = "Not enough salvage: foundry costs %d" % current.foundry_cost
+			4: economy_notice = "Placement blocked: requires clear space away from structures, deposits and workers"
+			5: economy_notice = "Select a living worker to gather or construct"
+	if not build_preview:
+		build_preview = _box(Vector3(2, 0.1, 2), Vector3.ZERO, _material(Color("4bbca5")))
+		build_preview.visible = false
+	for category in ["structures", "deposits"]:
+		for entity in current.get(category, []):
+			var key: String = category + str(entity.id)
+			var deposit: bool = category == "deposits"
+			var anchor: bool = not deposit and int(entity.kind) == 0
+			if not economy_actors.has(key):
+				var root := Node3D.new()
+				add_child(root)
+				root.position = Vector3(entity.x / SCALE, 0, entity.z / SCALE)
+				var color := Color("d6b869") if deposit else (Color("438d97") if entity.player == 0 else Color("ae684e"))
+				var mesh := BoxMesh.new()
+				mesh.size = Vector3(0.94, 0.65, 0.94) if deposit else Vector3(1.94, 1.4 if anchor else 0.9, 1.94)
+				var body := MeshInstance3D.new()
+				body.mesh = mesh
+				body.material_override = _material(color, 0.3)
+				body.position.y = mesh.size.y / 2.0
+				root.add_child(body)
+				if anchor:
+					var mast := MeshInstance3D.new()
+					var mast_mesh := BoxMesh.new()
+					mast_mesh.size = Vector3(0.4, 1.4, 0.4)
+					mast.mesh = mast_mesh
+					mast.position.y = 1.8
+					mast.material_override = _material(color.lightened(0.2), 0.4)
+					root.add_child(mast)
+				var label := Label3D.new()
+				label.font_size = 36
+				label.pixel_size = 0.012
+				label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+				label.no_depth_test = true
+				label.position.y = 2.9 if anchor else 1.6
+				root.add_child(label)
+				var ring := _ring(1.2, Color("bdded6"))
+				ring.position.y = 0.04
+				root.add_child(ring)
+				economy_actors[key] = {"root": root, "body": body, "label": label, "ring": ring}
+			var entry: Dictionary = economy_actors[key]
+			entry.root.visible = int(entity.get("hp", 1)) > 0
+			entry.ring.visible = selected_entity.get("id", -1) == entity.id and selected_entity.get("category", "") == ("deposit" if deposit else "structure")
+			if entry.ring.visible:
+				selected_entity = entity.duplicate()
+				selected_entity["category"] = "deposit" if deposit else "structure"
+			if deposit:
+				entry.label.text = "SALVAGE  %d" % entity.remaining
+				entry.body.scale.y = 0.15 if entity.remaining == 0 else 1.0
+			else:
+				var progress := int(entity.build_ticks)
+				var fraction := minf(float(progress) / float(current.build_duration), 1.0)
+				entry.label.text = "COMMAND ANCHOR" if anchor else ("FOUNDRY" if fraction >= 1.0 else "FOUNDRY  %d%%" % int(fraction * 100))
+				if not anchor: entry.body.scale.y = 0.2 + 0.8 * fraction
 
 func _apply_team(node: Node, color: Color) -> void:
 	if node is MeshInstance3D:
@@ -528,6 +675,7 @@ func _process(delta: float) -> void:
 			if movement_smoke: _movement_smoke_tick()
 			if crowd_smoke: crowd_fixture.tick()
 			if scale_smoke: scale_fixture.tick()
+			if economy_smoke and economy_fixture: economy_fixture.tick()
 	var present_start := Time.get_ticks_usec() if presentation_profiler else 0
 	_present(clampf(accumulator / STEP, 0, 1), delta)
 	if presentation_profiler: presentation_profiler.record("present", Time.get_ticks_usec() - present_start)
@@ -544,6 +692,14 @@ func _process(delta: float) -> void:
 	camera_target.x = clampf(camera_target.x, 2, map_size.x - 2)
 	camera_target.z = clampf(camera_target.z, 2, map_size.y - 2)
 	_update_camera()
+	if economy:
+		_present_economy()
+		if build_pending:
+			var cursor := _world_at(get_viewport().get_mouse_position())
+			build_preview.position = Vector3(floorf(cursor.x) + 0.5, 0.08, floorf(cursor.z) + 0.5)
+			var affordable: bool = current.salvage[local_player] >= current.foundry_cost
+			build_preview.material_override = _material(Color("4bbca5") if affordable and bridge.can_build(int(cursor.x * SCALE), int(cursor.z * SCALE)) else Color("d65f56"))
+		build_preview.visible = build_pending
 	order_age += delta
 	order_mark.visible = order_age < 1.2
 	order_mark.scale = Vector3.ONE * (1.0 + minf(order_age, 1.2) * 0.5)
@@ -596,6 +752,8 @@ func _present(alpha: float, delta: float) -> void:
 		var to := Vector3(unit.x / SCALE, 0, unit.z / SCALE)
 		entry.root.position = from.lerp(to, alpha)
 		entry.ring.visible = unit.id in selected and unit.hp > 0
+		if int(unit.get("kind", 0)) == 1:
+			entry.root.get_node("SalvageCargo").visible = int(unit.get("cargo", 0)) > 0
 		if unit.hp <= 0:
 			if not entry.dead:
 				_play(entry, "death")
@@ -661,6 +819,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		match event.physical_keycode:
 			KEY_F2:
+				selected_entity.clear()
 				selected.clear()
 				for unit in current.units:
 					if unit.player == local_player and unit.hp > 0: selected.append(unit.id)
@@ -668,17 +827,40 @@ func _unhandled_input(event: InputEvent) -> void:
 					own_selection_passed = not selected.is_empty()
 					for unit in current.units:
 						if unit.id in selected and unit.player != local_player: own_selection_passed = false
-			KEY_A: attack_pending = true
-			KEY_ESCAPE: attack_pending = false
+			KEY_A:
+				attack_pending = true
+				build_pending = false
+			KEY_B:
+				if economy and _selected_workers() > 0:
+					build_pending = true
+					attack_pending = false
+			KEY_ESCAPE:
+				attack_pending = false
+				build_pending = false
 			KEY_S: _issue(0, Vector3(0, 0, 0))
 			KEY_H: _issue(3, Vector3(0, 0, 0))
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed: camera.size = maxf(14, camera.size - 1.5)
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed: camera.size = minf(160 if scale128 else 36, camera.size + 1.5)
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-			_issue(1, _world_at(event.position))
+			if build_pending:
+				build_pending = false
+			else:
+				var destination := _world_at(event.position)
+				var entity := _economy_entity_at(event.position) if economy else {}
+				var order := 1
+				if _selected_workers() > 0 and not entity.is_empty():
+					if entity.category == "deposit": order = 4
+					elif entity.player == local_player and entity.kind == 0: order = 5
+					elif entity.player == local_player and entity.build_ticks < current.build_duration: order = 6
+					if order != 1: destination = Vector3(entity.x / SCALE, 0, entity.z / SCALE)
+				_issue(order, destination)
 			attack_pending = false
 		if event.button_index == MOUSE_BUTTON_LEFT:
+			if build_pending and event.pressed:
+				_issue(6, _world_at(event.position))
+				build_pending = false
+				return
 			if attack_pending and event.pressed:
 				_issue(2, _world_at(event.position))
 				attack_pending = false
@@ -717,8 +899,10 @@ func _control_group(number: int, store_group: bool, additive: bool) -> void:
 	control_groups[number] = members.duplicate()
 	if additive: members.append_array(selected)
 	selected = _live_own_ids(members)
+	selected_entity.clear()
 
 func _select(from: Vector2, to: Vector2, additive: bool) -> void:
+	selected_entity.clear()
 	if not additive: selected.clear()
 	var bounds := Rect2(from, to - from).abs()
 	var nearest := -1
@@ -734,6 +918,8 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 	if nearest != -1:
 		if additive and nearest in selected: selected.erase(nearest)
 		else: selected.append(nearest)
+	elif economy and from.distance_to(to) <= 7:
+		selected_entity = _economy_entity_at(to)
 	if movement_smoke and from.distance_to(to) <= 7:
 		movement_selected = selected.size() == 1 and selected[0] == 1
 	if smoke:
@@ -761,6 +947,11 @@ func _issue(order: int, at: Vector3) -> void:
 		if not accepted: movement_errors.append("Rejected input: " + movement_label)
 	if crowd_smoke: crowd_fixture.record_input(accepted, order, at)
 	if scale_smoke: scale_fixture.record_input(accepted, order, at)
+	if economy_smoke and economy_fixture: economy_fixture.record_input(accepted, order, at)
+	if economy:
+		economy_notice = "Order submitted" if accepted else "Order rejected"
+		if order == 6:
+			economy_notice = "Foundry order submitted: %d salvage" % current.foundry_cost if bridge.can_build(int(at.x * SCALE), int(at.z * SCALE)) else "Cannot place here: blocked, unaffordable, or occupied; no salvage spent"
 	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
 		var feedback_at := Vector3(at.x, 0.05, at.z)

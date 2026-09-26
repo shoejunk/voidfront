@@ -98,6 +98,25 @@ func _process(_delta: float) -> void:
 			result.text = "NETWORK SESSION ENDED\nR  /  return to offline skirmish"
 			connection.text += "\n" + str(game.network_state.get("error", "Unknown network failure"))
 		if not game.network_notice.is_empty(): connection.text += "\n" + game.network_notice
+	if game.economy:
+		var resources: Array = game.current.get("salvage", [0, 0])
+		var cost: int = game.current.foundry_cost
+		status.text = "CAIRN SALVAGE OUTPOST   /   SALVAGE  %d   /   FOUNDRY COST %d" % [resources[game.local_player], cost]
+		connection.text = "Economy prototype: gather salvage, then construct a foundry. Production and victory are forthcoming."
+		var workers: int = game._selected_workers()
+		selection.text = "%02d WORKERS / %02d STRIDERS" % [workers, game.selected.size() - workers]
+		if workers > 0:
+			var cargo := 0
+			for unit in game.current.units:
+				if unit.id in game.selected: cargo += int(unit.get("cargo", 0))
+			selection.text += "   /   CARRYING %d SALVAGE" % cargo
+		if not game.selected_entity.is_empty():
+			var entity: Dictionary = game.selected_entity
+			if entity.category == "deposit": selection.text = "SALVAGE DEPOSIT   /   %d REMAINING" % entity.remaining
+			elif entity.kind == 0: selection.text = "COMMAND ANCHOR   /   WORKER DROP-OFF"
+			else: selection.text = "FOUNDRY   /   %s" % ("CONSTRUCTION COMPLETE" if entity.build_ticks >= game.current.build_duration else "CONSTRUCTING %d%%" % int(float(entity.build_ticks) / game.current.build_duration * 100))
+		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
+		tip.text = "LMB / drag  select workers    RMB deposit  gather    RMB anchor  return cargo    B + click  build foundry (%d)\nRMB unfinished foundry  resume construction    S  stop    Esc / RMB  cancel placement    R  restart economy\n" % cost + game.economy_notice
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
@@ -107,7 +126,7 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	var profile_start := Time.get_ticks_usec() if is_instance_valid(game) and game.presentation_profiler else 0
 	var view := get_viewport_rect().size
-	var network_panel: bool = is_instance_valid(game) and (game.network or not game.option_error.is_empty())
+	var network_panel: bool = is_instance_valid(game) and (game.network or game.economy or not game.option_error.is_empty())
 	var panel_size := Vector2(920, 128) if network_panel else Vector2(548, 80)
 	draw_rect(Rect2(Vector2(16, 12), panel_size), Color(0.025, 0.047, 0.055, 0.94))
 	draw_rect(Rect2(16, 12, 3, panel_size.y), Color("61c9c6"))
@@ -127,6 +146,14 @@ func _draw() -> void:
 	draw_multimesh(minimap_obstacles, null)
 	draw_set_transform(Vector2.ZERO)
 	var selected_ids := {}
+	if game.economy:
+		for structure in game.current.get("structures", []):
+			var at := map_rect.position + Vector2(structure.x, structure.z) / 256.0 * map_scale
+			draw_rect(Rect2(at - Vector2(4, 4), Vector2(8, 8)), Color("62d7d1") if structure.player == 0 else Color("ef9259"))
+		for deposit in game.current.get("deposits", []):
+			if deposit.remaining > 0:
+				var at := map_rect.position + Vector2(deposit.x, deposit.z) / 256.0 * map_scale
+				draw_circle(at, 3.0, Color("d6b869"))
 	for id in game.selected: selected_ids[id] = true
 	for u in game.current.units:
 		if u.hp <= 0:

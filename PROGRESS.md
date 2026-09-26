@@ -1,5 +1,48 @@
 # Voidfront progress
 
+## 2026-09-26 09:49 America/Los_Angeles - playable economy increment
+
+Baseline dev ad59512 with existing user-owned roadmap, progress and last-run
+priority edits preserved. STOP/COMPLETE and prior marker absent; exclusively
+acquired marker for task 01a0de9e-d52e-7432-9cf2-6a6c2b11936d. Current gameplay-first
+roadmap supersedes older crowd-research next steps. Goals: canonical workers,
+salvage gather/return and paid construction; playable default offline controls,
+costs and progress; packaged InputEvent/replay evidence and independent review.
+Simulation and client specialists own separate files; primary owns bridge,
+tools, builds, integration and Git. Production/economic AI/full matches and
+existing scale/performance/shipping gates remain open.
+
+The first playable economy is now implemented: default offline play begins
+with anchors, three workers each side and finite salvage deposits. Workers
+mine/carry/return through canonical commands; players can spend100 salvage on a
+blocking Foundry, stop/resume construction without repayment and restart.
+HUD shows costs, cargo, bank, placement/result feedback and construction.
+--skirmish retains the old combat trial. Economic state remains standalone
+integer C++/protocol6; network sessions still run the existing combat scenario.
+Foundries do not yet produce units and the opposite outpost is passive.
+
+Independent review found/fixed occupied service-slot recovery, stale selection
+readouts and unaffordable green placement previews. First runtime funding
+window was too short (91salvage at779); retained failure and extended fixture,
+without changing game speed/costs. Final Debug/Release8/8 suites, replay/alias
+checks and2000cross-build hashes+10repeats pass. Packaged25checks/1045ticks pass;
+all client hashes replay Debug+10Release, with6276independently swept worker rows,
+4000salvage conserved and100construction increments.17crowd fixtures/20runs pass.
+Headless22 and rendered6 actual-process network regressions pass; rendered80ms
+executionp95=141.754/150.161ms still fails150ms on one peer. Timings are sparse
+and concurrent, no new performance acceptance. Detailed commands and paths in
+TESTING.md and .voidfront-agent/review-economy-2026-09-26.md.
+
+Package: artifacts/package/Voidfront.exe. Primary/critic inspected fresh PNGs:
+resources/progress are legible but label/healthbar overlap and blockout art persist.
+A52.3second1600x90060fps packaged movie and sampled contact sheet are retained;
+its separate input stream also matches Debug and ten Release replays. This is
+sampled-state review, not continuous playback or human/animation acceptance.
+Next implement resource-funded unit production, queues and population limits,
+then economic AI/anchor victory. Full small matches, flux/tech/fog, production
+art/audio, dense crowd progress, reference budgets and shipping remain open.
+No COMPLETE.md. Preserve the earlier user-owned roadmap/last-run/progress edits.
+
 ## 2026-09-26 08:42 America/Los_Angeles - cooperative movement pass
 
 Baseline clean dev ff96df8; STOP, COMPLETE and prior marker absent. Acquired

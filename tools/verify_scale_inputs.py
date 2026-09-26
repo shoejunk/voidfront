@@ -32,7 +32,7 @@ def main():
         require(path.read_bytes()==payload,f'{name}: replay input changed')
         rejected.append(name)
     for length in (24,27,28,31,32,33,34,35,len(golden)-1): reject(f'truncated-{length}',golden[:length])
-    for name,offset,value in [('map-unknown',32,2),('map-u32max',32,0xffffffff),('map-foundry-large-command',32,0),
+    for name,offset,value in [('map-unknown',32,3),('map-u32max',32,0xffffffff),('map-foundry-large-command',32,0),
                               ('bad-protocol',4,0),('bad-content',24,0),('x-wire-limit',54,32768),('z-wire-limit',58,32768)]:
         bad=bytearray(golden); struct.pack_into('<I',bad,offset,value); reject(name,bad)
     reject('trailing',golden+b'X')

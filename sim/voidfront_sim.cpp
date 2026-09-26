@@ -8,17 +8,17 @@
 
 namespace vf {
 int map_width(Map map) {
-    if (map==Map::Foundry) return kMapWidth;
+    if ((map==Map::Foundry || map==Map::Economy)) return kMapWidth;
     if (map==Map::Scale128) return 128;
     throw std::invalid_argument("unsupported map");
 }
-int map_height(Map map) { return map==Map::Foundry?kMapHeight:map_width(map); }
+int map_height(Map map) { return (map==Map::Foundry || map==Map::Economy)?kMapHeight:map_width(map); }
 const std::vector<nav::Rect>& map_terrain(Map map) {
     static const std::vector<nav::Rect> foundry{{15*kScale,3*kScale,17*kScale,9*kScale},
         {15*kScale,16*kScale,17*kScale,21*kScale}};
     static const std::vector<nav::Rect> scale{{63*kScale,8*kScale,65*kScale,60*kScale},
         {63*kScale,68*kScale,65*kScale,120*kScale}};
-    if (map==Map::Foundry) return foundry;
+    if ((map==Map::Foundry || map==Map::Economy)) return foundry;
     if (map==Map::Scale128) return scale;
     throw std::invalid_argument("unsupported map");
 }
@@ -30,7 +30,7 @@ int64_t distance2(const Unit& a, const Unit& b) {
     return dx * dx + dz * dz;
 }
 bool canonical(const Command& c) {
-    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 3 &&
+    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 6 &&
         !c.units.empty() && c.units.size() <= 256 && c.x >= 0 && c.z >= 0 &&
         c.x < kMaxMapSize * kScale && c.z < kMaxMapSize * kScale &&
         std::is_sorted(c.units.begin(), c.units.end()) &&
@@ -69,6 +69,21 @@ void step_candidates(nav::Point here,nav::Point waypoint,std::vector<nav::Point>
 
 Sim::Sim(uint32_t seed, uint32_t count, Map map) : map_(map), rng_(seed ? seed : 1), navigation_(terrain_bounds(map), map_terrain(map), unit_radius) {
     if (count < 1 || count > 250) throw std::invalid_argument("units_per_team must be 1..250");
+    if (map==Map::Economy) {
+        for (uint8_t p=0;p<2;++p) {
+            structures_.push_back({uint32_t(p)+1,p,StructureKind::Anchor,(p==0?4:27)*kScale+128,12*kScale+128});
+            deposits_.push_back({uint32_t(p)+1,(p==0?7:24)*kScale+128,7*kScale+128,2000});
+            for (int n=0;n<3;++n) {
+                Unit u;
+                u.id=static_cast<uint32_t>(units_.size())+1; u.player=p; u.kind=UnitKind::Worker;
+                u.x=u.goal_x=u.next_x=(p==0?6:25)*kScale+128;
+                u.z=u.goal_z=u.next_z=(11+n)*kScale+128;
+                units_.push_back(u);
+            }
+        }
+        rebuild_navigation();
+        return;
+    }
     for (uint8_t p = 0; p < 2; ++p) {
         for (uint32_t n = 0; n < count; ++n) {
             Unit u;
@@ -89,8 +104,12 @@ Sim::Sim(uint32_t seed, uint32_t count, Map map) : map_(map), rng_(seed ? seed :
 
 bool Sim::blocked(int x, int z) const {
     if (x <= 0 || z <= 0 || x >= width() - 1 || z >= height() - 1) return true;
+    if (map_==Map::Economy) return !navigation_.valid({x*kScale+kScale/2,z*kScale+kScale/2});
     for (const auto& r:map_terrain(map_))
         if (x*kScale>=r.min_x && x*kScale<r.max_x && z*kScale>=r.min_z && z*kScale<r.max_z) return true;
+    for (const auto& b:structures_) if (b.hp>0 && x*kScale+kScale/2>=b.x-kScale && x*kScale+kScale/2<b.x+kScale &&
+        z*kScale+kScale/2>=b.z-kScale && z*kScale+kScale/2<b.z+kScale) return true;
+    for (const auto& d:deposits_) if (x==d.x/kScale && z==d.z/kScale) return true;
     return false;
 }
 
@@ -114,6 +133,8 @@ bool Sim::submit(Command command) {
 
 void Sim::apply(const Command& c) {
     last_sequence_[c.player] = c.sequence;
+    if (static_cast<uint8_t>(c.order)>=4) { apply_economy(c); return; }
+    if (map_==Map::Economy) { results_[c.player]=CommandResult::Accepted; result_sequences_[c.player]=c.sequence; }
     // Enumerate Manhattan rings once in row-major order. This preserves the
     // original exhaustive search's exact distance/row/column ties without
     // rescanning every map cell for each selected unit.
@@ -134,6 +155,7 @@ void Sim::apply(const Command& c) {
     for (const auto id : c.units) {
         auto& u = units_[id - 1];
         if (u.hp <= 0) continue;
+        u.resource_id=0; u.build_id=0; u.work_ticks=0; u.returning=false;
         u.order = c.order;
         u.target_id = 0;
         u.path.clear(); u.next_x = u.x; u.next_z = u.z;
@@ -158,6 +180,7 @@ void Sim::step() {
     size_t applied = 0;
     while (applied < pending_.size() && pending_[applied].tick == tick_) apply(pending_[applied++]);
     pending_.erase(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(applied));
+    economy_step();
     std::vector<int32_t> damage(units_.size(), 0);
     std::vector<nav::Point> tick_start;
     tick_start.reserve(units_.size());
@@ -180,7 +203,7 @@ void Sim::step() {
         if (u.cooldown > 0) --u.cooldown;
         const Unit* target = nullptr;
         int64_t nearest = acquire_range2 + 1;
-        if (u.order != Order::Move) {
+        if (u.kind==UnitKind::Strider && u.order != Order::Move) {
             constexpr int reach=6*kScale+movement_speed;
             spatial.query({u.x-reach,u.z-reach,u.x+reach,u.z+reach},nearby);
             for (const auto id : nearby) {
@@ -402,6 +425,7 @@ void Sim::step() {
 }
 
 int Sim::winner() const {
+    if (map_==Map::Economy) return -1;
     std::array<bool, 2> live{};
     for (const auto& u : units_) if (u.hp > 0) live[u.player] = true;
     if (live[0] && live[1]) return -1;
@@ -445,6 +469,7 @@ uint64_t Sim::state_hash() const {
     add(kProtocolVersion); add(static_cast<uint32_t>(map_)); add(width()); add(height());
     add(tick_); add(rng_); add(last_sequence_[0]); add(last_sequence_[1]); add(units_.size());
     for (const auto& u : units_) {
+        add(static_cast<uint8_t>(u.kind)); add(u.cargo); add(u.resource_id); add(u.build_id); add(u.work_ticks); add(u.returning);
         add(u.id); add(u.player); add(u.x); add(u.z); add(u.hp); add(static_cast<uint8_t>(u.order));
         add(u.target_id); add(u.cooldown); add(u.moving); add(u.goal_x); add(u.goal_z); add(u.next_x); add(u.next_z);
         add(u.route_goal.x); add(u.route_goal.z); add(u.path.size());
@@ -452,6 +477,11 @@ uint64_t Sim::state_hash() const {
         add(u.blocked_ticks); add(u.detour.size());
         for (const auto& point : u.detour) { add(point.x); add(point.z); }
     }
+    for (int p=0;p<2;++p) { add(salvage_[p]); add(static_cast<uint8_t>(results_[p])); add(result_sequences_[p]); }
+    add(structures_.size());
+    for (const auto& b:structures_) { add(b.id); add(b.player); add(static_cast<uint8_t>(b.kind)); add(b.x); add(b.z); add(b.hp); add(b.build_ticks); }
+    add(deposits_.size());
+    for (const auto& d:deposits_) { add(d.id); add(d.x); add(d.z); add(d.remaining); }
     return h;
 }
 
@@ -465,6 +495,7 @@ uint64_t Sim::hash() const {
 }
 
 std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& sequence) {
+    if (sim.map()==Map::Economy) return {};
     if (player >= 2 || sim.winner() != -1 || sim.tick() % 20 != 0) return {};
     Command c;
     c.tick = sim.tick(); c.sequence = ++sequence; c.player = player; c.order = Order::AttackMove;
