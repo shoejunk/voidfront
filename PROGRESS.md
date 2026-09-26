@@ -39,6 +39,11 @@ are not performance acceptance. See TESTING for artifact paths and limits.
 No new package, visual inspection, human play or separate-process network suite
 was performed this pass; prior package PCK and DLL hashes are unchanged.
 
+Checkpoint `8b4b463` is committed and pushed to origin/dev. The independent
+review accepts the tests/diagnostics increment and rejects every movement
+candidate. `.voidfront-agent/last-run.json` distinguishes current headless
+evidence from the retained September 25 package and presentation captures.
+
 Exact next movement step: bounded cooperative entry and exit ordering with
 follower dependencies and valid longitudinal slots, including final formation
 redistribution. Do not repeat fixed merge/exit offsets or arbitrary delay tweaks.
