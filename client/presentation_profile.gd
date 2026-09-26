@@ -21,6 +21,14 @@ var errors: Array[String] = []
 var initial_scene_classes: Dictionary = {}
 var initial_context: Dictionary = {}
 var final_context: Dictionary = {}
+var controlled_mode := ""
+var controlled_tick := 40
+var controlled_camera := "standard"
+const CLIP_PHASE_SECONDS := 0.25
+var animation_manifest: Array[Dictionary] = []
+var animation_players: Array[AnimationPlayer] = []
+var initial_pose_hash := ""
+var scene_topology: Dictionary = {"meshes": 0, "mesh_surfaces": 0, "bones": 0, "skeleton_modifiers": 0}
 
 func _init(owner) -> void:
 	game = owner
@@ -29,8 +37,79 @@ func _init(owner) -> void:
 			measured_frames = game._integer_option(argument, 1, 3600)
 		elif argument.begins_with("--profile-warmup="):
 			warmup_frames = game._integer_option(argument, 0, 1200)
+		elif argument.begins_with("--profile-controlled="):
+			controlled_mode = argument.get_slice("=", 1)
+		elif argument.begins_with("--profile-tick="):
+			controlled_tick = game._integer_option(argument, 0, 1000)
+		elif argument.begins_with("--profile-camera="):
+			controlled_camera = argument.get_slice("=", 1)
+
+func is_controlled() -> bool:
+	return not controlled_mode.is_empty()
+
+func _pose_hash(node: Node, poses: Array) -> void:
+	if node is Skeleton3D:
+		for bone in node.get_bone_count():
+			poses.append(node.get_bone_pose(bone))
+	for child in node.get_children(): _pose_hash(child, poses)
+
+func _current_pose_hash() -> String:
+	var poses: Array = []
+	_pose_hash(game, poses)
+	return var_to_bytes(poses).hex_encode().sha256_text()
+
+func _prepare_controlled() -> void:
+	for tick in controlled_tick: game.bridge.advance()
+	game.current = game.bridge.snapshot()
+	game.previous = game.current.duplicate(true)
+	game.accumulator = 0.0
+	if controlled_camera == "overview":
+		game.camera_target = Vector3(game.map_size.x / 2.0, 0, game.map_size.y / 2.0)
+		game.camera.size = 96.0 if game.scale128 else 36.0
+		game._update_camera()
+	# Initialize to the frozen state's health/cooldown so presenting it cannot
+	# create transient damage flashes or beam tweens from the skipped setup ticks.
+	for unit in game.current.units:
+		var entry: Dictionary = game.actors[unit.id]
+		entry.hp = unit.hp
+		entry.cooldown = unit.cooldown
+	game._present(1.0, 0.0)
+	game.order_mark.visible = false
+	for unit in game.current.units:
+		var entry: Dictionary = game.actors[unit.id]
+		var player: AnimationPlayer = entry.animation
+		if player == null:
+			errors.append("Controlled actor has no AnimationPlayer")
+			continue
+		player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		var desired := "death" if int(unit.hp) <= 0 else ("walk" if unit.moving else "idle")
+		var found := false
+		for clip in player.get_animation_list():
+			if not clip.to_lower().ends_with(desired): continue
+			player.play(clip, 0.0)
+			player.seek(CLIP_PHASE_SECONDS, true)
+			animation_players.append(player)
+			animation_manifest.append({"unit_id": unit.id, "clip": clip,
+				"length_seconds": player.get_animation(clip).length,
+				"tracks": player.get_animation(clip).get_track_count(),
+				"phase_seconds": player.current_animation_position})
+			found = true
+			break
+		if not found: errors.append("Controlled actor missing clip: " + desired)
+	initial_pose_hash = _current_pose_hash()
+
+func controlled_frame(delta: float, profile_start: int) -> void:
+	# Diagnostic only: fixed pose resubmission is not normal animation playback.
+	var start := Time.get_ticks_usec()
+	if controlled_mode == "pose-refresh":
+		for player in animation_players:
+			player.seek(CLIP_PHASE_SECONDS, true)
+	record("animation_pose_update", Time.get_ticks_usec() - start)
+	record("main_process", Time.get_ticks_usec() - profile_start)
+	frame(delta)
 
 func start() -> void:
+	if is_controlled(): _prepare_controlled()
 	initial_snapshot = game.current.duplicate(true)
 	_count_scene(game, initial_scene_classes)
 	initial_context = _context()
@@ -43,6 +122,11 @@ func start() -> void:
 func _count_scene(node: Node, counts: Dictionary) -> void:
 	var kind := node.get_class()
 	counts[kind] = int(counts.get(kind, 0)) + 1
+	if node is MeshInstance3D and node.mesh != null:
+		scene_topology.meshes += 1
+		scene_topology.mesh_surfaces += node.mesh.get_surface_count()
+	if node is Skeleton3D: scene_topology.bones += node.get_bone_count()
+	if node is SkeletonModifier3D: scene_topology.skeleton_modifiers += 1
 	for child in node.get_children(): _count_scene(child, counts)
 
 func _context() -> Dictionary:
@@ -151,11 +235,15 @@ func _finish() -> void:
 	if samples.is_empty(): errors.append("No measured samples")
 	if samples.size() != measured_frames: errors.append("Incomplete measured frame count")
 	if warmup.size() != warmup_frames: errors.append("Incomplete warmup frame count")
-	for stage in REQUIRED_STAGES:
+	var required := ["animation_pose_update", "hud_process", "main_process"] if is_controlled() else REQUIRED_STAGES
+	for stage in required:
 		if measured_summary.stage_calls_usec.get(stage, {}).get("count", 0) == 0:
 			errors.append("No measured stage calls: " + stage)
-	if int(final_snapshot.tick) <= int(measurement_initial_snapshot.tick):
+	if not is_controlled() and int(final_snapshot.tick) <= int(measurement_initial_snapshot.tick):
 		errors.append("Simulation did not advance during measurement")
+	var final_pose_hash := _current_pose_hash() if is_controlled() else ""
+	if is_controlled() and (final_snapshot != initial_snapshot or final_context != initial_context or final_pose_hash != initial_pose_hash):
+		errors.append("Controlled state, context or pose changed")
 	var capture_error := OK
 	if not game.capture_path.is_empty():
 		# GPU readback and PNG encoding occur strictly after ended_usec.
@@ -165,7 +253,10 @@ func _finish() -> void:
 	var report := {
 		"schema": 1, "ok": errors.is_empty(), "errors": errors,
 		"process_id": OS.get_process_id(),
-		"mode": "ordinary_offline_presentation", "seed": 1,
+		"mode": "controlled_pose_resubmission" if is_controlled() else "ordinary_offline_presentation", "seed": 1,
+		"controlled": {"variant": controlled_mode, "tick": controlled_tick, "camera": controlled_camera,
+			"clip_phase_seconds": CLIP_PHASE_SECONDS, "animation_manifest": animation_manifest,
+			"initial_pose_hash": initial_pose_hash, "final_pose_hash": final_pose_hash},
 		"map": "Scale128" if game.scale128 else "Foundry",
 		"requested_units_per_team": game.scale_count if game.scale128 else 6,
 		"ai_enabled": true, "smoke_fixture": false,
@@ -187,11 +278,14 @@ func _finish() -> void:
 		"initial_snapshot": initial_snapshot,
 		"initial_context": initial_context, "final_context": final_context,
 		"initial_scene_node_classes": initial_scene_classes,
+		"scene_topology": scene_topology,
+		"static_geometry": game._static_geometry_manifest(),
 		"measurement_initial_snapshot": measurement_initial_snapshot,
 		"final_snapshot": final_snapshot,
 		"foreground_entire_measurement": measured_summary.focused_frames == samples.size(),
 		"capture_path": game.capture_path, "capture_after_measurement": not game.capture_path.is_empty(),
 		"notes": [
+			"Controlled variants freeze simulation and input at a declared tick/clip phase and suppress skipped-tick damage transients. Pose-refresh manually seeks with update=true; pose-frozen retains the identical initialized pose. The difference includes resubmission and downstream invalidation; it is not ordinary animation, isolated skeleton, or GPU timing.",
 			"Warmup and measured raw samples are retained without outlier or focus filtering; nearest-rank percentiles.",
 			"Wall intervals are deferred sample-to-sample; first warmup interval starts after setup. Process delta is the engine-supplied value and may be capped.",
 			"Stages are CPU call durations. Main process encloses bridge/snapshot/present and is not additive. Present excludes asynchronous skeleton/renderer/GPU work. Snapshot includes authoritative hashing and marshaling.",

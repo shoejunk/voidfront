@@ -1,5 +1,110 @@
 # Verification ledger
 
+## 2026-09-25 controlled presentation diagnostics and static batching
+
+`artifacts/weekly-build-2026-09-25.log`: pinned Godot 4.7.2, templates and
+godot-cpp checks, integrated MSVC Debug/Release **7/7 CTest** each, 15 malformed
+replays and seven output-alias cases per build, 2,000 cross-build tick hashes
+and ten repeated Release replays pass. Simulation, network, bridge, assets and
+tool pins are unchanged. `presentation-batched-package-2026-09-25.log` records
+the final Release build, tests, import and export. No later native rebuild.
+
+Repeated static boxes now use translation-only MultiMeshes grouped by exact
+mesh dimensions, material and center chunk. Original mesh arrays, transforms,
+materials and shadow settings are preserved; floor/borders, actors, animation
+and transient beams keep their original paths. Expanded geometry accounts for
+all **1,090** boxes, hash
+`7da1ffb6c4f10273c8e1fbcd029a5e7894160b413869b707cd0516cfae94c44f`.
+500-unit scene nodes fall **4,608 -> 3,781**; 500 skeletons/7,500 bones remain.
+Chunk culling can submit more triangles: standard/overview observations add
+1,080/1,620 primitives. Long grid strips still span the map despite grouping
+by their centers. Dynamic terrain is not implemented by this static setup.
+
+Controlled diagnostics freeze seed 1 at tick 40, fixed camera, input and clip
+phase 0.25 seconds. Both variants initialize exactly the same bone poses;
+`pose-refresh` repeatedly seeks with update=true, while `pose-frozen` retains
+the pose without automatic animation processing. Raw state/camera/pose and
+geometry invariants are checked. This measures manual pose resubmission and
+downstream effects, **not ordinary animation, isolated skeleton CPU or GPU time**.
+The same-payload baseline refresh/frozen means were 44.658/17.429 ms with
+identical 4,393 draw calls. No animation throttling or quality change is shipped.
+
+The first unbatched/batched timing comparison was rejected because rebuilding
+changed the native DLL fingerprint. Those artifacts remain descriptive only.
+`artifacts/presentation-matched-baseline-package-2026-09-25/composition.json`
+records a retained unbatched PCK combined with the final native EXE/DLL.
+Four serial 360-frame/60-warmup captures then used this identical native payload
+in A/B/B/A order (A unbatched, B batched):
+
+| Run | Mean / p95 / p99 frame interval ms | Draw calls |
+| --- | --- | --- |
+| A1 | 53.530 / 66.830 / 70.774 | 4,393 |
+| B1 | 52.013 / 57.755 / 62.090 | 4,164 |
+| B2 | 53.427 / 61.779 / 66.299 | 4,164 |
+| A2 | 57.319 / 67.118 / 70.597 | 4,393 |
+
+Both strict paired comparisons pass; baseline drift and only two observations
+per implementation prevent a general speedup or statistical performance claim.
+The accepted improvement is fewer scene nodes and draw submissions. Overview
+draw observations are 10,779 -> 8,715; paired overview PNGs have zero changed
+pixels. Strict ABBA A-A/B-B PNGs are identical; A-B differs at 20 of 2,073,600
+pixels (maximum channel delta 18), inside the walker raster region. Primary and
+critic inspected actual overview, ordinary and selected choke screenshots.
+This does not establish production readability, animation quality or human play.
+
+Reproduction (use fresh names):
+
+```powershell
+./tools/profile.ps1 -Packaged -UnitsPerTeam 250 -Frames 360 -Warmup 60 -Controlled pose-refresh -Capture -Name controlled-refresh
+./tools/profile.ps1 -Packaged -UnitsPerTeam 250 -Frames 360 -Warmup 60 -Controlled pose-frozen -Camera overview -Capture -Name controlled-overview
+python tools/verify_presentation_profile.py artifacts/controlled-refresh.json artifacts/controlled-overview.json
+```
+
+Use `-PackageDirectory` for a retained package; default is `artifacts/package`.
+`tools/compare_presentation_profiles.py` accepts `--comparison pose` for paired
+variants with identical payloads or `--comparison implementation` for identical
+variants/native binaries and differing PCKs. Optional `--left-package` and
+`--right-package` audit actual retained payload files against recorded hashes.
+Six comparison corruptions reject. Individual integrity checks reject 10
+ordinary and 14 controlled corruptions; all 16 retained reports pass, including
+legacy ordinary format compatibility. Eight malformed new CLI combinations
+reject with exit 2 before match setup (`presentation-invalid-options-2026-09-25.json`).
+Compact paths, hashes, comparisons and limitations are committed in
+`.voidfront-agent/presentation-results-2026-09-25.json`; independent findings
+are `.voidfront-agent/review-presentation-2026-09-25.md`.
+
+Final ordinary AI-play captures use 360 frames/60 warmup at 1920x1080, hidden
+launch, observed focused/nonminimized windows, matching runtime/host PIDs:
+
+| Units | Measured seconds / ticks | Frame p95 / p99 ms | Peak resident bytes |
+| --- | --- | --- | --- |
+| 12 Foundry | 6.005 / 24..144 | 17.128 / 17.336 | 233,840,640 |
+| 200 Scale128 | 7.950 / 29..188 | 25.696 / 27.531 | 244,510,720 |
+| 500 Scale128 | 35.383 / 115..821 | 130.709 / 137.834 | 313,151,488 |
+
+Reports: `artifacts/presentation-ordinary{12,200,500}-final-2026-09-25.json`
+and companion host files/PNGs. All miss the 16.67 ms p99 target in these runs.
+Different tick windows and uncontrolled host/display scheduling preclude causal
+ordinary-play before/after attribution. No reference-hardware, unoccluded human
+foreground, sustained full match or shipping acceptance; budgets unchanged.
+
+`presentation-scale-controls-2026-09-25.json` passes all 23 packaged 500-unit
+InputEvent checks through 700 ticks, including first-tick Stop (14 stationary
+samples), resume, control groups and reset. `presentation-scale-replay-2026-09-25/summary.json`
+verifies every hash against Debug and ten Release runs, rejects eight corruptions,
+and independently checks all 350,500 swept unit rows. This is a one-sided fixture,
+not the retained failed opposing-stream gate. `presentation-offline-final-2026-09-25.json`
+passes default 400-tick controls/combat/restart, unchanged hash `1b35fbb0222cbc7b`,
+winner 1. No new movie/manual play or full static-route/crowd/22-case headless
+transport rerun; authoritative source is unchanged and prior evidence stays dated.
+
+`python tools/verify_client_network.py --out artifacts/presentation-network-final-2026-09-25`
+passes all six rendered separate-process cases: clean, 80/160 ms RTT with
+jitter/loss, withheld frame, mismatched input delay and disconnect. Applied
+recordings replay in the opposite build; ten clean repeats and all five final
+payload/replayer fingerprints pass. This preserves Foundry loopback coverage,
+not physical endpoints, complete RTS matches or a 30-minute soak.
+
 ## 2026-09-20 ordinary presentation profiling and HUD submission
 
 `artifacts/weekly-build-2026-09-20.log` records pinned Godot 4.7.2/templates/

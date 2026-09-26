@@ -1,0 +1,938 @@
+{
+  "schema": 1,
+  "run_date_pacific": "2026-09-25",
+  "created_utc": "2026-09-26T00:35:00.426922+00:00",
+  "ok": true,
+  "all_retained_profile_reports_verified": 16,
+  "runs": [
+    {
+      "name": "presentation-frozen500-after-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-frozen500-after-2026-09-25.json",
+        "sha256": "dd108115f55dab0e388bde8f64c46b234625b447634b13cf53567bd4f04ad2cd"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-frozen500-after-2026-09-25-host.json",
+        "sha256": "81b759309aeb8b9c7a5803c38b3644518a31a10bd0cc1e2c3b72283857cb9440"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-frozen",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 18.21425,
+        "p50": 17.779,
+        "p95": 22.199,
+        "p99": 25.762,
+        "maximum": 28.438
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 0.001,
+        "hud_draw": 5.631,
+        "hud_process": 0.073,
+        "main_process": 0.021
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4164.0,
+        "p50": 4164.0,
+        "p95": 4164.0,
+        "p99": 4164.0,
+        "maximum": 4164.0,
+        "total": 1499040.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "0ABA62BEF45793B57B928AB72C99B886D09DBCDA9EF1FEB4E11FB12914A56F0A",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 289390592,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-frozen500-before-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-frozen500-before-2026-09-25.json",
+        "sha256": "20978f576f243983895cd947dcbee9a5bfce1ff2d6b9fa399023dac83ea85df6"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-frozen500-before-2026-09-25-host.json",
+        "sha256": "50c82d2f0b1451c0cc5e5e8b8355d6391c0413447f1bc8653b515e8a11b5749f"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-frozen",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 17.4289361111111,
+        "p50": 17.188,
+        "p95": 19.243,
+        "p99": 20.964,
+        "maximum": 22.972
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 0.001,
+        "hud_draw": 5.013,
+        "hud_process": 0.065,
+        "main_process": 0.017
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4393.0,
+        "p50": 4393.0,
+        "p95": 4393.0,
+        "p99": 4393.0,
+        "maximum": 4393.0,
+        "total": 1581480.0
+      },
+      "native_dll_sha256": "0A4FBE5AB2F5380DBFF179063A91141EFA1C83438D19AE8663F1B6638B0A9715",
+      "pck_sha256": "CE8119B1113D38225DFF1BA270679B937EEF392D743DDFFACD58EB49917D2A64",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 301727744,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-ordinary12-final-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-ordinary12-final-2026-09-25.json",
+        "sha256": "43414cbc3d8b88ce2b17d8654371dec9aeb839ac3189f64e5c5bf5648c689bb0"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-ordinary12-final-2026-09-25-host.json",
+        "sha256": "69a6e0bef6e9df4d6e3295435bc2e61a3066395a28b473d785c5ed08cd23ae81"
+      },
+      "mode": "ordinary_offline_presentation",
+      "variant": "",
+      "camera": "standard",
+      "tick_start": 24,
+      "tick_end": 144,
+      "units": 12,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 16.6802583333333,
+        "p50": 16.68,
+        "p95": 17.128,
+        "p99": 17.336,
+        "maximum": 17.828
+      },
+      "stage_p95_ms": {
+        "bridge": 0.058,
+        "hud_draw": 0.343,
+        "hud_process": 0.083,
+        "main_process": 0.47,
+        "present": 0.319,
+        "snapshot": 0.095
+      },
+      "draws": {
+        "count": 360,
+        "mean": 333.84722222222223,
+        "p50": 326.0,
+        "p95": 356.0,
+        "p99": 356.0,
+        "maximum": 356.0,
+        "total": 120185.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "0ABA62BEF45793B57B928AB72C99B886D09DBCDA9EF1FEB4E11FB12914A56F0A",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 233840640,
+      "corruption_rejections": 10
+    },
+    {
+      "name": "presentation-ordinary200-final-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-ordinary200-final-2026-09-25.json",
+        "sha256": "1d30f842688a6117badb62af5af26858431ba804ad1ee168663ea8d670f10a5e"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-ordinary200-final-2026-09-25-host.json",
+        "sha256": "d1e487bbc079b51e094862cdb5e52a59d218c738852da2dbf6f8f9123aca777f"
+      },
+      "mode": "ordinary_offline_presentation",
+      "variant": "",
+      "camera": "standard",
+      "tick_start": 29,
+      "tick_end": 188,
+      "units": 200,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 22.0845611111111,
+        "p50": 21.844,
+        "p95": 25.696,
+        "p99": 27.531,
+        "maximum": 28.119
+      },
+      "stage_p95_ms": {
+        "bridge": 0.367,
+        "hud_draw": 2.601,
+        "hud_process": 0.088,
+        "main_process": 3.289,
+        "present": 2.474,
+        "snapshot": 0.715
+      },
+      "draws": {
+        "count": 360,
+        "mean": 1729.0,
+        "p50": 1729.0,
+        "p95": 1729.0,
+        "p99": 1729.0,
+        "maximum": 1729.0,
+        "total": 622440.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "0ABA62BEF45793B57B928AB72C99B886D09DBCDA9EF1FEB4E11FB12914A56F0A",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 244510720,
+      "corruption_rejections": 10
+    },
+    {
+      "name": "presentation-ordinary500-before-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-ordinary500-before-2026-09-25.json",
+        "sha256": "7a20a8fba3d000e6b5f7665a3d9feb9c1a9dcf8a578529a3110b37b1aa60895a"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-ordinary500-before-2026-09-25-host.json",
+        "sha256": "572f382055527b6d5b9d81792a3f6b18ffdd6553018f39cc6666ed161330135d"
+      },
+      "mode": "ordinary_offline_presentation",
+      "variant": null,
+      "camera": null,
+      "tick_start": 74,
+      "tick_end": 600,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 73.1155722222222,
+        "p50": 69.963,
+        "p95": 97.679,
+        "p99": 106.838,
+        "maximum": 114.218
+      },
+      "stage_p95_ms": {
+        "bridge": 2.165,
+        "hud_draw": 8.017,
+        "hud_process": 0.095,
+        "main_process": 22.429,
+        "present": 12.219,
+        "snapshot": 2.497
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4430.680555555556,
+        "p50": 4398.0,
+        "p95": 4688.0,
+        "p99": 4883.0,
+        "maximum": 4928.0,
+        "total": 1595045.0
+      },
+      "native_dll_sha256": "C315FED8635B4A1643970CB2BCD427906604BF541DCB3F1948EC46BF3C64945A",
+      "pck_sha256": "57289AE84E0899D4C8EAD947E0ED4000A1D097C5A0F4B8DBED252DE6101C2C7C",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 322383872,
+      "corruption_rejections": 10
+    },
+    {
+      "name": "presentation-ordinary500-final-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-ordinary500-final-2026-09-25.json",
+        "sha256": "a02b2bd54f9cc58f8cbcb4a2ed3672597b1f9b27006c3f71d3bb2b599cad2147"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-ordinary500-final-2026-09-25-host.json",
+        "sha256": "42adc5b6dd55b11fb925ea1d6a70606c2159b98b96350007f49443a6a23a29b8"
+      },
+      "mode": "ordinary_offline_presentation",
+      "variant": "",
+      "camera": "standard",
+      "tick_start": 115,
+      "tick_end": 821,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 98.2855055555556,
+        "p50": 96.782,
+        "p95": 130.709,
+        "p99": 137.834,
+        "maximum": 143.659
+      },
+      "stage_p95_ms": {
+        "bridge": 2.327,
+        "hud_draw": 9.585,
+        "hud_process": 0.127,
+        "main_process": 34.731,
+        "present": 15.837,
+        "snapshot": 3.35
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4578.0,
+        "p50": 4169.0,
+        "p95": 5593.0,
+        "p99": 5700.0,
+        "maximum": 5720.0,
+        "total": 1648080.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "0ABA62BEF45793B57B928AB72C99B886D09DBCDA9EF1FEB4E11FB12914A56F0A",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 313151488,
+      "corruption_rejections": 10
+    },
+    {
+      "name": "presentation-overview500-after-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-overview500-after-2026-09-25.json",
+        "sha256": "f4a52bed912b926a9d92b4a48ca845d24aac19e2662e46c670f773b86a484e7e"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-overview500-after-2026-09-25-host.json",
+        "sha256": "146becab248797daab487670d8252ae13f006cb957e1447fd9481a0123bf3734"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-frozen",
+      "camera": "overview",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 29.4101111111111,
+        "p50": 28.292,
+        "p95": 38.144,
+        "p99": 45.784,
+        "maximum": 53.888
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 0.001,
+        "hud_draw": 6.529,
+        "hud_process": 0.089,
+        "main_process": 0.025
+      },
+      "draws": {
+        "count": 360,
+        "mean": 8715.0,
+        "p50": 8715.0,
+        "p95": 8715.0,
+        "p99": 8715.0,
+        "maximum": 8715.0,
+        "total": 3137400.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "0ABA62BEF45793B57B928AB72C99B886D09DBCDA9EF1FEB4E11FB12914A56F0A",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 302968832,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-overview500-before-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-overview500-before-2026-09-25.json",
+        "sha256": "6be8b6c4b1cbad498a8b185e509c1ed69aa1aaec45640005061f6489a4cd174e"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-overview500-before-2026-09-25-host.json",
+        "sha256": "cc551b3b4b91ebef29b037de1d1c69cae07bbacd5c1b583eab13dadfe98e969f"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-frozen",
+      "camera": "overview",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 29.1995305555556,
+        "p50": 28.519,
+        "p95": 34.428,
+        "p99": 39.387,
+        "maximum": 47.289
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 0.001,
+        "hud_draw": 5.207,
+        "hud_process": 0.068,
+        "main_process": 0.019
+      },
+      "draws": {
+        "count": 360,
+        "mean": 10779.0,
+        "p50": 10779.0,
+        "p95": 10779.0,
+        "p99": 10779.0,
+        "maximum": 10779.0,
+        "total": 3880440.0
+      },
+      "native_dll_sha256": "0A4FBE5AB2F5380DBFF179063A91141EFA1C83438D19AE8663F1B6638B0A9715",
+      "pck_sha256": "CE8119B1113D38225DFF1BA270679B937EEF392D743DDFFACD58EB49917D2A64",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 337719296,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-refresh500-after-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-refresh500-after-2026-09-25.json",
+        "sha256": "997d3cca4645b8a728c0f3701b59ab4622ef6978e939301c053ce875e75eaeb3"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-refresh500-after-2026-09-25-host.json",
+        "sha256": "d77f570b07ec7daa4c8f6a0011f7d2697eadbeb103e3edd63a9f5bdf48a4ed18"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-refresh",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 51.3772361111111,
+        "p50": 49.908,
+        "p95": 60.106,
+        "p99": 67.463,
+        "maximum": 146.182
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 2.882,
+        "hud_draw": 6.471,
+        "hud_process": 0.091,
+        "main_process": 2.914
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4164.0,
+        "p50": 4164.0,
+        "p95": 4164.0,
+        "p99": 4164.0,
+        "maximum": 4164.0,
+        "total": 1499040.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "0ABA62BEF45793B57B928AB72C99B886D09DBCDA9EF1FEB4E11FB12914A56F0A",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 346923008,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-refresh500-after-repeat-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-refresh500-after-repeat-2026-09-25.json",
+        "sha256": "9764c7d7519125721688c47da57a13b5f5c5ff51ca0790e6cd0659a9c2e797fa"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-refresh500-after-repeat-2026-09-25-host.json",
+        "sha256": "d1b56a1e97c5e57ba24ccb92b986f6cdeb16e93a867b60550e878406e4d4279f"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-refresh",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 49.3868305555556,
+        "p50": 48.454,
+        "p95": 56.501,
+        "p99": 58.441,
+        "maximum": 62.414
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 2.422,
+        "hud_draw": 5.836,
+        "hud_process": 0.086,
+        "main_process": 2.445
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4164.0,
+        "p50": 4164.0,
+        "p95": 4164.0,
+        "p99": 4164.0,
+        "maximum": 4164.0,
+        "total": 1499040.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "0ABA62BEF45793B57B928AB72C99B886D09DBCDA9EF1FEB4E11FB12914A56F0A",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 306089984,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-refresh500-before-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-refresh500-before-2026-09-25.json",
+        "sha256": "5d10c4a4958f21380c67ec889cd4c60fe83bd928600fd25bbe3bfef8bc2381ae"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-refresh500-before-2026-09-25-host.json",
+        "sha256": "0f2284c8781921be6d8346f7a1c56d5fc872d6e5bec3e6791ca1c04e8580beee"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-refresh",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 44.658488888888904,
+        "p50": 43.891,
+        "p95": 48.647,
+        "p99": 55.81,
+        "maximum": 61.939
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 2.076,
+        "hud_draw": 5.266,
+        "hud_process": 0.068,
+        "main_process": 2.099
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4393.0,
+        "p50": 4393.0,
+        "p95": 4393.0,
+        "p99": 4393.0,
+        "maximum": 4393.0,
+        "total": 1581480.0
+      },
+      "native_dll_sha256": "0A4FBE5AB2F5380DBFF179063A91141EFA1C83438D19AE8663F1B6638B0A9715",
+      "pck_sha256": "CE8119B1113D38225DFF1BA270679B937EEF392D743DDFFACD58EB49917D2A64",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 301785088,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-refresh500-before-repeat-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-refresh500-before-repeat-2026-09-25.json",
+        "sha256": "52ef865e49b777ba2082ccfe25661dac55f702bdb7e3c26ff41ed21a9fd16d18"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-refresh500-before-repeat-2026-09-25-host.json",
+        "sha256": "db68c00217786faf8cd45770c61be90448522ce9494d1c667f8f5c44ecd2a27e"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-refresh",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 48.9143888888889,
+        "p50": 48.699,
+        "p95": 53.41,
+        "p99": 55.238,
+        "maximum": 58.288
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 2.459,
+        "hud_draw": 5.635,
+        "hud_process": 0.078,
+        "main_process": 2.48
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4393.0,
+        "p50": 4393.0,
+        "p95": 4393.0,
+        "p99": 4393.0,
+        "maximum": 4393.0,
+        "total": 1581480.0
+      },
+      "native_dll_sha256": "0A4FBE5AB2F5380DBFF179063A91141EFA1C83438D19AE8663F1B6638B0A9715",
+      "pck_sha256": "CE8119B1113D38225DFF1BA270679B937EEF392D743DDFFACD58EB49917D2A64",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 322359296,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-refresh500-matched-a1-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-refresh500-matched-a1-2026-09-25.json",
+        "sha256": "4339ef7d41b2cb39e8697bca496bfbcaea0dd7965f0e0673b0b0651038d1e719"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-refresh500-matched-a1-2026-09-25-host.json",
+        "sha256": "921deb56ec4cae603dff852ed547129b83636e3812bc7c794baf6b88c0af9417"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-refresh",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 53.5299972222222,
+        "p50": 51.31,
+        "p95": 66.83,
+        "p99": 70.774,
+        "maximum": 72.432
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 3.44,
+        "hud_draw": 7.418,
+        "hud_process": 0.107,
+        "main_process": 3.474
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4393.0,
+        "p50": 4393.0,
+        "p95": 4393.0,
+        "p99": 4393.0,
+        "maximum": 4393.0,
+        "total": 1581480.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "CE8119B1113D38225DFF1BA270679B937EEF392D743DDFFACD58EB49917D2A64",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 316751872,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-refresh500-matched-a2-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-refresh500-matched-a2-2026-09-25.json",
+        "sha256": "479e75a4506a7507d0ec78608f65597cf78953500ca3b53644616aab6ff0f560"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-refresh500-matched-a2-2026-09-25-host.json",
+        "sha256": "c3487c3752222b76f196b4a3d07aa6a2a86d0b2d2089b4ff7de269661c1db68c"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-refresh",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 57.3185388888889,
+        "p50": 56.791,
+        "p95": 67.118,
+        "p99": 70.597,
+        "maximum": 75.275
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 3.532,
+        "hud_draw": 7.575,
+        "hud_process": 0.124,
+        "main_process": 3.566
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4393.0,
+        "p50": 4393.0,
+        "p95": 4393.0,
+        "p99": 4393.0,
+        "maximum": 4393.0,
+        "total": 1581480.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "CE8119B1113D38225DFF1BA270679B937EEF392D743DDFFACD58EB49917D2A64",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 323096576,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-refresh500-matched-b1-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-refresh500-matched-b1-2026-09-25.json",
+        "sha256": "3e79bb81ce6de1de2035c037d78a9ef6a5f75d45a6dbfbca3f86592e3c898118"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-refresh500-matched-b1-2026-09-25-host.json",
+        "sha256": "597788b0be2f66bb3e5c7e09ebfc1033c7b613137501f3757eccabfede1aa96c"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-refresh",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 52.0132527777778,
+        "p50": 51.043,
+        "p95": 57.755,
+        "p99": 62.09,
+        "maximum": 65.785
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 3.072,
+        "hud_draw": 6.457,
+        "hud_process": 0.098,
+        "main_process": 3.104
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4164.0,
+        "p50": 4164.0,
+        "p95": 4164.0,
+        "p99": 4164.0,
+        "maximum": 4164.0,
+        "total": 1499040.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "0ABA62BEF45793B57B928AB72C99B886D09DBCDA9EF1FEB4E11FB12914A56F0A",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 306163712,
+      "corruption_rejections": 14
+    },
+    {
+      "name": "presentation-refresh500-matched-b2-2026-09-25",
+      "artifact": {
+        "path": "artifacts/presentation-refresh500-matched-b2-2026-09-25.json",
+        "sha256": "8bf3374674db6f1379746f13bec7c0c3ab5800bb7683449676bb5916f69bafbc"
+      },
+      "host_artifact": {
+        "path": "artifacts/presentation-refresh500-matched-b2-2026-09-25-host.json",
+        "sha256": "af8ac9008a2b35673dc1db873782623c3ffcd20a50ec7d4de76f91a4ae92506a"
+      },
+      "mode": "controlled_pose_resubmission",
+      "variant": "pose-refresh",
+      "camera": "standard",
+      "tick_start": 40,
+      "tick_end": 40,
+      "units": 500,
+      "frames": 360,
+      "wall_ms": {
+        "mean": 53.4269277777778,
+        "p50": 52.207,
+        "p95": 61.779,
+        "p99": 66.299,
+        "maximum": 68.833
+      },
+      "stage_p95_ms": {
+        "animation_pose_update": 3.274,
+        "hud_draw": 7.018,
+        "hud_process": 0.1,
+        "main_process": 3.31
+      },
+      "draws": {
+        "count": 360,
+        "mean": 4164.0,
+        "p50": 4164.0,
+        "p95": 4164.0,
+        "p99": 4164.0,
+        "maximum": 4164.0,
+        "total": 1499040.0
+      },
+      "native_dll_sha256": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+      "pck_sha256": "0ABA62BEF45793B57B928AB72C99B886D09DBCDA9EF1FEB4E11FB12914A56F0A",
+      "foreground_flag_all_frames": true,
+      "visible_requested": false,
+      "host_counters_valid_for_game": true,
+      "peak_resident_bytes": 306581504,
+      "corruption_rejections": 14
+    }
+  ],
+  "controlled_contract": {
+    "tick": 40,
+    "clip_phase_seconds": 0.25,
+    "snapshot_hash": "e14e0e44cb2c09da",
+    "exact_binary_bone_pose_hash": "d340d5fdea35190dc2e1bf6265c854e0eb972fca8479db5851933760dc94de2f",
+    "static_box_count": 1090,
+    "expanded_static_geometry_hash": "7da1ffb6c4f10273c8e1fbcd029a5e7894160b413869b707cd0516cfae94c44f",
+    "manifest_actor_count": 500,
+    "before_node_classes": {
+      "AnimationPlayer": 500,
+      "Camera3D": 1,
+      "CanvasLayer": 1,
+      "Control": 1,
+      "DirectionalLight3D": 2,
+      "Label": 6,
+      "Label3D": 2,
+      "MeshInstance3D": 2093,
+      "Node3D": 1501,
+      "Skeleton3D": 500,
+      "WorldEnvironment": 1
+    },
+    "after_node_classes": {
+      "AnimationPlayer": 500,
+      "Camera3D": 1,
+      "CanvasLayer": 1,
+      "Control": 1,
+      "DirectionalLight3D": 2,
+      "Label": 6,
+      "Label3D": 2,
+      "MeshInstance3D": 1010,
+      "MultiMeshInstance3D": 256,
+      "Node3D": 1501,
+      "Skeleton3D": 500,
+      "WorldEnvironment": 1
+    },
+    "before_scene_topology": {
+      "bones": 7500,
+      "mesh_surfaces": 4093,
+      "meshes": 2093,
+      "skeleton_modifiers": 0
+    },
+    "after_scene_topology": {
+      "bones": 7500,
+      "mesh_surfaces": 3010,
+      "meshes": 1010,
+      "skeleton_modifiers": 0
+    },
+    "node_reduction": 827
+  },
+  "accepted_implementation_pairs": [
+    {
+      "left": "presentation-refresh500-matched-a1-2026-09-25",
+      "right": "presentation-refresh500-matched-b1-2026-09-25",
+      "verified": true,
+      "wall_interval_usec": {
+        "left": {
+          "count": 360,
+          "maximum": 72432,
+          "mean": 53529.9972222222,
+          "p50": 51310,
+          "p95": 66830,
+          "p99": 70774,
+          "total": 19270799.0
+        },
+        "right": {
+          "count": 360,
+          "maximum": 65785,
+          "mean": 52013.2527777778,
+          "p50": 51043,
+          "p95": 57755,
+          "p99": 62090,
+          "total": 18724771.0
+        },
+        "right_minus_left": {
+          "mean": -1516.7444444443972,
+          "p50": -267,
+          "p95": -9075,
+          "p99": -8684
+        }
+      }
+    },
+    {
+      "left": "presentation-refresh500-matched-a2-2026-09-25",
+      "right": "presentation-refresh500-matched-b2-2026-09-25",
+      "verified": true,
+      "wall_interval_usec": {
+        "left": {
+          "count": 360,
+          "maximum": 75275,
+          "mean": 57318.5388888889,
+          "p50": 56791,
+          "p95": 67118,
+          "p99": 70597,
+          "total": 20634674.0
+        },
+        "right": {
+          "count": 360,
+          "maximum": 68833,
+          "mean": 53426.9277777778,
+          "p50": 52207,
+          "p95": 61779,
+          "p99": 66299,
+          "total": 19233694.0
+        },
+        "right_minus_left": {
+          "mean": -3891.611111111102,
+          "p50": -4584,
+          "p95": -5339,
+          "p99": -4298
+        }
+      }
+    }
+  ],
+  "native_mismatch": {
+    "initial_pairs_accepted_for_implementation_timing": false,
+    "rejection": "Implementation comparison changed native payload",
+    "old_dll": "0A4FBE5AB2F5380DBFF179063A91141EFA1C83438D19AE8663F1B6638B0A9715",
+    "current_dll": "B234E1FA1BC58A190951861D0FBA0B0A4920262C3F50B33FA28943E49AF148BE",
+    "remedy": "Retained old PCK combined with exact final EXE/DLL in new immutable matched baseline directory; recollected A1 B1 B2 A2."
+  },
+  "package_audits": {
+    "matched_baseline": {
+      "Voidfront.exe": {
+        "path": "C:\\dev\\voidfront\\artifacts\\presentation-matched-baseline-package-2026-09-25\\Voidfront.exe",
+        "sha256": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+        "bytes": 109268480
+      },
+      "Voidfront.pck": {
+        "path": "C:\\dev\\voidfront\\artifacts\\presentation-matched-baseline-package-2026-09-25\\Voidfront.pck",
+        "sha256": "ce8119b1113d38225dff1ba270679b937eef392d743ddffacd58eb49917d2a64",
+        "bytes": 362676
+      },
+      "voidfront_bridge.dll": {
+        "path": "C:\\dev\\voidfront\\artifacts\\presentation-matched-baseline-package-2026-09-25\\voidfront_bridge.dll",
+        "sha256": "b234e1fa1bc58a190951861d0fba0b0a4920262c3f50b33fa28943e49af148be",
+        "bytes": 496640
+      }
+    },
+    "batched_current": {
+      "Voidfront.exe": {
+        "path": "C:\\dev\\voidfront\\artifacts\\package\\Voidfront.exe",
+        "sha256": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+        "bytes": 109268480
+      },
+      "Voidfront.pck": {
+        "path": "C:\\dev\\voidfront\\artifacts\\package\\Voidfront.pck",
+        "sha256": "0aba62bef45793b57b928ab72c99b886d09dbcda9ef1feb4e11fb12914a56f0a",
+        "bytes": 363844
+      },
+      "voidfront_bridge.dll": {
+        "path": "C:\\dev\\voidfront\\artifacts\\package\\voidfront_bridge.dll",
+        "sha256": "b234e1fa1bc58a190951861d0fba0b0a4920262c3f50b33fa28943e49af148be",
+        "bytes": 496640
+      }
+    }
+  },
+  "composition_artifact": {
+    "path": "artifacts/presentation-matched-baseline-package-2026-09-25/composition.json",
+    "sha256": "5f0d1ceb49d082af8e89530bb3eeb73f85807bc4cb2f74a89459376bb1f09833"
+  },
+  "claims": [
+    "Static scene submission and node count decrease while expanded geometry/material/transform/render-state inventory agrees.",
+    "Both strict same-native fixed-state implementation pairs passed. ABBA timings are descriptive host observations, not causal or general frame-rate evidence.",
+    "Initial before/after overview and frozen samples are descriptive only for implementation timing because native DLLs differ.",
+    "Normal animation/AI/simulation remains enabled in final ordinary twelve-, 200-, and 500-unit profiles. Their states differ by elapsed time; do not treat as matched implementation timing.",
+    "Pose refresh repeatedly seeks update=true to one clip phase; delta includes downstream work and is not ordinary animation, isolated skeleton, or GPU cost.",
+    "Hidden launches report focused flags; no unoccluded human foreground, responsiveness, representative-hardware, gameplay or budget acceptance."
+  ],
+  "next_focus": "Ordinary 200/500-unit frames remain over target; inspect engine animation/skeleton/update/render work separately. Preserve crowd progress and complete-game gates."
+}

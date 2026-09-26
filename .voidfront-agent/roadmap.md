@@ -54,3 +54,12 @@ Acceptance requires:
 - **Fast, efficient execution:** profile initial group orders, shared destinations, repeated orders and replanning after blocker changes on the existing representative 200-unit and 500-unit scenarios. Record pathfinding time, simulation p95/p99, memory and command-response latency; meet the existing SPEC budgets without weakening them. Bound and deterministically schedule work to avoid frame/tick spikes.
 - **Robust movement in actual play:** validate unit clearance, consistent speed across headings, responsive stop/retargeting, crowded chokes, opposing streams, moving blockers, unreachable goals and dynamic construction without clipping, permanent crowd locks or needless zigzags. Measure dynamic crowd behavior separately from static shortest-path quality so necessary collision avoidance is distinguished from poor global routing.
 - **Evidence before acceptance:** retain deterministic regression fixtures, route-quality comparisons and performance captures; inspect packaged gameplay recordings and obtain independent pathfinding/playability review. Any-angle movement and efficient near-optimal routing are required functionality, not optional late polish.
+
+Controlled diagnostic contract (2026-09-25): fixed seed/map/tick 40, fixed
+camera and clip phase 0.25 seconds. Pose refresh repeatedly submits that pose;
+pose frozen initializes the identical pose and disables automatic updates.
+This measures manual resubmission plus downstream effects, not ordinary
+animation, isolated skeleton/GPU time, or gameplay. Expanded static geometry
+and exact bone-pose hashes must match for comparisons. A rebuilt native DLL
+caused the first implementation comparison to reject; fresh matched-native
+captures use a separately retained baseline PCK with the final EXE/DLL.

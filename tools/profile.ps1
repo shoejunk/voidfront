@@ -3,16 +3,21 @@ param(
     [switch]$Packaged,
     [switch]$Visible,
     [switch]$Capture,
+    [string]$PackageDirectory='',
     [ValidateSet('Scale128','Foundry')][string]$Map='Scale128',
     [ValidateRange(1,250)][int]$UnitsPerTeam=100,
     [ValidateRange(1,3600)][int]$Frames=600,
     [ValidateRange(0,1200)][int]$Warmup=120,
+    [ValidateSet('ordinary','pose-refresh','pose-frozen')][string]$Controlled='ordinary',
+    [ValidateRange(0,1000)][int]$Tick=40,
+    [ValidateSet('standard','overview')][string]$Camera='standard',
     [ValidateRange(30,1800)][int]$TimeoutSeconds=300,
     [string]$Name='presentation-profile'
 )
 . "$PSScriptRoot/common.ps1"
 Assert-RunningAllowed
 Assert-Godot
+if ($Controlled -eq 'ordinary' -and $Camera -ne 'standard') { throw 'Overview camera requires controlled profiling.' }
 if ($Name -notmatch '^[a-zA-Z0-9_-]+$') { throw 'Profile name must contain only letters, digits, underscores and hyphens.' }
 $out = Join-Path $Repo 'artifacts'
 New-Item -ItemType Directory -Force $out | Out-Null
@@ -22,11 +27,14 @@ $hostPath = Join-Path $out "$Name-host.json"
 foreach ($suffix in @('.json','-host.json','-engine.log','-stdout.log','-stderr.log','.png')) {
     if (Test-Path (Join-Path $out "$Name$suffix")) { throw "Profile artifacts already exist: $Name$suffix; choose a new -Name." }
 }
-$executable = if ($Packaged) { "$Repo/artifacts/package/Voidfront.exe" } else { $Toolchain.godot_console }
+if ([string]::IsNullOrEmpty($PackageDirectory)) { $PackageDirectory = "$Repo/artifacts/package" }
+if (-not $Packaged -and $PSBoundParameters.ContainsKey('PackageDirectory')) { throw '-PackageDirectory requires -Packaged.' }
+$executable = if ($Packaged) { Join-Path $PackageDirectory 'Voidfront.exe' } else { $Toolchain.godot_console }
 if (-not (Test-Path -LiteralPath $executable)) { throw "Missing executable: $executable" }
 $arguments = @('--log-file',"$out/$Name-engine.log",'--resolution','1920x1080')
 if (-not $Packaged) { $arguments += @('--path',"$Repo/client") }
 $arguments += @('--','--profile-presentation',"--profile-frames=$Frames","--profile-warmup=$Warmup","--report=$reportPath")
+if ($Controlled -ne 'ordinary') { $arguments += @("--profile-controlled=$Controlled", "--profile-tick=$Tick", "--profile-camera=$Camera") }
 if ($Map -eq 'Scale128') { $arguments += @('--scale128',"--units-per-team=$UnitsPerTeam") }
 if ($Capture) { $arguments += "--capture=$out/$Name.png" }
 # Hash before launch: a later edit or rebuild must not be attributed to this run.
@@ -38,7 +46,7 @@ $fingerprintPaths = @(
     "$PSScriptRoot/toolchain.json"
 )
 if ($Packaged) {
-    $fingerprintPaths += @("$Repo/artifacts/package/Voidfront.pck", "$Repo/artifacts/package/voidfront_bridge.dll")
+    $fingerprintPaths += @((Join-Path $PackageDirectory 'Voidfront.pck'), (Join-Path $PackageDirectory 'voidfront_bridge.dll'))
 } else {
     $fingerprintPaths += @($Toolchain.godot_editor, "$Repo/client/bin/Debug/voidfront_bridge.dll")
 }
@@ -101,12 +109,18 @@ try {
     $runtimeProcessId = $report.process_id
     $hostCountersValid = $null -ne $runtimeProcessId -and $runtimeProcessId -eq $process.Id -and $hostSamples.Count -gt 0
     if (-not $hostCountersValid) { Write-Warning 'Sampled PID differs from runtime PID or has no samples. Host counters describe the launcher only; no game resident-memory or CPU claim is supported.' }
-    if (-not $report.ok -or $report.mode -ne 'ordinary_offline_presentation') { throw 'Runtime profile assertions failed.' }
+    $expectedMode = if ($Controlled -eq 'ordinary') { 'ordinary_offline_presentation' } else { 'controlled_pose_resubmission' }
+    if (-not $report.ok -or $report.mode -ne $expectedMode) { throw 'Runtime profile assertions failed.' }
     if (@($report.measured_samples).Count -ne $Frames -or @($report.warmup_samples).Count -ne $Warmup) { throw 'Incomplete raw profile samples.' }
-    foreach ($stage in @('bridge','snapshot','present','hud_process','main_process')) {
+    $requiredStages = if ($Controlled -eq 'ordinary') { @('bridge','snapshot','present','hud_process','main_process') } else { @('animation_pose_update','hud_process','main_process') }
+    foreach ($stage in $requiredStages) {
         if ($report.measurement_summary.stage_calls_usec.$stage.count -le 0) { throw "Missing measured stage calls: $stage" }
     }
-    if ($report.final_snapshot.tick -le $report.measurement_initial_snapshot.tick) { throw 'Measured simulation did not advance.' }
+    if ($Controlled -eq 'ordinary') {
+        if ($report.final_snapshot.tick -le $report.measurement_initial_snapshot.tick) { throw 'Measured simulation did not advance.' }
+    } elseif ($report.controlled.variant -ne $Controlled -or $report.final_snapshot.tick -ne $Tick -or $report.initial_snapshot.hash -ne $report.final_snapshot.hash) {
+        throw 'Controlled profile state or requested variant differs.'
+    }
     if ($Capture -and -not (Test-Path "$out/$Name.png")) { throw 'Missing post-measurement screenshot.' }
     if (-not $report.foreground_entire_measurement) { Write-Warning 'Some measured frames were unfocused; this run cannot be described as continuous foreground evidence.' }
     Write-Output ($report.measurement_summary | ConvertTo-Json -Depth 6)
@@ -125,6 +139,7 @@ try {
         host_counter_scope=$(if ($hostCountersValid) { 'runtime_game_process' } else { 'launcher_only_or_unverified' })
         visible_requested=[bool]$Visible; packaged=[bool]$Packaged; screenshot_after_measurement=[bool]$Capture
         map=$Map; requested_units_per_team=$(if ($Map -eq 'Foundry') { 6 } else { $UnitsPerTeam })
+        controlled=$Controlled; controlled_tick=$(if ($Controlled -eq 'ordinary') { $null } else { $Tick }); controlled_camera=$Camera
         process_id=$(if ($null -ne $process) { $process.Id } else { $null }); exit_code=$exitCode; failure=$failure
         executable=$executable; executable_sha256=$executableSha256; prelaunch_fingerprints=@($fingerprints)
         fingerprint_note='Collected before process launch. Packaged PCK and DLL identify loaded payload; source fingerprints are checkout context and do not prove package-source equality.'

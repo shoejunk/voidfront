@@ -1,5 +1,52 @@
 # Voidfront progress
 
+## 2026-09-25 17:19 America/Los_Angeles - controlled presentation cost
+
+Baseline: clean dev 99d7aa9, STOP/COMPLETE/prior marker absent. Exclusively
+acquired run marker for task 01a0db15-05aa-70c0-a197-a20eb5d3aa51.
+Target: isolate animation/skeleton/render work using controlled identical-state
+measurements, then integrate a justified presentation optimization and verify
+packaged controls and deterministic regressions. Separate implementation,
+profiling and independent evidence-review agents own non-overlapping files.
+Dense crossing, full economy/AI matches, production content and shipping remain
+open. Existing frame and simulation budgets remain unchanged.
+
+Added controlled fixed-state pose-refresh/frozen profiling, retained-package
+selection, exact pose/static geometry checks and independent paired verification.
+The first native-DLL-mismatched implementation comparison was correctly rejected;
+fresh A/B/B/A captures use identical final native binaries and retained baseline
+PCK. The manual pose-resubmission diagnostic exposes substantial downstream cost,
+but does not isolate ordinary animation, skeleton CPU or GPU work.
+
+Static terrain/grid boxes now batch by exact dimensions/material/center chunk,
+preserving all 1,090 expanded boxes and their transforms/materials. Scene nodes
+fall 4,608 -> 3,781; standard controlled draw calls fall 4,393 -> 4,164. Both
+strict paired runs have lower batched tails, but baseline drift prevents a
+general speedup claim. Overview screenshots are identical; strict standard
+before/after screenshots differ by only 20 walker-region pixels. Independent
+review accepts this bounded scene/submission improvement, not quality or shipping.
+
+Debug/Release 7/7 CTest, malformed replay/alias checks, 2,000 cross-build hashes
+and ten repeats pass. Final packaged 500-unit controls pass 23 checks; all 700
+tick hashes match Debug and ten Release replays, and 350,500 swept rows pass the
+independent oracle. Default controls/combat/restart retains hash 1b35fbb0222cbc7b.
+All six rendered separate-process network cases, opposite-build recordings and
+ten clean replays pass with final package fingerprints unchanged.
+All 16 retained profiles and comparison corruption checks pass; eight malformed
+profile option combinations reject before match setup. See TESTING.md and the
+dated review for exact commands, artifacts and limits.
+
+Ordinary final frame p99 is 17.336/27.531/137.834 ms for 12/200/500 units; the
+16.67 ms gate remains unmet. Differing simulation windows and uncontrolled host
+scheduling prevent causal ordinary-play before/after attribution. No new movie,
+human responsiveness, production art, physical network or full-match acceptance.
+
+Next: purposeful backward crowd decompression with a retained passing side on
+the unchanged dense opposing-stream fixture, preserving Stop/Hold/firing and
+swept safety. Use engine-side profiling for actual advancing animation/render
+cost before another performance optimization. Full economy/AI and content scope
+remain prerequisites to shipping; no COMPLETE.md.
+
 ## 2026-09-20 America/Los_Angeles - ordinary-play presentation profiling
 
 Baseline: clean dev 900be2e; STOP, COMPLETE and prior run marker absent.

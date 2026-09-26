@@ -97,6 +97,9 @@ var presentation_profiler: RefCounted
 func _ready() -> void:
 	var ticks_specified := false
 	var profile_options := false
+	var controlled_profile := false
+	var profile_tick_specified := false
+	var profile_camera_specified := false
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--smoke": smoke = true
 		elif argument == "--profile-presentation": profile_presentation = true
@@ -106,6 +109,20 @@ func _ready() -> void:
 		elif argument.begins_with("--profile-warmup="):
 			profile_options = true
 			_integer_option(argument, 0, 1200)
+		elif argument.begins_with("--profile-controlled="):
+			profile_options = true
+			controlled_profile = true
+			if argument.trim_prefix("--profile-controlled=") not in ["pose-refresh", "pose-frozen"]:
+				option_error = "Unknown controlled presentation profile."
+		elif argument.begins_with("--profile-tick="):
+			profile_options = true
+			profile_tick_specified = true
+			_integer_option(argument, 0, 1000)
+		elif argument.begins_with("--profile-camera="):
+			profile_options = true
+			profile_camera_specified = true
+			if argument.trim_prefix("--profile-camera=") not in ["standard", "overview"]:
+				option_error = "Unknown profile camera."
 		elif argument == "--movement-smoke": movement_smoke = true
 		elif argument == "--crowd-smoke": crowd_smoke = true
 		elif argument == "--controls-smoke": controls_smoke = true
@@ -143,6 +160,8 @@ func _ready() -> void:
 	if scale_smoke and (finish_tick < 200 or finish_tick > 1000): option_error = "Scale smoke requires 200..1000 ticks."
 	if profile_presentation and (smoke or movement_smoke or crowd_smoke or controls_smoke or scale_smoke or network): option_error = "Presentation profiling requires ordinary offline play."
 	if profile_options and not profile_presentation: option_error = "Profile frame options require --profile-presentation."
+	if profile_tick_specified and not controlled_profile: option_error = "Profile tick requires --profile-controlled."
+	if profile_camera_specified and not controlled_profile: option_error = "Profile camera requires --profile-controlled."
 	if profile_presentation and report_path.is_empty(): option_error = "Presentation profiling requires --report=<path>."
 	if (profile_presentation or profile_options) and not option_error.is_empty():
 		push_error(option_error)
@@ -236,6 +255,64 @@ func _ring(radius: float, color: Color) -> MeshInstance3D:
 	instance.material_override = _material(color, 0, true)
 	return instance
 
+func _queue_static_box(groups: Dictionary, size: Vector3, at: Vector3, material: Material) -> void:
+	# Bound instance groups spatially so terrain can still be culled in chunks.
+	# Keep the original mesh dimensions: translation-only instances preserve its
+	# vertex positions, normals and UVs, including the thin grid and ridge strips.
+	var chunk := Vector2i(floori(at.x / 16.0), floori(at.z / 16.0))
+	var key := [size, material.get_instance_id(), chunk]
+	if not groups.has(key): groups[key] = {"size": size, "material": material, "positions": []}
+	groups[key].positions.append(at)
+
+func _build_static_boxes(groups: Dictionary) -> void:
+	for group in groups.values():
+		if group.positions.size() == 1:
+			_box(group.size, group.positions[0], group.material)
+			continue
+		var mesh := BoxMesh.new()
+		mesh.size = group.size
+		var instances := MultiMesh.new()
+		instances.transform_format = MultiMesh.TRANSFORM_3D
+		instances.mesh = mesh
+		instances.instance_count = group.positions.size()
+		for index in group.positions.size():
+			instances.set_instance_transform(index, Transform3D(Basis.IDENTITY, group.positions[index]))
+		var batch := MultiMeshInstance3D.new()
+		batch.multimesh = instances
+		batch.material_override = group.material
+		batch.set_meta("voidfront_static_box", true)
+		add_child(batch)
+
+func _static_geometry_manifest() -> Dictionary:
+	# Expanded inventory is diagnostic only, outside the profile measurement.
+	# Hash actual vertex arrays and exact transforms, not resource/process IDs.
+	var boxes: Array[String] = []
+	var meshes := {}
+	for child in get_children():
+		if not child.get_meta("voidfront_static_box", false): continue
+		var mesh: BoxMesh
+		var transforms: Array[Transform3D] = []
+		if child is MeshInstance3D:
+			mesh = child.mesh
+			transforms.append(child.global_transform)
+		elif child is MultiMeshInstance3D:
+			mesh = child.multimesh.mesh
+			for index in child.multimesh.instance_count:
+				transforms.append(child.global_transform * child.multimesh.get_instance_transform(index))
+		else: continue
+		if not meshes.has(mesh):
+			meshes[mesh] = var_to_bytes(mesh.surface_get_arrays(0)).hex_encode().sha256_text()
+		var geometry := child as GeometryInstance3D
+		var material: StandardMaterial3D = geometry.material_override
+		var surface := [material.albedo_color, material.metallic, material.roughness,
+			material.emission_enabled, material.emission, material.emission_energy_multiplier,
+			material.cull_mode, material.shading_mode, material.transparency]
+		var rendering := [geometry.cast_shadow, geometry.layers, geometry.gi_mode, geometry.visible]
+		for transform in transforms:
+			boxes.append(var_to_bytes([meshes[mesh], transform, surface, rendering]).hex_encode().sha256_text())
+	boxes.sort()
+	return {"box_count": boxes.size(), "sha256": JSON.stringify(boxes).sha256_text(), "box_hashes": boxes}
+
 func _setup_world() -> void:
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
@@ -269,11 +346,12 @@ func _setup_world() -> void:
 	var w := map_size.x
 	var h := map_size.y
 	_box(Vector3(w, 0.45, h), Vector3(w / 2.0, -0.3, h / 2.0), floor_material)
+	var static_boxes := {}
 	var grid_material := _material(Color("334249"))
 	for x in range(0, w + 1, 2):
-		_box(Vector3(0.018, 0.012, h), Vector3(x, -0.067, h / 2.0), grid_material)
+		_queue_static_box(static_boxes, Vector3(0.018, 0.012, h), Vector3(x, -0.067, h / 2.0), grid_material)
 	for z in range(0, h + 1, 2):
-		_box(Vector3(w, 0.012, 0.018), Vector3(w / 2.0, -0.067, z), grid_material)
+		_queue_static_box(static_boxes, Vector3(w, 0.012, 0.018), Vector3(w / 2.0, -0.067, z), grid_material)
 	var border_material := _material(Color("253b43"), 0.4)
 	_box(Vector3(w + 2, 0.6, 0.5), Vector3(w / 2.0, -0.15, -0.4), border_material)
 	_box(Vector3(w + 2, 0.6, 0.5), Vector3(w / 2.0, -0.15, h + 0.4), border_material)
@@ -285,9 +363,10 @@ func _setup_world() -> void:
 			if bridge.is_blocked(x, z):
 				obstacle_cells.append(Vector2i(x, z))
 				var height := 0.75 + float((x * 7 + z * 3) % 5) * 0.12
-				_box(Vector3(0.96, height, 0.96), Vector3(x + 0.5, height / 2, z + 0.5), obstacle_material)
+				_queue_static_box(static_boxes, Vector3(0.96, height, 0.96), Vector3(x + 0.5, height / 2, z + 0.5), obstacle_material)
 				if (x + z) % 3 == 0:
-					_box(Vector3(0.64, 0.02, 0.04), Vector3(x + 0.5, height + 0.02, z + 0.5), _material(Color("769c9c"), 0.2, true))
+					_queue_static_box(static_boxes, Vector3(0.64, 0.02, 0.04), Vector3(x + 0.5, height + 0.02, z + 0.5), _material(Color("769c9c"), 0.2, true))
+	_build_static_boxes(static_boxes)
 	for player in range(2):
 		var pad_color := Color("4d9caa") if player == 0 else Color("c78960")
 		var pad := _ring(3.5, pad_color)
@@ -306,6 +385,10 @@ func _setup_world() -> void:
 	order_mark = _ring(0.55, Color("a3ffea"))
 	order_mark.visible = false
 	add_child(order_mark)
+	# Profile inventory distinguishes fixed world boxes from later transient beams.
+	for child in get_children():
+		if child is MeshInstance3D and child.mesh is BoxMesh:
+			child.set_meta("voidfront_static_box", true)
 
 func _reset() -> void:
 	# A peer must never reset the authoritative shared match unilaterally.
@@ -406,6 +489,9 @@ func _process(delta: float) -> void:
 	if current.is_empty() or completed: return
 	if not option_error.is_empty(): return
 	var profile_start := Time.get_ticks_usec() if presentation_profiler else 0
+	if presentation_profiler and presentation_profiler.is_controlled():
+		presentation_profiler.controlled_frame(delta, profile_start)
+		return
 	if smoke or network_smoke or movement_smoke or crowd_smoke or scale_smoke:
 		var now := Time.get_ticks_usec()
 		if last_frame_usec != 0 and (not movement_smoke or frame_times.size() < finish_tick * 12): frame_times.append((now - last_frame_usec) / 1000.0)
@@ -561,6 +647,7 @@ func _input(event: InputEvent) -> void:
 	event.set_meta("voidfront_input_usec", Time.get_ticks_usec())
 
 func _unhandled_input(event: InputEvent) -> void:
+	if presentation_profiler and presentation_profiler.is_controlled(): return
 	event_usec = int(event.get_meta("voidfront_input_usec", Time.get_ticks_usec()))
 	if current.is_empty(): return
 	if event is InputEventKey and event.pressed and event.physical_keycode == KEY_R:
