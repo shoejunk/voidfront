@@ -1,24 +1,24 @@
 {
   "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
-  "simulation_commit": "704e293ec2a68c44e13e8d099c92ff2ac1b2cf44",
+  "simulation_commit": "c98656d69d0107ee4b871bfc879522811769b4e6",
   "branch": "dev",
   "new_movie": true,
   "crowd_report": "C:\\dev\\voidfront\\artifacts\\cooperative-crowd-verified-2026-09-26.json",
   "movement_report": "C:\\dev\\voidfront\\artifacts\\cooperative-movement-verified-2026-09-26.json",
-  "run": "2026-09-26-cooperative-following",
-  "state": "Verified bounded simultaneous following; dense crowd progress remains failed",
-  "checkpoint_utc": "2026-09-26T16:34:32.634058+00:00",
-  "source_commit": "704e293ec2a68c44e13e8d099c92ff2ac1b2cf44",
+  "run": "2026-09-26-playable-economy",
+  "state": "Verified offline worker salvage and construction; production and full matches remain open",
+  "checkpoint_utc": "2026-09-26T17:12:33.001552+00:00",
+  "source_commit": "c98656d69d0107ee4b871bfc879522811769b4e6",
   "runtime_evidence_date": "2026-09-26",
-  "verification": "C:\\dev\\voidfront\\artifacts\\cooperative-final-build-2026-09-26.log",
-  "runtime_report": "C:\\dev\\voidfront\\artifacts\\cooperative-offline-2026-09-26.json",
-  "client_report": "C:\\dev\\voidfront\\artifacts\\cooperative-client-network-2026-09-26\\summary.json",
+  "verification": "C:/dev/voidfront/artifacts/economy-final-build-2026-09-26.log",
+  "runtime_report": "C:/dev/voidfront/artifacts/economy-package-2026-09-26.json",
+  "client_report": "C:/dev/voidfront/artifacts/economy-client-network-2026-09-26/summary.json",
   "scale_reports": [
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-2026-09-26\\summary.json",
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-client-replays-2026-09-26\\summary.json"
   ],
   "reviews": [
-    "C:\\dev\\voidfront\\.voidfront-agent\\review-cooperative-2026-09-26.md"
+    "C:/dev/voidfront/.voidfront-agent/review-economy-2026-09-26.md"
   ],
   "profile_reports": [
     "C:/dev/voidfront/artifacts/presentation-ordinary12-final-2026-09-25.json",
@@ -27,14 +27,14 @@
   ],
   "profile_integrity": "C:/dev/voidfront/.voidfront-agent/presentation-results-2026-09-25.json",
   "next": "Bounded clearance/goal-axis alignment for final pending redistribution unit before dense cooperative ordering",
-  "package_pck_sha256": "0aba62bef45793b57b928ab72c99b886d09dbcda9ef1feb4e11fb12914a56f0a",
-  "package_bridge_sha256": "88cce9915b285685d61d0d8a83ac5421ab1f1d5e704a808463dae581e5adab35",
+  "package_pck_sha256": "4f8ce814ae4c9937d58abba30d6ca99a41115ce94f49f09391c2ea0c24f01006",
+  "package_bridge_sha256": "c86cdb3a09224bd014dccc4d11021091e8ed1f5772adef0b08cfd086d86d0abf",
   "remote_backup": true,
-  "crowd_regressions": "C:\\dev\\voidfront\\artifacts\\cooperative-small-2026-09-26\\summary.json",
+  "crowd_regressions": "C:/dev/voidfront/artifacts/economy-crowds-2026-09-26/summary.json",
   "crowd_experiments": "C:/dev/voidfront/.voidfront-agent/crowd-recovery-results-2026-09-26.json",
   "new_package": true,
   "new_network_suite": true,
-  "current_pass_limits": "Dense crossing 0/500; optional redistribution5/6; frame and client response targets fail; cap exhaustion/cycles, physical networking, full economy/AI/content and shipping remain open",
+  "current_pass_limits": "Worker-only passive offline economy; no production/economic AI/full match/economy networking. Prior dense crossing0/500 and rendering failures remain. Sparse concurrent rendered80ms response p95 secondpeer150.161ms exceeds150ms. Blockout art, human play/reference hardware and shipping open.",
   "presentation_profile_evidence_date": "2026-09-25",
   "cooperative_results": "C:\\dev\\voidfront\\.voidfront-agent\\cooperative-results-2026-09-26.json",
   "scripted_frame_p99_ms": {
@@ -42,13 +42,17 @@
     "scale-controls": 118.716
   },
   "client_rtt80_execution_p95_ms": [
-    200.337,
-    133.904
+    141.754,
+    150.161
   ],
   "prior_ordinary_frame_interval_p99_ms": {
     "units500": 137.834,
     "foundry12": 17.336,
     "units200": 27.531
   },
-  "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance."
+  "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
+  "economy_results": "C:/dev/voidfront/.voidfront-agent/economy-results-2026-09-26.json",
+  "next_checkpoint": "Economy first increment now fulfilled: implement funded production queues and population, then economic AI and anchor victory. This supersedes the historical next field while preserving the user priority edit.",
+  "previous_scripted_frame_evidence_date": "2026-09-26 cooperative run; not rerun for scale this checkpoint",
+  "movie": "C:/dev/voidfront/artifacts/economy-movie-2026-09-26.mp4"
 }

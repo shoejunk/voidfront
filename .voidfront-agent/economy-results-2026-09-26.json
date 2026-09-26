@@ -1,0 +1,58 @@
+{
+  "run_start_utc": "2026-09-26T16:49:49.5105399Z",
+  "recorded_utc": "2026-09-26T17:10:38.621276+00:00",
+  "task_id": "01a0de9e-d52e-7432-9cf2-6a6c2b11936d",
+  "base_commit": "ad59512f0769c8566eaac7f549fc8ee4202c8e7c",
+  "protocol": 6,
+  "content_id": "1566e8f9ac1e3adb",
+  "source_commit": "c98656d69d0107ee4b871bfc879522811769b4e6",
+  "package_checks": 25,
+  "package_ticks": 1045,
+  "package_hash": "805025cf101424f6",
+  "evidence": [
+    "artifacts/economy-final-build-2026-09-26.log",
+    "artifacts/economy-package-2026-09-26.json",
+    "artifacts/economy-replay-2026-09-26/summary.json",
+    "artifacts/economy-movie-replay-2026-09-26/summary.json",
+    "artifacts/economy-crowds-2026-09-26/summary.json",
+    "artifacts/economy-network-2026-09-26/summary.json",
+    "artifacts/economy-client-network-2026-09-26/summary.json",
+    "artifacts/economy-startup-2026-09-26.json",
+    "artifacts/economy-replay-inputs-2026-09-26/summary.json",
+    "artifacts/economy-combat-regression-2026-09-26.json"
+  ],
+  "fingerprints": {
+    "extension/bridge.cpp": "87abb0c096c4b463ad4b9fc1879123a300ce37c0a7e917df141b4d9e4704a855",
+    "sim/voidfront_sim.hpp": "c003e380ccfaeb5094df1945a80200626b6fdb49b1657ea9aa944aa47c133008",
+    "sim/voidfront_sim.cpp": "ba9e67cf39ac2266c7b02cd8ba511e790a57b5b4d4e74721f9e1681dffd6699e",
+    "sim/economy.cpp": "b4e06eeef6c426d2406fe71ce75be4d48a5d477e83ac71c4b751609eb4ea20d3",
+    "sim/headless.cpp": "0747158836294de41fe8a054f9de8b88473d3849f68a4255e59cb60835149656",
+    "client/main.gd": "67bc10f97f6bd43d3a433dc9c00508bb21d5c3042648a0f45641c589d6ff665a",
+    "client/hud.gd": "654792bef185a98c23d923ad55d6e2d7996e7b765de91dcaa7e7692c4fbb1133",
+    "client/economy_smoke.gd": "07e4d58c68cc3acdd154829f787f3e6ea9183ecff76ebaa5b7924816bcb68f03",
+    "artifacts/package/Voidfront.exe": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+    "artifacts/package/Voidfront.pck": "4f8ce814ae4c9937d58abba30d6ca99a41115ce94f49f09391c2ea0c24f01006",
+    "artifacts/package/voidfront_bridge.dll": "c86cdb3a09224bd014dccc4d11021091e8ed1f5772adef0b08cfd086d86d0abf"
+  },
+  "movie": {
+    "path": "artifacts/economy-movie-2026-09-26.mp4",
+    "seconds": 52.3,
+    "frames": 3138,
+    "fps": 60,
+    "resolution": [
+      1600,
+      900
+    ],
+    "inspection": "sampled contact sheet, not continuous playback or animation acceptance"
+  },
+  "next": "Resource-funded unit production, queues and population, then economic AI and anchor victory",
+  "limitations": [
+    "Worker-only passive offline economy; no production, economic AI or full match",
+    "Economy network setup not implemented; existing tests are combat loopback",
+    "Prior dense-crowd and frame/response budgets remain failed; rendered80ms secondpeer150.161ms p95",
+    "Blockout art and overlapping labels; no human/reference-hardware/SC2 or shipping approval",
+    "Pre-existing roadmap/progress/last-run user edits preserved unstaged"
+  ],
+  "checkpoint_utc": "2026-09-26T17:12:33.001552+00:00",
+  "remote_backup": true
+}
