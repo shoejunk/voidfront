@@ -27,7 +27,7 @@ Stop/Hold and mid-convoy retargeting. Integrated Debug/Release pass 7/7 CTest,
 replay/output-alias rejection, 2,000 cross-build hashes and ten repeated replays.
 Independent 30,254-row small-crowd audit passes 20 runs and rejects 22 mutations;
 51 static-route fixtures pass ten repeats per configuration with zero observed
-reference excess. Full scale, network and packaged runtime verification follows.
+reference excess. Full scale, network and packaged runtime verification is complete (see TESTING).
 
 The optional reversed-goal fixture remains failed: final source reaches 5/6
 goals, leaving unit 2 at (2448,2928), goal (2304,2944). Independent static geometry
@@ -35,6 +35,26 @@ confirms a clear vertical alignment then horizontal approach with all neighbors
 stationary. This is a next-policy reproducer, not executed alternate-path proof.
 No dense-stream, full-match, production, responsiveness or shipping gate passes
 from the convoy repair. The previous package is preserved separately.
+
+Final broad verification passes all eight scale cases for safety/replay equality
+(11,202,800 swept rows, 96 executions), all 22 headless transport cases and all
+six rendered-client functional cases. All 88 Release scale observations meet
+numeric percentile/memory limits, retaining a 21.2734 ms maximum spike. All six
+noncombat scale cases remain at zero arrivals. Final 500-unit crossing p95/p99
+is 2.7471/3.0667 ms versus fresh baseline 1.6006/1.9193 ms; following adds cost.
+
+Packaged controls, single-unit paths, crowd Stop/resume and 700-tick 500-unit
+inputs pass independent replay/sweep checks. Fresh video is 20.016667 seconds,
+1600x900 at 60 fps; primary and critic inspect actual screenshots and ten sampled
+contact frames. Visual debt and human-play limits remain explicit. Scripted
+frame p99 is 17.002/118.716 ms for 12/500 units; at 80 ms RTT client execution p95
+is 200.337/133.904 ms, so one peer misses 150 ms. These are retained failures,
+not shipping acceptance. No new ordinary-profile/reference-hardware or physical
+network/full-match proof. Previous presentation profiles remain separately dated.
+
+Source `704e293` is committed and pushed to origin/dev. Final review/evidence
+metadata and precise next goal-alignment reproducer are in the current handoff.
+No COMPLETE.md; continue the existing game on the next scheduled run.
 
 ## 2026-09-26 01:10 America/Los_Angeles - opposing-stream movement pass
 

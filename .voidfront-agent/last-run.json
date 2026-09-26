@@ -1,24 +1,24 @@
 {
   "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
-  "simulation_commit": "de74df7",
+  "simulation_commit": "704e293ec2a68c44e13e8d099c92ff2ac1b2cf44",
   "branch": "dev",
-  "new_movie": false,
-  "crowd_report": "C:/dev/voidfront/artifacts/scale-client-crowd-verified-2026-09-13.json",
-  "movement_report": "C:/dev/voidfront/artifacts/scale-client-movement-verified-2026-09-13.json",
-  "run": "2026-09-26-crowd-regression-diagnostics",
-  "state": "Verified crowd tests and routing diagnostics; all six movement experiments rejected and baseline restored",
-  "checkpoint_utc": "2026-09-26T08:49:42.169157+00:00",
-  "source_commit": "8b4b463807a4138da2b28c62ad93ad3f99d3fe0c",
-  "runtime_evidence_date": "2026-09-25",
-  "verification": "C:/dev/voidfront/artifacts/crowd-final-build-2026-09-26.log",
-  "runtime_report": "C:/dev/voidfront/artifacts/presentation-offline-final-2026-09-25.json",
-  "client_report": "C:/dev/voidfront/artifacts/presentation-network-final-2026-09-25/summary.json",
+  "new_movie": true,
+  "crowd_report": "C:\\dev\\voidfront\\artifacts\\cooperative-crowd-verified-2026-09-26.json",
+  "movement_report": "C:\\dev\\voidfront\\artifacts\\cooperative-movement-verified-2026-09-26.json",
+  "run": "2026-09-26-cooperative-following",
+  "state": "Verified bounded simultaneous following; dense crowd progress remains failed",
+  "checkpoint_utc": "2026-09-26T16:34:32.634058+00:00",
+  "source_commit": "704e293ec2a68c44e13e8d099c92ff2ac1b2cf44",
+  "runtime_evidence_date": "2026-09-26",
+  "verification": "C:\\dev\\voidfront\\artifacts\\cooperative-final-build-2026-09-26.log",
+  "runtime_report": "C:\\dev\\voidfront\\artifacts\\cooperative-offline-2026-09-26.json",
+  "client_report": "C:\\dev\\voidfront\\artifacts\\cooperative-client-network-2026-09-26\\summary.json",
   "scale_reports": [
-    "C:/dev/voidfront/artifacts/crowd-final-scale-2026-09-26/summary.json"
+    "C:\\dev\\voidfront\\artifacts\\cooperative-scale-2026-09-26\\summary.json",
+    "C:\\dev\\voidfront\\artifacts\\cooperative-scale-client-replays-2026-09-26\\summary.json"
   ],
   "reviews": [
-    "C:/dev/voidfront/.voidfront-agent/review-presentation-2026-09-25.md",
-    "C:/dev/voidfront/.voidfront-agent/review-crowd-recovery-2026-09-26.md"
+    "C:\\dev\\voidfront\\.voidfront-agent\\review-cooperative-2026-09-26.md"
   ],
   "profile_reports": [
     "C:/dev/voidfront/artifacts/presentation-ordinary12-final-2026-09-25.json",
@@ -26,20 +26,29 @@
     "C:/dev/voidfront/artifacts/presentation-ordinary500-final-2026-09-25.json"
   ],
   "profile_integrity": "C:/dev/voidfront/.voidfront-agent/presentation-results-2026-09-25.json",
-  "frame_interval_p99_ms": {
+  "next": "Bounded clearance/goal-axis alignment for final pending redistribution unit before dense cooperative ordering",
+  "package_pck_sha256": "0aba62bef45793b57b928ab72c99b886d09dbcda9ef1feb4e11fb12914a56f0a",
+  "package_bridge_sha256": "88cce9915b285685d61d0d8a83ac5421ab1f1d5e704a808463dae581e5adab35",
+  "remote_backup": true,
+  "crowd_regressions": "C:\\dev\\voidfront\\artifacts\\cooperative-small-2026-09-26\\summary.json",
+  "crowd_experiments": "C:/dev/voidfront/.voidfront-agent/crowd-recovery-results-2026-09-26.json",
+  "new_package": true,
+  "new_network_suite": true,
+  "current_pass_limits": "Dense crossing 0/500; optional redistribution5/6; frame and client response targets fail; cap exhaustion/cycles, physical networking, full economy/AI/content and shipping remain open",
+  "presentation_profile_evidence_date": "2026-09-25",
+  "cooperative_results": "C:\\dev\\voidfront\\.voidfront-agent\\cooperative-results-2026-09-26.json",
+  "scripted_frame_p99_ms": {
+    "offline": 17.002,
+    "scale-controls": 118.716
+  },
+  "client_rtt80_execution_p95_ms": [
+    200.337,
+    133.904
+  ],
+  "prior_ordinary_frame_interval_p99_ms": {
     "units500": 137.834,
     "foundry12": 17.336,
     "units200": 27.531
   },
-  "timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
-  "next": "Bounded cooperative merge and exit ordering with follower dependencies and longitudinal slots; preserve exact goals, full sweeps and Stop/Hold/firing semantics",
-  "package_pck_sha256": "0aba62bef45793b57b928ab72c99b886d09dbcda9ef1feb4e11fb12914a56f0a",
-  "package_bridge_sha256": "b234e1fa1bc58a190951861d0fba0b0a4920262c3f50b33fa28943e49af148be",
-  "remote_backup": true,
-  "crowd_regressions": "C:/dev/voidfront/artifacts/crowd-final-small-2026-09-26/summary.json",
-  "crowd_experiments": "C:/dev/voidfront/.voidfront-agent/crowd-recovery-results-2026-09-26.json",
-  "authoritative_source_unchanged_from": "76507b778705f7e9ae940896e0d0de4a9d549f05",
-  "new_package": false,
-  "new_network_suite": false,
-  "current_pass_limits": "No movement change shipped. 0/500 crossing arrivals; runtime/profile/client reports below retain their prior dated package evidence. No new visual, human-play, network or frame-performance acceptance."
+  "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance."
 }

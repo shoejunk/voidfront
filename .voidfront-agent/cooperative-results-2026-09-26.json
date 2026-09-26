@@ -1,0 +1,80 @@
+{
+  "run": "2026-09-26-cooperative-following",
+  "checked_utc": "2026-09-26T16:34:32.634058+00:00",
+  "source_commit": "704e293ec2a68c44e13e8d099c92ff2ac1b2cf44",
+  "protocol": 5,
+  "content_id": "13957603591114643942",
+  "evidence": {
+    "artifacts/cooperative-final-build-2026-09-26.log": "f2ae6bdfc68bcabb459a65c14845392f9a8026f0c0ef0652eaee358a8058d3e2",
+    "artifacts/cooperative-package-2026-09-26.log": "fa40c42c5a60f9c3e62ee2dd11ab852e412a59223fd0b67c5ce84aa3851db782",
+    "artifacts/cooperative-small-2026-09-26/summary.json": "9b5297039563f484cfbed59387d3516ad59d5e440873b09a640835618efaa6fd",
+    "artifacts/cooperative-navigation-2026-09-26/summary.json": "2f57fa96bc28df7e46fdcb63fd9041f8fb8aa2f94207f2f00e3945a00bd71f82",
+    "artifacts/cooperative-scale-2026-09-26/summary.json": "3cedd5c5b06caba73bffdcb6d87d9b9305c904329a08327ba835713dc817c079",
+    "artifacts/cooperative-network-2026-09-26/summary.json": "3d228165b0ce032355ed17dcbec5db7bdf5fa484df585e7fe5a119cfdacce93b",
+    "artifacts/cooperative-client-network-2026-09-26/summary.json": "423c701eda8b88ede897ff1b087a1eaa516a99432d8de0a6157944b4d0beccab",
+    "artifacts/cooperative-scale-client-replays-2026-09-26/summary.json": "c57c6fc5290c4b84b0b7482ee04a6c67571b2acea1992e7dd957ef8796224cc7",
+    "artifacts/cooperative-movement-verified-2026-09-26.json": "c77b18bfd525a06bb71f73ded064059d4c3810dbf2b796f657f36ecae80ce002",
+    "artifacts/cooperative-crowd-verified-2026-09-26.json": "9743924873d089d213cc10113a4d2ecebaf52f819250f831bf953367bf6ed0f0",
+    "artifacts/cooperative-crowd-movie-verified-2026-09-26.json": "4f61f344f7aebaa7fecbc10a7627e8f3d3f623b1878dbbcda9457046dcfb786d",
+    "artifacts/cooperative-final-redistribution-static-paths-2026-09-26.json": "b4a1f23eea7865f63d297dced6e1f194f73872d585ab841e3261f3e1dd98910a",
+    "artifacts/cooperative-crowd-movie-2026-09-26.mp4": "7c962448e201a951bdc4233e45a4c75b333719e8b22ae2aceb8a3a4e2e44cd61",
+    "artifacts/cooperative-crowd-contact-2026-09-26.png": "ed0a655077afc7411bb1b77ef5bb91cee6febadce7580437addc2e647b926b8c"
+  },
+  "package_and_replayers": {
+    "C:\\dev\\voidfront\\artifacts\\package\\Voidfront.exe": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+    "C:\\dev\\voidfront\\artifacts\\package\\Voidfront.pck": "0aba62bef45793b57b928ab72c99b886d09dbcda9ef1feb4e11fb12914a56f0a",
+    "C:\\dev\\voidfront\\artifacts\\package\\voidfront_bridge.dll": "88cce9915b285685d61d0d8a83ac5421ab1f1d5e704a808463dae581e5adab35",
+    "C:\\dev\\voidfront\\build\\windows\\sim\\Debug\\voidfront_headless.exe": "055bbefd58d13a5fbf7dc92a2a6bbf9a1e73a3dca21a8c3b0152fb49c0d55542",
+    "C:\\dev\\voidfront\\build\\windows\\sim\\Release\\voidfront_headless.exe": "4c05d773a4f99048a6b769ea4a3f943a6b4c2ebd98a8cabe2c987a01d1007dfe"
+  },
+  "small": {
+    "fixtures": 17,
+    "rows": 30254,
+    "runs": 20,
+    "mutations": 22
+  },
+  "scale": {
+    "cases": 8,
+    "executions": 96,
+    "tick_hashes": 384000,
+    "swept_rows": 11202800,
+    "release_observations": 88,
+    "release_p95_max_ms": 3.4181,
+    "release_p99_max_ms": 3.9573,
+    "single_step_max_ms": 21.2734,
+    "headless_peak_resident_bytes": 5468160,
+    "noncombat_arrivals": {
+      "200-crossing": 0,
+      "200-repeated": 0,
+      "200-moving-blockers": 0,
+      "500-crossing": 0,
+      "500-repeated": 0,
+      "500-moving-blockers": 0
+    }
+  },
+  "headless_network_cases": 22,
+  "rendered_network_cases": 6,
+  "client_rtt80_execution_p95_ms": [
+    200.337,
+    133.904
+  ],
+  "client_rtt80_display_p95_ms": [
+    233.327,
+    166.692
+  ],
+  "scripted_frame_p99_ms": {
+    "offline": 17.002,
+    "scale-controls": 118.716
+  },
+  "movie": {
+    "path": "artifacts/cooperative-crowd-movie-2026-09-26.mp4",
+    "width": 1600,
+    "height": 900,
+    "frames": 1201,
+    "fps": 60,
+    "seconds": 20.016667,
+    "inspection": "Ten sampled contact frames, not continuous playback or deformation acceptance"
+  },
+  "remaining": "Dense crossing 0/500; optional redistribution5/6; frame and client response targets fail; cap exhaustion/cycles, physical networking, full economy/AI/content and shipping remain open",
+  "next": "Bounded clearance/goal-axis alignment for final pending redistribution unit before dense cooperative ordering"
+}

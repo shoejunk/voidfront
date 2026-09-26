@@ -1,5 +1,131 @@
 # Verification ledger
 
+## 2026-09-26 cooperative follower verification
+
+Source checkpoint `704e293` implements bounded atomic follower retries and
+simulation compatibility version 5. Old VFR1 protocol-4 input is rejected before
+playback (`artifacts/cooperative-legacy-rejection-2026-09-26.log`). The preserved
+old package is `artifacts/cooperative-prior-package-2026-09-26`.
+
+`artifacts/cooperative-final-build-2026-09-26.log`: pinned Godot 4.7.2 and
+godot-cpp verification, integrated MSVC Debug/Release 7/7 CTest each, 15 malformed
+replays and seven output aliases each, 2,000 cross-build hashes and ten repeated
+Release replays pass. `cooperative-package-2026-09-26.log` records the final
+Release package build, tests, import and export. No native source changed after
+these builds; subsequent handoff edits are documentation only.
+
+`artifacts/cooperative-small-2026-09-26/summary.json`: 17 default fixtures,
+30,254 independently swept-checked rows, ten runs per configuration, 22 rejected
+evidence mutations. Both six-unit tangent chains move exactly 32 units of fixed
+point per tick for 16 ticks. Stop/Hold leaders remain fixed; failed dependencies
+cannot partially advance the first blocked tick. Mid-convoy retarget responds
+on its first tick and preserves every exact goal. Transaction cap exhaustion,
+arbitrary cycle resolution and general crowd liveness are not covered.
+
+The frozen baseline library, linked to the new convoy fixtures, fails both
+chains with artificial waiting and lateral detours. Its complete 16-tick
+ledgers and endpoints are `artifacts/cooperative-baseline-2026-09-26/chains.csv`
+and `chain-endpoints.json`. The baseline has no new cooperative code.
+
+`artifacts/cooperative-navigation-2026-09-26/summary.json`: all 51 static-route
+fixtures pass ten Debug and ten Release runs with zero observed reference excess.
+The independent analytic/collision reference self-tests pass. This preserves
+bounded static geometry coverage, not arbitrary terrain or dynamic-route quality.
+
+The optional `--redistribution` test deliberately remains outside the default
+suite and fails with five of six exact arrivals. Final evidence is
+`artifacts/cooperative-final-redistribution-2026-09-26.csv` and `.log`.
+Only ID2 remains at (2448,2928), goal (2304,2944), stationary since tick332.
+`cooperative-final-redistribution-static-paths-2026-09-26.json` validates a
+frozen-scene vertical alignment then horizontal approach using the independent
+geometry oracle. It is not an executed policy or arrival proof. The earlier
+probe1 four-arrival result is superseded by this final-source diagnostic.
+
+`artifacts/cooperative-scale-2026-09-26/summary.json`: all eight 200/500-unit,
+4,000-tick cases pass independent full relative sweeps and exact command/goal
+checks: 11,202,800 ledger rows, 96 executions, 384,000 matching tick hashes.
+Every recording matches one Debug and ten Release replays, including final
+routing metadata. All 88 Release record/replay observations meet the numeric
+4/8 ms p95/p99 limits and headless 2 GB memory limit on this development host.
+Maximum observed p95/p99 is 3.4181/3.9573 ms, resident peak 5,468,160 bytes.
+The largest individual step is retained at 21.2734 ms, not filtered. Record-only
+samples follow (replays and every raw sample remain in the artifact directory):
+
+| Scenario | Alive / exact goals | Step p95 / p99 / max ms |
+| --- | ---: | --- |
+| 200-crossing | 200 / 0 | 1.9503 / 2.4495 / 6.8821 |
+| 200-repeated | 200 / 0 | 2.2173 / 2.4839 / 4.2851 |
+| 200-moving-blockers | 200 / 0 | 1.8243 / 2.0530 / 2.7380 |
+| 200-ai | 10 / 2 | 0.7603 / 0.9833 / 1.3444 |
+| 500-crossing | 500 / 0 | 2.7471 / 3.0667 / 7.1788 |
+| 500-repeated | 500 / 0 | 3.2742 / 3.7505 / 5.0344 |
+| 500-moving-blockers | 500 / 0 | 2.8185 / 3.2617 / 4.2644 |
+| 500-ai | 48 / 0 | 3.3485 / 3.7615 / 5.2034 |
+
+All six noncombat cases have zero exact arrivals and fail the unchanged crowd
+progress gate. AI survivors/goal matches are combat diagnostics, not complete
+RTS matches. Stationary tails remain included; these costs do not establish
+moving production battles, renderer performance, human responsiveness or the
+reference-hardware budget. The fresh baseline crossing p95/p99 was
+1.6006/1.9193 ms versus final 2.7471/3.0667 ms; the new following path adds cost,
+not a claimed speedup, and host scheduling prevents causal timing precision.
+
+`artifacts/cooperative-scale-inputs-{Debug,Release}-2026-09-26/summary.json`:
+25 malformed replay/setup cases rejected, 18 output aliases preserved, 14
+ledger corruptions rejected and two analytic sweep controls per configuration.
+
+`artifacts/cooperative-network-2026-09-26/summary.json`: all 22 isolated
+separate-process UDP cases pass, including 1,000-tick clean/mixed builds,
+80/160 ms RTT with jitter/loss, both input delays, withheld frames/checksums,
+lost acknowledgements, incompatibility, terminal recovery, desync and disconnect.
+Opposite-build replay traces and ten repeats agree; all four final peer/replayer
+fingerprints match. At 80 ms, generated-command p95 is 101.8206/101.4633 ms.
+Strict >=20 Hz remains false; 160 ms with delay 2 runs about 19.776 Hz. Sparse
+generated skirmish commands, loopback fault injection and replayable prefixes
+do not establish physical networking, human latency or 30-minute complete matches.
+
+Fresh packaged reports are `artifacts/cooperative-{movement,crowd,offline,
+scale-controls}-2026-09-26.json` and corresponding `-verified` reports/logs.
+Single-unit direct/detour/retarget paths retain 184 oblique steps and nine
+stationary Stop ticks. The 400-tick crowd fixture audits 4,800 unit rows and
+rejects eight corruptions. Offline click/drag/orders/combat/restart pass at tick
+400, winner 1, hash `c73aa7a670a4df81` (compatibility version changed).
+
+The 500-unit controls capture passes all 23 assertions; its 700 tick hashes
+match Debug plus ten Release replays in
+`artifacts/cooperative-scale-client-replays-2026-09-26/summary.json`.
+The independent audit checks 350,500 swept rows and rejects eight corruptions.
+This is the existing one-sided controls fixture, not dense opposing-stream
+arrival. Scripted hidden captures record frame p99 17.002 ms for offline twelve
+units and 118.716 ms for scale controls. Both exceed 16.67 ms; capture overhead
+and differing states preclude ordinary-play speedup or reference acceptance.
+
+`artifacts/cooperative-crowd-movie-2026-09-26.mp4` is video-only, 1600x900,
+60 fps, 1,201 frames / 20.016667 seconds. Its 400-tick trajectory also passes
+4,800-row/eight-corruption checks. Swap tick31 versus normal capture32 follows
+different frame-dispatched input timing, not identical input streams. Primary
+and independent critic inspect the ten sampled frames in
+`cooperative-crowd-contact-2026-09-26.png` and fresh movement, crowd and 500-unit
+PNGs. Selected motion/settling and rendered feedback are visible; continuous
+playback, detailed deformation, human responsiveness and production readability
+remain unverified. Movie timings are encoding-distorted. Overbright surfaces,
+stacked silhouettes/health bars, crowded cyan selection and blockout terrain
+remain explicit debt. No new SC2 reference comparison or production claim.
+
+`artifacts/cooperative-client-network-2026-09-26/summary.json`: all six
+rendered separate-process cases pass their functional/replay checks, with ten
+clean repeats and five matching final payload/replayer fingerprints. Main and
+held-frame cases complete 240 ticks; mismatch rejects at zero and disconnect
+prefixes replay through 52 ticks. At 80 ms RTT, event-to-execution p95 is
+200.337/133.904 ms: **player 0 misses the 150 ms response target**. Display p95
+is 233.327/166.692 ms; feedback p95 is 16.553/16.545 ms. Only three synthetic
+inputs per peer; this miss is retained, with no causal attribution or resampling
+to obtain a passing result. Functional network success is not response-budget,
+physical endpoint, 30-minute full-match or shipping acceptance.
+
+Independent review: `.voidfront-agent/review-cooperative-2026-09-26.md`.
+Compact evidence hashes and limitations: `.voidfront-agent/cooperative-results-2026-09-26.json`.
+
 ## 2026-09-26 crowd regression and diagnosis checkpoint
 
 `artifacts/crowd-final-build-2026-09-26.log`: pinned Godot 4.7.2 and recorded

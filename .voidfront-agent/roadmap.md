@@ -77,3 +77,22 @@ with a geometrically valid progression objective and full collision checks;
 retain exact goals and immutable Stop/Hold/firing eligibility. Passing the small
 tests is preservation evidence only. Dense arrival, full matches, production
 content, responsiveness, reference performance and shipping remain open.
+
+## 2026-09-26 cooperative follower checkpoint
+
+Bounded transactional following fixes the demonstrated tangent-convoy defect:
+six units now advance together without artificial stops or lateral diversions.
+Canonical goals, exact full-tick relative sweeps, immutable Stop/Hold/firing
+participants, rollback and deterministic work caps are preserved. This does not
+solve opposing-stream progression, and the full arrival contract remains intact.
+
+The optional six-unit reversed-goal probe isolates the next smaller defect.
+Five units arrive; unit 2 stops at (2448,2928), targeting (2304,2944), between
+already-arrived neighbors at z=2816 and z=3072. Independent frozen-scene geometry
+permits vertical alignment to z=2944 at x=2448, then horizontal travel into the
+exact slot. Next implement bounded, collision-checked goal-axis or multi-blocker
+clearance-boundary candidates. Prove this canonical fixture before combining it
+with cooperative entry/exit ordering on the unchanged 500-unit opposing stream.
+Do not displace stopped arrivals, change goals, substitute static feasibility for
+executed progress, or claim transaction-cap/cycle exhaustion coverage that has
+not been exercised. Preserve replay/network/package gates and original budgets.
