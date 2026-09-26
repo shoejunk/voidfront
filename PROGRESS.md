@@ -1,5 +1,49 @@
 # Voidfront progress
 
+## 2026-09-26 01:10 America/Los_Angeles - opposing-stream movement pass
+
+User requested another development pass. Baseline clean dev76507b7; STOP,
+COMPLETE and prior marker absent. Exclusively acquired this task's run marker.
+Unchanged 500-unit/4,000-tick crossing reproduces zero exact-goal arrivals.
+Target: prevent the terrain-gap front from compressing into a permanent pocket,
+using geometry-derived retained passing lanes or purposeful decompression;
+retain exact canonical goals, Stop/Hold/firing and swept clearance. Independent
+implementation, regression and critic agents own separate files. Full scale,
+Debug/Release replay, actual package and network preservation remain required
+before accepting a simulation change. No gates or budgets are weakened.
+
+Six implemented portal-routing candidates were compiled and exercised on the
+unchanged 500-unit/4,000-tick crossing. Exact arrivals were 25, 0, 12, 49, 84,
+and 72; all were rejected. Distributed approaches and retained passing halves
+moved many units through the ridge, but shared exit points, waypoint reversals,
+and final formation conflicts produced permanent queues. The independent critic
+rejected the movement change. Authoritative source is restored byte-for-byte;
+protocol, content identity, gameplay and the prior packaged build stay unchanged.
+
+The retained increment adds five bounded regression fixtures (short disjoint
+orders, firing before a target leaves range, opposed Stop/Hold with retarget,
+and outer-channel eligibility), an exact relative-sweep C++ oracle, and matching
+Python evidence-corruption checks. Headless metrics expose final route/cache,
+next waypoint and detour state to diagnose pending goals. The rejected probe-6
+patch, source snapshots, raw replay/timing outputs and independent review are
+preserved; this is useful diagnostic/test work, not a crowd fix.
+
+Verification: integrated Debug/Release 7/7 CTest each; malformed replay and
+output-alias preservation, 2,000 cross-build hashes and ten repeated playback
+runs pass. Twelve small fixtures pass 20 runs with 17,630 independently audited
+rows and 17 rejected evidence mutations. The restored 500-unit crossing passes
+2,000,500 swept-ledger rows, Debug plus ten Release playbacks and an exact
+4,000-hash comparison to baseline, while still recording 0/500 arrivals. Step
+p95/p99/max is 1.7505/1.9971/2.4291 ms in the Release record; stationary queues
+are not performance acceptance. See TESTING for artifact paths and limits.
+No new package, visual inspection, human play or separate-process network suite
+was performed this pass; prior package PCK and DLL hashes are unchanged.
+
+Exact next movement step: bounded cooperative entry and exit ordering with
+follower dependencies and valid longitudinal slots, including final formation
+redistribution. Do not repeat fixed merge/exit offsets or arbitrary delay tweaks.
+Keep the original 500 arrivals, full swept safety and deterministic work budgets.
+
 ## 2026-09-25 17:19 America/Los_Angeles - controlled presentation cost
 
 Baseline: clean dev 99d7aa9, STOP/COMPLETE/prior marker absent. Exclusively

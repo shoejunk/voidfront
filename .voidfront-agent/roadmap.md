@@ -63,3 +63,17 @@ animation, isolated skeleton/GPU time, or gameplay. Expanded static geometry
 and exact bone-pose hashes must match for comparisons. A rebuilt native DLL
 caused the first implementation comparison to reject; fresh matched-native
 captures use a separately retained baseline PCK with the final EXE/DLL.
+
+## 2026-09-26 movement experiment rejection
+
+Six portal-lane variants failed the unchanged 500-unit crossing (25/0/12/49/84/72
+exact arrivals). All authoritative changes were removed. The reviewed checkpoint
+retains twelve small regression trajectories, exact relative-sweep checks and
+final routing diagnostics. Read `review-crowd-recovery-2026-09-26.md` and the
+rejected experiment archive before resuming. Fixed gate offsets and passing-half
+restrictions did not coordinate same-stream merging, egress or goal fan-out.
+Next implement bounded follower dependencies and cooperative entry/exit ordering,
+with a geometrically valid progression objective and full collision checks;
+retain exact goals and immutable Stop/Hold/firing eligibility. Passing the small
+tests is preservation evidence only. Dense arrival, full matches, production
+content, responsiveness, reference performance and shipping remain open.

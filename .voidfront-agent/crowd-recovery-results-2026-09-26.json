@@ -1,0 +1,99 @@
+{
+  "baseline": "76507b778705f7e9ae940896e0d0de4a9d549f05",
+  "verdict": "All movement experiments rejected. Authoritative source restored; no progress acceptance.",
+  "scope": "Isolated Release exploration; candidate full-ledger safety and cross-build repeat acceptance not established.",
+  "runs": [
+    {
+      "artifact": "artifacts/crowd-baseline-2026-09-26/crossing.json",
+      "arrived": 0,
+      "alive": 500,
+      "ticks": 4000,
+      "last_motion": 530,
+      "max_pending_idle": 3709,
+      "step_p95_ms": 1.7451,
+      "step_p99_ms": 2.3506,
+      "step_max_ms": 2.9891
+    },
+    {
+      "artifact": "artifacts/crowd-portal-probe1-2026-09-26.json",
+      "arrived": 25,
+      "alive": 500,
+      "ticks": 4000,
+      "last_motion": 1000,
+      "max_pending_idle": 3735,
+      "step_p95_ms": 1.67,
+      "step_p99_ms": 2.0237,
+      "step_max_ms": 2.7182
+    },
+    {
+      "artifact": "artifacts/crowd-portal-probe2-2026-09-26.json",
+      "arrived": 0,
+      "alive": 500,
+      "ticks": 4000,
+      "last_motion": 755,
+      "max_pending_idle": 3967,
+      "step_p95_ms": 1.962,
+      "step_p99_ms": 2.3291,
+      "step_max_ms": 3.1092
+    },
+    {
+      "artifact": "artifacts/crowd-portal-probe3-2026-09-26.json",
+      "arrived": 12,
+      "alive": 500,
+      "ticks": 4000,
+      "last_motion": 1791,
+      "max_pending_idle": 3732,
+      "step_p95_ms": 1.674,
+      "step_p99_ms": 1.9763,
+      "step_max_ms": 2.1013
+    },
+    {
+      "artifact": "artifacts/crowd-portal-probe4-2026-09-26.json",
+      "arrived": 49,
+      "alive": 500,
+      "ticks": 4000,
+      "last_motion": 1924,
+      "max_pending_idle": 3732,
+      "step_p95_ms": 1.6554,
+      "step_p99_ms": 1.986,
+      "step_max_ms": 3.2137
+    },
+    {
+      "artifact": "artifacts/crowd-portal-probe5-2026-09-26.json",
+      "arrived": 84,
+      "alive": 500,
+      "ticks": 4000,
+      "last_motion": 1588,
+      "max_pending_idle": 3676,
+      "step_p95_ms": 1.738,
+      "step_p99_ms": 2.1416,
+      "step_max_ms": 2.4277
+    },
+    {
+      "artifact": "artifacts/crowd-portal-probe6-2026-09-26.json",
+      "arrived": 72,
+      "alive": 500,
+      "ticks": 4000,
+      "last_motion": 1687,
+      "max_pending_idle": 3762,
+      "step_p95_ms": 1.7227,
+      "step_p99_ms": 1.901,
+      "step_max_ms": 2.0266
+    }
+  ],
+  "final_verification": {
+    "build_log": "artifacts/crowd-final-build-2026-09-26.log",
+    "crowds": "artifacts/crowd-final-small-2026-09-26/summary.json",
+    "scale": "artifacts/crowd-final-scale-2026-09-26/summary.json",
+    "unchanged_baseline_hashes": 4000,
+    "source_content_id": "2323859433208175334",
+    "small_fixture_rows": 17630,
+    "small_fixture_runs": 20,
+    "rejected_mutations": 17,
+    "scale_rows": 2000500,
+    "scale_playbacks": 11,
+    "scale_arrivals": 0,
+    "new_package": false,
+    "new_network_suite": false
+  }
+}

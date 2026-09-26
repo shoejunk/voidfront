@@ -263,7 +263,21 @@ int main(int argc, char** argv) {
                 metrics<<"{\"id\":"<<u.id<<",\"player\":"<<static_cast<int>(u.player)<<",\"start\":["<<initial[i].x<<','<<initial[i].z
                     <<"],\"end\":["<<u.x<<','<<u.z<<"],\"goal\":["<<u.goal_x<<','<<u.goal_z<<"],\"hp\":"<<u.hp
                     <<",\"order\":"<<static_cast<int>(u.order)<<",\"first_motion_tick\":"<<first_motion[i]<<",\"last_motion_tick\":"<<last_motion[i]
-                    <<",\"pending_idle_tail\":"<<idle[i]<<",\"max_pending_idle\":"<<max_idle[i]<<'}'; }
+                    <<",\"pending_idle_tail\":"<<idle[i]<<",\"max_pending_idle\":"<<max_idle[i]
+                    <<",\"routing\":{\"next\":["<<u.next_x<<','<<u.next_z
+                    <<"],\"route_goal\":["<<u.route_goal.x<<','<<u.route_goal.z
+                    <<"],\"blocked_ticks\":"<<u.blocked_ticks;
+                const auto route_points=[&](const char* name,const std::vector<vf::nav::Point>& points) {
+                    metrics<<",\""<<name<<"\":[";
+                    for(size_t n=0;n<points.size();++n) {
+                        if(n) metrics<<',';
+                        metrics<<'['<<points[n].x<<','<<points[n].z<<']';
+                    }
+                    metrics<<']';
+                };
+                route_points("path",u.path); route_points("detour",u.detour);
+                metrics<<"}}";
+            }
             const auto write_samples=[&](const char* name,const std::vector<int64_t>& values) {
                 metrics<<"],\""<<name<<"\":["; for(size_t i=0;i<values.size();++i) { if(i) metrics<<','; metrics<<values[i]; }
             };

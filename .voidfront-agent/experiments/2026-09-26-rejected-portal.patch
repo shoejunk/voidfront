@@ -1,0 +1,264 @@
+diff --git a/sim/voidfront_sim.cpp b/sim/voidfront_sim.cpp
+index e563931..0d46907 100644
+--- a/sim/voidfront_sim.cpp
++++ b/sim/voidfront_sim.cpp
+@@ -2,6 +2,7 @@
+ #include "spatial.hpp"
+ #include <algorithm>
+ #include <limits>
++#include <map>
+ #include <stdexcept>
+ #include <tuple>
+
+@@ -137,6 +138,8 @@ void Sim::apply(const Command& c) {
+         u.target_id = 0;
+         u.path.clear(); u.next_x = u.x; u.next_z = u.z;
+         u.detour.clear(); u.blocked_ticks=0;
++        u.traffic_path.clear(); u.traffic_planned=false;
++        u.traffic_heading={}; u.traffic_corridor={};
+         u.route_goal = {-1,-1};
+         if (c.order == Order::Stop || c.order == Order::Hold) {
+             u.goal_x = u.x; u.goal_z = u.z;
+@@ -153,10 +156,124 @@ void Sim::apply(const Command& c) {
+     }
+ }
+
++void Sim::plan_traffic() {
++    // Derive straight passages between facing terrain edges. Work is bounded
++    // by the map rectangle pairs and the roster, only after canonical input.
++    struct Portal { bool horizontal; int low,high,begin,end; };
++    std::vector<Portal> portals;
++    const auto& terrain=map_terrain(map_);
++    for (size_t i=0;i<terrain.size();++i) for (size_t j=i+1;j<terrain.size();++j) {
++        const auto a=terrain[i],b=terrain[j];
++        if (std::max(a.min_x,b.min_x)<std::min(a.max_x,b.max_x)) {
++            const auto top=a.min_z<b.min_z?a:b,bottom=a.min_z<b.min_z?b:a;
++            if (bottom.min_z-top.max_z>=8*unit_radius)
++                portals.push_back({true,top.max_z,bottom.min_z,std::min(a.min_x,b.min_x),std::max(a.max_x,b.max_x)});
++        }
++        if (std::max(a.min_z,b.min_z)<std::min(a.max_z,b.max_z)) {
++            const auto left=a.min_x<b.min_x?a:b,right=a.min_x<b.min_x?b:a;
++            if (right.min_x-left.max_x>=8*unit_radius)
++                portals.push_back({false,left.max_x,right.min_x,std::min(a.min_z,b.min_z),std::max(a.max_z,b.max_z)});
++        }
++    }
++    for (const auto portal:portals) {
++        std::array<std::vector<uint32_t>,2> streams;
++        const auto along=[&](const Unit& u) { return portal.horizontal?u.x:u.z; };
++        const auto across=[&](const Unit& u) { return portal.horizontal?u.z:u.x; };
++        for (const auto& u:units_) {
++            if (u.hp<=0 || u.order!=Order::Move) continue;
++            const int start=along(u),goal=portal.horizontal?u.goal_x:u.goal_z;
++            const int direction=start<portal.begin-3*kScale && goal>portal.end+3*kScale?0:
++                (start>portal.end+3*kScale && goal<portal.begin-3*kScale?1:-1);
++            if (direction<0) continue;
++            // Traffic elsewhere on the map must not be diverted to this gap.
++            bool traverses=false;
++            auto a=nav::Point{u.x,u.z};
++            for (const auto b:navigation_.route(a,{u.goal_x,u.goal_z})) {
++                int64_t aa=portal.horizontal?a.x:a.z,bb=portal.horizontal?b.x:b.z;
++                int64_t az=portal.horizontal?a.z:a.x,bz=portal.horizontal?b.z:b.x;
++                if (aa>bb) { std::swap(aa,bb); std::swap(az,bz); }
++                const int64_t middle=(portal.begin+portal.end)/2;
++                if (aa<bb && aa<=middle && middle<=bb) {
++                    const int64_t transverse=az*(bb-aa)+(bz-az)*(middle-aa);
++                    traverses=transverse>=int64_t(portal.low+unit_radius)*(bb-aa) &&
++                        transverse<=int64_t(portal.high-unit_radius)*(bb-aa);
++                }
++                a=b;
++                if (traverses) break;
++            }
++            if (traverses) streams[direction].push_back(u.id);
++        }
++        if (streams[0].size()<2 || streams[1].size()<2) continue;
++        for (int direction=0;direction<2;++direction) {
++            auto& stream=streams[direction];
++            std::sort(stream.begin(),stream.end(),[&](uint32_t a,uint32_t b) {
++                const int za=across(units_[a-1]),zb=across(units_[b-1]);
++                return za!=zb?za<zb:a<b;
++            });
++            const int middle=(portal.low+portal.high)/2;
++            // Right-hand halves reverse for north/south travel.
++            const bool lower=(direction==0)==portal.horizontal;
++            const int first=(lower?portal.low:middle)+unit_radius+32;
++            const int last=(lower?middle:portal.high)-unit_radius-32;
++            const int lanes=1+(last-first)/(3*unit_radius);
++            if (lanes<1) continue;
++            // Begin fan-out before this stream's nearest final goal. Sending
++            // every actor beyond the opposing spawn caused early finishers to
++            // turn back into their own lane and seal its remaining traffic.
++            int far=direction==0?std::numeric_limits<int>::max():std::numeric_limits<int>::min();
++            for (const auto id:stream) {
++                const auto& unit=units_[id-1];
++                const int goal=portal.horizontal?unit.goal_x:unit.goal_z;
++                far=direction==0?std::min(far,goal):std::max(far,goal);
++            }
++            far+=direction==0?-3*kScale:3*kScale;
++            far=direction==0?std::max(far,portal.end+3*kScale):std::min(far,portal.begin-3*kScale);
++            far=std::clamp(far,kScale+unit_radius,(portal.horizontal?width():height())*kScale-kScale-unit_radius);
++            std::vector<std::vector<uint32_t>> lane_streams(static_cast<size_t>(lanes));
++            for (size_t rank=0;rank<stream.size();++rank)
++                lane_streams[rank*static_cast<size_t>(lanes)/stream.size()].push_back(stream[rank]);
++            for (int lane_index=0;lane_index<lanes;++lane_index) {
++              auto& members=lane_streams[static_cast<size_t>(lane_index)];
++              const int lane=first+lane_index*3*unit_radius;
++              std::sort(members.begin(),members.end(),[&](uint32_t a,uint32_t b) {
++                  const auto& ua=units_[a-1]; const auto& ub=units_[b-1];
++                  const int pa=along(ua),pb=along(ub);
++                  if (pa!=pb) return direction==0?pa>pb:pa<pb;
++                  const int da=std::abs(across(ua)-lane),db=std::abs(across(ub)-lane);
++                  return da!=db?da<db:a<b;
++              });
++              for (size_t rank=0;rank<members.size();++rank) {
++                auto& u=units_[members[rank]-1];
++                if (u.traffic_planned) continue;
++                // Distinct physical merge gates form an ordered queue, rather
++                // than sending every member to the same exact approach point.
++                const int spacing=2*unit_radius+movement_speed;
++                const int near=direction==0?portal.begin-3*kScale-static_cast<int>(rank)*spacing:
++                    portal.end+3*kScale+static_cast<int>(rank)*spacing;
++                const nav::Point entry=portal.horizontal?nav::Point{near,lane}:nav::Point{lane,near};
++                const nav::Point exit=portal.horizontal?nav::Point{far,lane}:nav::Point{lane,far};
++                if (!navigation_.valid(entry) || !navigation_.valid(exit) || !navigation_.clear(entry,exit) ||
++                    navigation_.route({u.x,u.z},entry).empty() || navigation_.route(exit,{u.goal_x,u.goal_z}).empty()) continue;
++                u.traffic_path={entry,exit}; u.traffic_planned=true;
++                const int sign=direction==0?1:-1;
++                u.traffic_heading=portal.horizontal?nav::Point{sign,0}:nav::Point{0,sign};
++                const int low=(lower?portal.low:middle)+unit_radius;
++                const int high=(lower?middle:portal.high)-unit_radius;
++                u.traffic_corridor=portal.horizontal?
++                    nav::Rect{portal.begin-unit_radius,low,portal.end+unit_radius,high}:
++                    nav::Rect{low,portal.begin-unit_radius,high,portal.end+unit_radius};
++                u.path.clear(); u.detour.clear(); u.blocked_ticks=0; u.route_goal={-1,-1};
++              }
++            }
++        }
++    }
++}
++
+ void Sim::step() {
+     size_t applied = 0;
+     while (applied < pending_.size() && pending_[applied].tick == tick_) apply(pending_[applied++]);
+     pending_.erase(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(applied));
++    if (applied) plan_traffic();
+     std::vector<int32_t> damage(units_.size(), 0);
+     std::vector<nav::Point> tick_start;
+     tick_start.reserve(units_.size());
+@@ -165,6 +282,16 @@ void Sim::step() {
+         tick_start.push_back({u.x,u.z});
+         if (u.hp>0) spatial.insert(u.id,{u.x,u.z});
+     }
++    using TrafficKey=std::tuple<bool,int32_t,int32_t>;
++    const auto traffic_key=[](const Unit& u) {
++        const auto r=u.traffic_corridor;
++        return u.traffic_heading.x!=0?TrafficKey{true,r.min_x,r.max_x}:TrafficKey{false,r.min_z,r.max_z};
++    };
++    const auto traffic_sign=[](const Unit& u) { return u.traffic_heading.x+u.traffic_heading.z>0?0:1; };
++    std::map<TrafficKey,std::array<size_t,2>> traffic_presence;
++    for (const auto& u:units_)
++        if (u.hp>0 && u.order==Order::Move && !u.traffic_path.empty())
++            ++traffic_presence[traffic_key(u)][traffic_sign(u)];
+     std::vector<uint32_t> nearby;
+     std::vector<uint32_t> local;
+     std::vector<nav::Point> candidates;
+@@ -188,6 +315,18 @@ void Sim::step() {
+             }
+         }
+         nav::Point goal{u.goal_x, u.goal_z};
++        while (!u.traffic_path.empty()) {
++            const auto a=u.traffic_path.front(),heading=u.traffic_heading;
++            const int64_t forward=int64_t(u.x-a.x)*heading.x+int64_t(u.z-a.z)*heading.z;
++            const int64_t lateral=int64_t(u.x-a.x)*heading.z-int64_t(u.z-a.z)*heading.x;
++            // An intermediate gate is a crossing, not an exact final goal.
++            // Never reverse after passing the exit merely to touch its center.
++            if (!(a==nav::Point{u.x,u.z}) && !(forward>=0 &&
++                (u.traffic_path.size()==1 || std::abs(lateral)<=unit_radius))) break;
++            u.traffic_path.erase(u.traffic_path.begin());
++            u.path.clear(); u.detour.clear(); u.route_goal={-1,-1};
++        }
++        if (u.order==Order::Move && !u.traffic_path.empty()) goal=u.traffic_path.front();
+         if (target) {
+             u.target_id = target->id;
+             if (nearest <= attack_range2) {
+@@ -227,8 +366,25 @@ void Sim::step() {
+                 std::min(old.z,other.z)-2*unit_radius-padding,std::max(old.x,other.x)+2*unit_radius+padding,
+                 std::max(old.z,other.z)+2*unit_radius+padding};
+         };
++        const auto traffic_clear=[&](nav::Point a,nav::Point b) {
++            if (u.traffic_path.empty()) return true;
++            // Once the opposing stream has exited or been explicitly halted,
++            // its half is available for an ordinary detour around held bodies.
++            // Counts come from tick-start authoritative state, never timeouts.
++            const auto presence=traffic_presence.find(traffic_key(u));
++            if (presence==traffic_presence.end() || presence->second[1-traffic_sign(u)]==0) return true;
++            auto r=u.traffic_corridor;
++            if (u.traffic_heading.x==0) {
++                std::swap(a.x,a.z); std::swap(b.x,b.z);
++                r={r.min_z,r.min_x,r.max_z,r.max_x};
++            }
++            // Restrict only the actual terrain mouth. Approach and egress remain
++            // free to route around stopped bodies using their ordinary sweeps.
++            return nav::segment_clear(a,b,{r.min_x,-65536,r.max_x,r.min_z}) &&
++                nav::segment_clear(a,b,{r.min_x,r.max_z,r.max_x,65536});
++        };
+         for (const auto candidate : candidates) {
+-            bool free = navigation_.clear(here,candidate);
++            bool free = navigation_.clear(here,candidate) && traffic_clear(here,candidate);
+             for (const auto id : nearby) {
+                 if (!free) break;
+                 const auto& other=units_[id-1];
+@@ -257,7 +413,7 @@ void Sim::step() {
+                 const std::array<nav::Point,4> corners{{{box.min_x,box.min_z},{box.max_x,box.min_z},
+                     {box.max_x,box.max_z},{box.min_x,box.max_z}}};
+                 const auto clear=[&](nav::Point a,nav::Point b) {
+-                    if (!navigation_.clear(a,b)) return false;
++                    if (!navigation_.clear(a,b) || !traffic_clear(a,b)) return false;
+                     constexpr int pad=2*unit_radius+movement_speed;
+                     spatial.query({std::min(a.x,b.x)-pad,std::min(a.z,b.z)-pad,
+                         std::max(a.x,b.x)+pad,std::max(a.z,b.z)+pad},local);
+@@ -279,7 +435,8 @@ void Sim::step() {
+                     // Finish on the far half of the obstacle, avoiding repeated
+                     // near-corner maneuvers that make no progress past a blocker.
+                     if (dx*(int64_t(last.x)-obstacle.x)+dz*(int64_t(last.z)-obstacle.z)<0 ||
+-                        last==here || !navigation_.clear(last,destination) || !clear(here,first) || !clear(first,last)) continue;
++                        last==here || !navigation_.clear(last,destination) || !traffic_clear(last,destination) ||
++                        !clear(here,first) || !clear(first,last)) continue;
+                     const auto cost=length(here,first)+length(first,last)+length(last,destination);
+                     const int side=dx*(int64_t(first.z)-here.z)-dz*(int64_t(first.x)-here.x)<=0?0:1;
+                     if (std::tie(cost,side)<std::tie(best_cost,best_side)) {
+@@ -350,6 +507,11 @@ uint64_t Sim::state_hash() const {
+         for (const auto& point : u.path) { add(point.x); add(point.z); }
+         add(u.blocked_ticks); add(u.detour.size());
+         for (const auto& point : u.detour) { add(point.x); add(point.z); }
++        add(u.traffic_planned); add(u.traffic_path.size());
++        for (const auto& point:u.traffic_path) { add(point.x); add(point.z); }
++        add(u.traffic_heading.x); add(u.traffic_heading.z);
++        add(u.traffic_corridor.min_x); add(u.traffic_corridor.min_z);
++        add(u.traffic_corridor.max_x); add(u.traffic_corridor.max_z);
+     }
+     return h;
+ }
+diff --git a/sim/voidfront_sim.hpp b/sim/voidfront_sim.hpp
+index 97a94e8..ca82d4a 100644
+--- a/sim/voidfront_sim.hpp
++++ b/sim/voidfront_sim.hpp
+@@ -36,6 +36,11 @@ struct Unit {
+     nav::Point route_goal{};
+     std::vector<nav::Point> detour;
+     uint16_t blocked_ticks = 0;
++    // Retained directional traffic waypoints; canonical goal coordinates stay intact.
++    std::vector<nav::Point> traffic_path;
++    bool traffic_planned = false;
++    nav::Point traffic_heading{};
++    nav::Rect traffic_corridor{};
+ };
+ class Sim {
+ public:
+@@ -60,6 +65,7 @@ private:
+     std::vector<Unit> units_;
+     std::vector<Command> pending_;
+     void apply(const Command& command);
++    void plan_traffic();
+     nav::World navigation_;
+ };
+ std::vector<uint8_t> serialize_command(const Command& command);

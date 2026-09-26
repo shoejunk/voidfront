@@ -14,7 +14,10 @@ from verify_navigation import midpoint_enters_open_rect, segment_clear
 CASES = {"stationary_blocker": (2,400), "stationary_chain": (6,400),
          "opposing_swap": (2,240), "moving_blocker": (2,200),
          "detour_stop_retarget": (2,None), "occupied_goal": (2,360),
-         "moving_attack_target": (2,275)}
+         "moving_attack_target": (2,275), "short_disjoint": (2,240),
+         "firing_then_target_leaves": (1,251),
+         "opposed_stop_retarget": (2,420), "opposed_hold_retarget": (2,420),
+         "outer_channel_prefix": (2,280)}
 BOUNDS = (320,320,7872,5824)
 RIDGES = [(3776,704,4416,2368), (3776,4032,4416,5440)]
 
@@ -42,26 +45,31 @@ def verify(rows):
         initial = {p*count+n+1: ((2 if p==0 else 29)*256+128,(9+n)*256+128)
                    for p in (0,1) for n in range(count)}
         previous = initial.copy()
+        previous_hp = {uid:100 for uid in initial}
         pursuit_detour = False
         for t in range(1,ticks+1):
             group = entries[(t-1)*2*count:t*2*count]
             require([r['id'] for r in group] == list(initial), 'missing/reordered/duplicate unit')
-            require(all(r['tick']==t and r['hp']==100 and 0<=r['order']<=3 for r in group), 'tick/state invalid')
+            combat = name.startswith('opposed_') or name=='firing_then_target_leaves'
+            require(all(r['tick']==t and (0<=r['hp']<=100 if combat else r['hp']==100) and 0<=r['order']<=3 for r in group), 'tick/state invalid')
             require(all(0<=r['target_id']<=2*count and 0<=r['detour_count']<=2 and 0<=r['blocked_ticks']<=8 for r in group), 'avoidance state invalid')
             require(len({r['hash'] for r in group})==1 and 0<=group[0]['hash']<2**64, 'hash coverage invalid')
             current = {r['id']: (r['x'],r['z']) for r in group}
             for uid,now in current.items():
                 old = previous[uid]
+                require(group[uid-1]['hp']<=previous_hp[uid], 'health increased')
                 require(sum((a-b)**2 for a,b in zip(old,now))<=1024, f'{name}: speed violation')
                 require(segment_clear(old,now,BOUNDS,RIDGES), f'{name}: swept terrain collision')
                 for other in range(uid+1,2*count+1):
+                    if previous_hp[uid]<=0 or previous_hp[other]<=0: continue
                     # Relative linear motion checks every interpolation time,
                     # independently of the simulation's conservative sweep boxes.
                     a = tuple(x-y for x,y in zip(old,previous[other]))
                     b = tuple(x-y for x,y in zip(now,current[other]))
                     require(not midpoint_enters_open_rect(a,b,(-128,-128,128,128)),
                             f'{name}: units overlap during interpolation')
-                if (uid>count and not (name=='moving_attack_target' and uid==3)) or (name.startswith('stationary') and uid!=1):
+                enemy_moves = name.startswith('opposed_') or name in ('firing_then_target_leaves','outer_channel_prefix') or (name=='moving_attack_target' and uid==3)
+                if (uid>count and not enemy_moves) or (name.startswith('stationary') and uid!=1):
                     require(now==initial[uid], 'stationary participant displaced')
             if name == 'detour_stop_retarget' and departure < t <= departure+40:
                 stop_at = entries[(departure-1)*2*count]
@@ -72,13 +80,37 @@ def verify(rows):
             if name == 'moving_attack_target' and t>250:
                 require(current[2]==(900,2432) and current[3]!=previous[3], 'pursuit fixture stopped its target/blocker')
                 pursuit_detour |= group[0]['target_id']==3 and group[0]['detour_count']>0
+            if name=='short_disjoint' and t>200:
+                require(current[1][1]==current[2][1]==2560 and current[1][0]>=previous[1][0] and current[2][0]<=previous[2][0],
+                        'disjoint short journeys diverted')
+            if name.startswith('opposed_') and 80<t<=120:
+                stopped=entries[79*2*count]
+                require(current[1]==(stopped['x'],stopped['z']) and group[0]['order']==(3 if 'hold' in name else 0),
+                        'opposed Stop/Hold drift')
+            if name=='firing_then_target_leaves':
+                require(all(r['hp']==(92 if t==251 and r['id']==2 else 100) for r in group), 'firing departure damage differs')
+                if t==250: require(current=={1:(1024,2560),2:(1792,2560)},'firing departure setup differs')
+                if t==251:
+                    require(current[1]==previous[1] and group[0]['target_id']==2 and current[2][0]>1792,
+                            'shooter moved after firing or target failed departure')
+            if name=='outer_channel_prefix':
+                z_by_id={1:400,2:600,3:400,4:600}
+                if t==200:
+                    require(current=={uid:(1200 if uid<=2 else 6800,z) for uid,z in z_by_id.items()},'outer channel setup differs')
+                if t>200:
+                    require(all(now[1]<=704 for now in current.values()),'outer channel diverted into central portal')
+                    if t<=240: require(all(current[uid][1]==z for uid,z in z_by_id.items()),'premature outer channel diversion')
             previous = current
+            previous_hp = {r['id']:r['hp'] for r in group}
         expected = {'stationary_blocker': {1:(640,4300)}, 'stationary_chain': {1:(640,4300)},
                     'opposing_swap': {1:(640,2688),2:(640,2432)},
                     'moving_blocker': {1:(640,3500),2:(2300,2688)},
                     'detour_stop_retarget': {1:(2101,2117)},
                     'occupied_goal': {1:(640,2688),2:(2100,2688)},
-                    'moving_attack_target': {2:(900,2432)}}[name]
+                    'moving_attack_target': {2:(900,2432)},
+                    'short_disjoint': {1:(1124,2560),2:(1524,2560)},
+                    'opposed_stop_retarget': {1:(1301,2107)}, 'opposed_hold_retarget': {1:(1301,2107)},
+                    'firing_then_target_leaves': {}, 'outer_channel_prefix': {}}[name]
         for uid,goal in expected.items():
             require(previous[uid]==goal and entries[-2*count+uid-1]['order']==0, f'{name}: false/missing arrival')
         if name=='moving_attack_target': require(pursuit_detour, 'moving pursuit never detoured')
@@ -133,7 +165,17 @@ def main():
         ('stop_drift',lambda r:r['case']=='detour_stop_retarget' and r['id']==1 and r['order']==0,
          {'x':None},'Stop drift/order'),
         ('false_arrival',lambda r:r['case']=='stationary_blocker' and r['tick']==400 and r['id']==1,
-         {'order':1},'false/missing arrival')]:
+         {'order':1},'false/missing arrival'),
+        ('hold_lost',lambda r:r['case']=='opposed_hold_retarget' and r['tick']==81 and r['id']==1,
+         {'order':0},'opposed Stop/Hold drift'),
+        ('disjoint_diversion',lambda r:r['case']=='short_disjoint' and r['tick']==240 and r['id']==1,
+         {'z':2561},'disjoint short journeys diverted'),
+        ('shooter_displaced',lambda r:r['case']=='firing_then_target_leaves' and r['tick']==251 and r['id']==1,
+         {'x':1025},'shooter moved after firing'),
+        ('retarget_false_arrival',lambda r:r['case']=='opposed_stop_retarget' and r['tick']==420 and r['id']==1,
+         {'order':1},'false/missing arrival'),
+        ('outer_channel_diversion',lambda r:r['case']=='outer_channel_prefix' and r['tick']==240 and r['id']==3,
+         {'x':None,'z':401},'premature outer channel diversion')]:
         changed=copy.deepcopy(rows)
         row=next(r for r in changed if predicate(r))
         row.update({k:row[k]+1 if v is None else v for k,v in update.items()})
@@ -144,7 +186,7 @@ def main():
         mutations.append((label,None))
     summary['rejected_mutations']=[name for name,_ in mutations]
     summary['finished_utc']=datetime.now(timezone.utc).isoformat()
-    summary['scope']='Seven bounded small-map fixtures; no choke/stream/128x128/performance or human-play acceptance.'
+    summary['scope']='Twelve bounded small-map fixtures; original seven safety/arrival checks retained. Outer-channel prefix does not establish completion after contact. No dense-stream/128x128/performance or human-play acceptance.'
     (args.out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
     print(json.dumps({'ok':True,'fixtures':summary['fixtures'],'runs':len(summary['runs']),
                       'rejected_mutations':summary['rejected_mutations']}))

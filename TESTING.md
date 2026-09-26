@@ -1,5 +1,48 @@
 # Verification ledger
 
+## 2026-09-26 crowd regression and diagnosis checkpoint
+
+`artifacts/crowd-final-build-2026-09-26.log`: pinned Godot 4.7.2 and recorded
+toolchain verified; integrated MSVC Debug and Release each pass 7/7 CTest.
+Malformed replay and output-alias preservation checks pass in both builds;
+2,000 cross-build hashes and ten repeated Release replays agree.
+
+`artifacts/crowd-final-small-2026-09-26/summary.json`: twelve trajectories,
+17,630 independently audited rows, ten runs per configuration (20 total), and
+17 deliberately corrupted evidence cases rejected. The original seven fixtures
+retain their speed, clearance, arrival, stationary and avoidance bounds. Five
+new fixtures check disjoint travel, firing before target departure, opposed
+Stop/Hold with retarget, and the upper-channel approach prefix. The last fixture
+does not establish arrival after contact. C++ now additionally checks full
+relative unit sweeps, terrain sweeps and firing immobility, with analytic
+corner-crossing and exact-tangent controls.
+
+Six exploratory Release runs on the unchanged 500-unit/4,000-tick crossing
+reached 25/0/12/49/84/72 exact destinations; every candidate failed the progress
+gate and was removed. Candidate full-ledger safety, cross-build repeat coverage
+and packaged gameplay acceptance were not established. Timings and source
+archive are indexed by `.voidfront-agent/crowd-recovery-results-2026-09-26.json`
+and `.voidfront-agent/experiments/README.md`; the independent review explicitly
+rejects a movement-progress claim. The retained headless JSON routing fields
+report existing state after the run and do not change authoritative logic.
+
+`artifacts/crowd-final-scale-2026-09-26/summary.json`: the unchanged 500-unit
+crossing audits all 2,000,500 rows, including 118,406 oblique steps, full relative
+sweeps and exact canonical goals. All 4,000 hashes and routing objects match
+Debug playback and ten Release repeats; the final record trace also exactly
+matches the pre-experiment baseline. Authoritative content ID remains
+2323859433208175334. All 500 live units remain unfinished; last motion is tick
+530 and maximum pending idle is 3,709 ticks. Release record step p95/p99/max is
+1.7505/1.9971/2.4291 ms, peak process resident memory 5,054,464 bytes. These
+stationary-tail timings satisfy this diagnostic's numerical limits only;
+the crowd-progress gate still fails. Other scale profiles were not rerun.
+
+This pass has no new export, movie, screenshot inspection, human playtest,
+separate-process network suite or representative frame capture. The prior
+packaged EXE/PCK/DLL are retained unchanged; the final build regenerated local
+client/bin libraries only. Previous dated network, runtime and art evidence
+remains scoped to its original payload. No full RTS match or shipping claim.
+
 ## 2026-09-25 controlled presentation diagnostics and static batching
 
 `artifacts/weekly-build-2026-09-25.log`: pinned Godot 4.7.2, templates and
