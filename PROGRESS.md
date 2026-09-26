@@ -1,5 +1,41 @@
 # Voidfront progress
 
+## 2026-09-26 08:42 America/Los_Angeles - cooperative movement pass
+
+Baseline clean dev ff96df8; STOP, COMPLETE and prior marker absent. Acquired
+run marker exclusively for task 01a0de62-2496-7fa3-8121-488995b713df. Resume the
+existing game and failed 500-unit crossing. This run targets explicit follower
+dependencies and cooperative ordering rather than another portal-offset variant.
+Separate simulation, regression and independent-review agents have disjoint
+file ownership; the primary retains builds, integration and all Git operations.
+Keep exact goals, full swept clearance, Stop/Hold/firing semantics and unchanged
+4,000-tick/all-arrivals acceptance. No quality or performance gate is relaxed.
+
+Implemented bounded atomic following for unfinished Move units after ordinary
+movement/combat. Exact relative sweeps allow tangent followers to advance with
+their leaders; Stop/Hold, firing and previously moved units remain immutable.
+The search has fixed 32-member, 16-root and 2,048-candidate limits, rollback and
+full transaction revalidation. Successful retries preserve their pre-search
+maneuver instead of a speculative newly installed detour. Compatibility version
+5 rejects older VFR1 recordings that have no content fingerprint; command and
+transport wire layouts are unchanged.
+
+Fresh frozen-baseline binaries fail both six-unit tangent convoy fixtures. The
+candidate passes them with exact 32-coordinate-unit movement on every one of
+16 ticks. Seventeen default fixtures now cover both directions, blocked leaders,
+Stop/Hold and mid-convoy retargeting. Integrated Debug/Release pass 7/7 CTest,
+replay/output-alias rejection, 2,000 cross-build hashes and ten repeated replays.
+Independent 30,254-row small-crowd audit passes 20 runs and rejects 22 mutations;
+51 static-route fixtures pass ten repeats per configuration with zero observed
+reference excess. Full scale, network and packaged runtime verification follows.
+
+The optional reversed-goal fixture remains failed: final source reaches 5/6
+goals, leaving unit 2 at (2448,2928), goal (2304,2944). Independent static geometry
+confirms a clear vertical alignment then horizontal approach with all neighbors
+stationary. This is a next-policy reproducer, not executed alternate-path proof.
+No dense-stream, full-match, production, responsiveness or shipping gate passes
+from the convoy repair. The previous package is preserved separately.
+
 ## 2026-09-26 01:10 America/Los_Angeles - opposing-stream movement pass
 
 User requested another development pass. Baseline clean dev76507b7; STOP,

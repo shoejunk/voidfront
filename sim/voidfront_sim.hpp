@@ -9,7 +9,7 @@ namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
 inline constexpr int kMaxMapSize = 128;
-inline constexpr uint32_t kProtocolVersion = 4;
+inline constexpr uint32_t kProtocolVersion = 5;
 enum class Map : uint32_t { Foundry = 0, Scale128 = 1 };
 int map_width(Map map);
 int map_height(Map map);

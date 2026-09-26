@@ -202,10 +202,104 @@ void outer_channel_prefix(std::ostream* trace) {
     }
     // Prefix eligibility only. This does not claim completion after contact.
 }
+
+void follower_chain(int direction,const std::string& name,std::ostream* trace) {
+    vf::Sim sim(1,6);
+    for (uint32_t id=1;id<=6;++id) order(sim,id,id,640,2432+128*(id-1));
+    for (int i=0;i<160;++i) step(sim,name,trace);
+    for (const auto& u:sim.units()) if (u.id<=6)
+        check(u.x==640 && u.z==2432+128*static_cast<int>(u.id-1),"follower chain setup failed");
+    for (uint32_t id=1;id<=6;++id)
+        order(sim,6+id,id,640,2432+128*static_cast<int>(id-1)+direction*512);
+    bool synchronized=true;
+    for (int i=1;i<=16;++i) {
+        step(sim,name,trace);
+        for (const auto& u:sim.units()) if (u.id<=6) {
+            const int start=2432+128*static_cast<int>(u.id-1);
+            check(u.goal_x==640 && u.goal_z==start+direction*512,"follower chain goal replaced");
+            synchronized &= u.x==640 && u.z==start+direction*32*i;
+        }
+    }
+    // Equal velocities keep every tangent pair separated for the full tick.
+    // There is no obstacle, turn, merge or occupied destination requiring a
+    // stop. Keep the complete failed ledger when this desired behavior fails.
+    check(synchronized,"unobstructed tangent followers stopped or diverted");
+    for (const auto& u:sim.units()) if (u.id<=6)
+        check(u.order==vf::Order::Stop,"follower chain did not finish exactly");
+}
+
+void goal_redistribution(std::ostream* trace) {
+    vf::Sim sim(1,6);
+    for (uint32_t id=1;id<=6;++id) order(sim,id,id,640,2432+128*(id-1));
+    for (int i=0;i<160;++i) step(sim,"goal_redistribution",trace);
+    for (const auto& u:sim.units()) if (u.id<=6)
+        check(u.x==640 && u.z==2432+128*static_cast<int>(u.id-1),"redistribution setup failed");
+    for (uint32_t id=1;id<=6;++id) order(sim,6+id,id,2304,2432+128*(6-id));
+    for (int i=0;i<600;++i) {
+        step(sim,"goal_redistribution",trace);
+        for (const auto& u:sim.units()) if (u.id<=6)
+            check(u.goal_x==2304 && u.goal_z==2432+128*static_cast<int>(6-u.id),"redistribution goal replaced");
+    }
+    for (const auto& u:sim.units()) if (u.id<=6)
+        check(u.x==u.goal_x && u.z==u.goal_z && u.order==vf::Order::Stop,"same-stream reversed goals remained locked");
+}
+
+void blocked_convoy(vf::Order pause,const std::string& name,std::ostream* trace) {
+    vf::Sim sim(1,6);
+    for (uint32_t id=1;id<=6;++id) order(sim,id,id,640,2432+128*(id-1));
+    for (int i=0;i<160;++i) step(sim,name,trace);
+    for (const auto& u:sim.units()) if (u.id<=6)
+        check(u.x==640 && u.z==2432+128*static_cast<int>(u.id-1),"blocked convoy setup failed");
+    for (uint32_t id=1;id<=5;++id) order(sim,6+id,id,640,2944+128*(id-1));
+    order(sim,12,6,0,0,pause);
+    for (int i=0;i<8;++i) {
+        step(sim,name,trace);
+        check(sim.units()[5].x==640 && sim.units()[5].z==3072 && sim.units()[5].order==pause,
+            "blocked convoy displaced stationary leader");
+        for (const auto& u:sim.units()) if (u.id<=5) {
+            check(u.goal_x==640 && u.goal_z==2944+128*static_cast<int>(u.id-1),"blocked convoy goal replaced");
+            if (i==0) check(u.x==640 && u.z==2432+128*static_cast<int>(u.id-1),
+                "blocked convoy partially committed failed dependency");
+        }
+    }
+    // Later local detours are allowed. This is rollback/immutability coverage,
+    // not eventual progress through a permanently occupied destination.
+}
+
+void convoy_retarget(std::ostream* trace) {
+    vf::Sim sim(1,6);
+    for (uint32_t id=1;id<=6;++id) order(sim,id,id,640,2432+128*(id-1));
+    for (int i=0;i<160;++i) step(sim,"convoy_retarget",trace);
+    for (const auto& u:sim.units()) if (u.id<=6)
+        check(u.x==640 && u.z==2432+128*static_cast<int>(u.id-1),"retarget convoy setup failed");
+    for (uint32_t id=1;id<=6;++id) order(sim,6+id,id,640,2944+128*(id-1));
+    for (int i=0;i<4;++i) step(sim,"convoy_retarget",trace);
+    for (const auto& u:sim.units()) if (u.id<=6)
+        check(u.x==640 && u.z==2560+128*static_cast<int>(u.id-1),"retarget convoy never advanced together");
+    order(sim,13,3,1901,2816);
+    for (int i=0;i<200;++i) {
+        step(sim,"convoy_retarget",trace);
+        if (i==0) check(sim.units()[2].x>640 && sim.units()[2].z==2816,"retarget convoy followed obsolete direction");
+        for (const auto& u:sim.units()) if (u.id<=6)
+            check(u.goal_x==(u.id==3?1901:640) && u.goal_z==(u.id==3?2816:2944+128*static_cast<int>(u.id-1)),
+                "retarget convoy goal replaced");
+    }
+    for (const auto& u:sim.units()) if (u.id<=6)
+        check(u.x==u.goal_x && u.z==u.goal_z && u.order==vf::Order::Stop,"retarget convoy failed exact arrival");
+}
 }
 int main(int argc,char** argv) {
     std::ofstream trace;
-    if (argc==2) { trace.open(argv[1]); if (!trace) return 2; trace<<"case,tick,id,x,z,hp,order,target_id,detour_count,blocked_ticks,hash\n"; }
+    bool redistribution=false;
+    const char* trace_path=nullptr;
+    for (int i=1;i<argc;++i) {
+        const std::string argument=argv[i];
+        if (argument=="--cooperative") {} // Retained compatibility; coverage is now mandatory.
+        else if (argument=="--redistribution") redistribution=true;
+        else if (argument.starts_with("--") || trace_path) return 2;
+        else trace_path=argv[i];
+    }
+    if (trace_path) { trace.open(trace_path); if (!trace) return 2; trace<<"case,tick,id,x,z,hp,order,target_id,detour_count,blocked_ticks,hash\n"; }
     auto* out=trace.is_open()? &trace:nullptr;
     int failed=0;
     const auto run=[&](const char* name,auto test) {
@@ -229,5 +323,11 @@ int main(int argc,char** argv) {
     run("opposed_stop_retarget",[&] { opposed_pause_retarget(vf::Order::Stop,"opposed_stop_retarget",out); });
     run("opposed_hold_retarget",[&] { opposed_pause_retarget(vf::Order::Hold,"opposed_hold_retarget",out); });
     run("outer_channel_prefix",[&] { outer_channel_prefix(out); });
+    run("follower_chain_forward",[&] { follower_chain(1,"follower_chain_forward",out); });
+    run("follower_chain_reverse",[&] { follower_chain(-1,"follower_chain_reverse",out); });
+    run("convoy_stop",[&] { blocked_convoy(vf::Order::Stop,"convoy_stop",out); });
+    run("convoy_hold",[&] { blocked_convoy(vf::Order::Hold,"convoy_hold",out); });
+    run("convoy_retarget",[&] { convoy_retarget(out); });
+    if (redistribution) run("goal_redistribution",[&] { goal_redistribution(out); });
     return failed?1:0;
 }

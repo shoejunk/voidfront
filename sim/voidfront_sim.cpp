@@ -1,6 +1,7 @@
 #include "voidfront_sim.hpp"
 #include "spatial.hpp"
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <stdexcept>
 #include <tuple>
@@ -169,6 +170,8 @@ void Sim::step() {
     std::vector<uint32_t> local;
     std::vector<nav::Point> candidates;
     candidates.reserve(9);
+    std::vector<std::vector<nav::Point>> attempted_detours(units_.size());
+    std::vector<uint8_t> reconsidered_detour(units_.size(),0);
     constexpr int64_t attack_range2 = int64_t(3 * kScale) * (3 * kScale);
     constexpr int64_t acquire_range2 = int64_t(6 * kScale) * (6 * kScale);
     for (auto& u : units_) {
@@ -241,6 +244,10 @@ void Sim::step() {
         }
         if (u.moving) { u.blocked_ticks=0; }
         else if (blocker && ++u.blocked_ticks>=2) {
+            if (u.order==Order::Move) {
+                attempted_detours[u.id-1]=u.detour;
+                reconsidered_detour[u.id-1]=1;
+            }
             // A bounded local maneuver around the first blocking sweep. At most
             // four corners and two segments are considered, with a right-hand
             // preference for equally short opposing encounters. Every actual
@@ -292,6 +299,100 @@ void Sim::step() {
             }
         }
         if (u.order == Order::Move && u.x == u.goal_x && u.z == u.goal_z) u.order = Order::Stop;
+    }
+    // A stopped follower must not treat its leader's entire swept bounding box
+    // as occupied at every instant. Resolve a bounded dependency transaction
+    // after the ordinary combat/movement decisions, retaining their ordering.
+    // Only unfinished Move units can join; firing, Hold, Stop and units which
+    // already moved this tick are immutable obstacles with their actual sweep.
+    std::vector<nav::Point> proposed(units_.size());
+    std::vector<uint8_t> planned(units_.size(),0);
+    std::vector<uint32_t> members;
+    members.reserve(32);
+    uint32_t attempts=0, starts=0;
+    const auto relative_clear=[&](uint32_t a,nav::Point end_a,uint32_t b,nav::Point end_b) {
+        const auto old_a=tick_start[a],old_b=tick_start[b];
+        return nav::segment_clear({old_a.x-old_b.x,old_a.z-old_b.z},
+            {end_a.x-end_b.x,end_a.z-end_b.z},
+            {-2*unit_radius,-2*unit_radius,2*unit_radius,2*unit_radius});
+    };
+    const auto eligible=[&](uint32_t index) {
+        const auto& u=units_[index];
+        return u.hp>0 && u.order==Order::Move && !u.moving &&
+            (u.x!=u.goal_x || u.z!=u.goal_z) && !u.path.empty();
+    };
+    std::function<bool(uint32_t)> plan;
+    plan=[&](uint32_t index) {
+        if (!eligible(index) || planned[index] || members.size()>=32 || attempts>=2048) return false;
+        const auto& u=units_[index];
+        const nav::Point here{u.x,u.z};
+        std::vector<nav::Point> steps;
+        step_candidates(here,{u.next_x,u.next_z},steps);
+        std::vector<uint32_t> neighbors;
+        constexpr int reach=2*unit_radius+2*movement_speed;
+        spatial.query({u.x-reach,u.z-reach,u.x+reach,u.z+reach},neighbors);
+        const auto checkpoint=members.size();
+        for (const auto step:steps) {
+            if (attempts>=2048) break;
+            ++attempts;
+            if (step==here || !navigation_.clear(here,step)) continue;
+            proposed[index]=step; planned[index]=1; members.push_back(index);
+            bool clear=true;
+            for (const auto id:neighbors) {
+                const auto other=id-1;
+                if (other==index) continue;
+                const auto& v=units_[other];
+                auto end=planned[other]?proposed[other]:nav::Point{v.x,v.z};
+                if (relative_clear(index,step,other,end)) continue;
+                // A tentative ancestor closes a dependency cycle. Its endpoint
+                // cannot change beneath this trial; retry another candidate.
+                if (planned[other] || !plan(other)) { clear=false; break; }
+                end=proposed[other];
+                if (!relative_clear(index,step,other,end)) { clear=false; break; }
+            }
+            if (clear) return true;
+            while (members.size()>checkpoint) {
+                planned[members.back()]=0; members.pop_back();
+            }
+        }
+        return false;
+    };
+    // Rotate the starting identity instead of granting permanent priority to
+    // the first blocked unit. Counts are fixed, never driven by elapsed time.
+    for (size_t n=0;n<units_.size() && starts<16 && attempts<2048;++n) {
+        const auto index=static_cast<uint32_t>((n+tick_)%units_.size());
+        if (!eligible(index)) continue;
+        ++starts;
+        if (!plan(index)) continue;
+        // Validate the complete transaction again. Recursive trials can add a
+        // participant after an earlier sibling was planned; no partial subset
+        // may commit with a dependency's assumed displacement removed.
+        bool clear=true;
+        for (const auto member:members) {
+            const auto old=tick_start[member];
+            std::vector<uint32_t> neighbors;
+            constexpr int reach=2*unit_radius+2*movement_speed;
+            spatial.query({old.x-reach,old.z-reach,old.x+reach,old.z+reach},neighbors);
+            for (const auto id:neighbors) if (id-1!=member) {
+                const auto other=id-1;
+                const auto& v=units_[other];
+                const auto end=planned[other]?proposed[other]:nav::Point{v.x,v.z};
+                if (!relative_clear(member,proposed[member],other,end)) { clear=false; break; }
+            }
+            if (!clear) break;
+        }
+        if (clear) for (const auto member:members) {
+            auto& u=units_[member];
+            u.x=proposed[member].x; u.z=proposed[member].z;
+            u.moving=true; u.blocked_ticks=0;
+            // This retry succeeded along the waypoint selected before the
+            // failed ordinary step. Discard only the replacement maneuver
+            // searched afterward; retain any maneuver actually being followed.
+            if (reconsidered_detour[member]) u.detour=std::move(attempted_detours[member]);
+            if (u.x==u.goal_x && u.z==u.goal_z) u.order=Order::Stop;
+        }
+        for (const auto member:members) planned[member]=0;
+        members.clear();
     }
     for (size_t i = 0; i < units_.size(); ++i) {
         units_[i].hp = std::max(0, units_[i].hp - damage[i]);
