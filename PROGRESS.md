@@ -47,6 +47,10 @@ swept safety. Use engine-side profiling for actual advancing animation/render
 cost before another performance optimization. Full economy/AI and content scope
 remain prerequisites to shipping; no COMPLETE.md.
 
+Published source checkpoint: c2b93d1 is pushed to origin/dev. The verified
+package remains artifacts/package/Voidfront.exe. Weekly development stays active;
+all remaining scope and failed gates are retained in this handoff.
+
 ## 2026-09-20 America/Los_Angeles - ordinary-play presentation profiling
 
 Baseline: clean dev 900be2e; STOP, COMPLETE and prior run marker absent.

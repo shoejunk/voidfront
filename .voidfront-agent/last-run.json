@@ -1,38 +1,38 @@
 {
-  "frame_interval_p99_ms": {
-    "foundry12": 3.249,
-    "units200": 20.4,
-    "units500": 63.897
-  },
-  "remote_backup": true,
   "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
-  "runtime_report": "C:\\dev\\voidfront\\artifacts\\presentation-offline-final-2026-09-20.json",
-  "package_pck_sha256": "57289ae84e0899d4c8ead947e0ed4000a1d097c5a0f4b8dbed252de6101c2c7c",
   "simulation_commit": "de74df7",
-  "source_commit": "e404e213f7d6a8af2e6036a895289ccbbfaa72b3",
-  "runtime_evidence_date": "2026-09-20",
-  "scale_reports": [
-    "C:\\dev\\voidfront\\artifacts\\presentation-scale-replay-2026-09-20\\summary.json"
-  ],
-  "run": "2026-09-20-presentation-profile-hud",
-  "verification": "C:\\dev\\voidfront\\artifacts\\weekly-build-2026-09-20.log",
-  "reviews": [
-    "C:\\dev\\voidfront\\.voidfront-agent\\review-presentation-2026-09-20.md"
-  ],
-  "next": "Purposeful backward crowd decompression with retained passing side on unchanged fixture; controlled same-state animation/skeleton/render attribution; preserve full-game scope",
-  "checkpoint_utc": "2026-09-20T19:19:36.936837+00:00",
-  "client_report": "C:\\dev\\voidfront\\artifacts\\presentation-network-final-2026-09-20\\summary.json",
   "branch": "dev",
-  "timing_limit": "Focused hidden-launch observations with unequal short tick/time windows; no same-state causal full-frame improvement, GPU attribution or reference acceptance",
-  "state": "Reviewed ordinary-play profiler and HUD optimization; large-army frames and dense crossing remain failed",
-  "package_bridge_sha256": "c315fed8635b4a1643970cb2bcd427906604bf541dcb3f1948ec46bf3c64945a",
   "new_movie": false,
   "crowd_report": "C:/dev/voidfront/artifacts/scale-client-crowd-verified-2026-09-13.json",
   "movement_report": "C:/dev/voidfront/artifacts/scale-client-movement-verified-2026-09-13.json",
-  "profile_reports": [
-    "C:\\dev\\voidfront\\artifacts\\presentation-package12-final-2026-09-20.json",
-    "C:\\dev\\voidfront\\artifacts\\presentation-package200-final-2026-09-20.json",
-    "C:\\dev\\voidfront\\artifacts\\presentation-package500-final-2026-09-20.json"
+  "run": "2026-09-25-controlled-profile-static-batching",
+  "state": "Reviewed fixed-pose diagnostics and static scene/draw submission reduction; ordinary frame and dense-crowd gates remain failed",
+  "checkpoint_utc": "2026-09-26T00:39:59.8036662Z",
+  "source_commit": "c2b93d1339d3e7e1824155fed7077ce833d78300",
+  "runtime_evidence_date": "2026-09-25",
+  "verification": "C:/dev/voidfront/artifacts/weekly-build-2026-09-25.log",
+  "runtime_report": "C:/dev/voidfront/artifacts/presentation-offline-final-2026-09-25.json",
+  "client_report": "C:/dev/voidfront/artifacts/presentation-network-final-2026-09-25/summary.json",
+  "scale_reports": [
+    "C:/dev/voidfront/artifacts/presentation-scale-replay-2026-09-25/summary.json"
   ],
-  "profile_integrity": "C:\\dev\\voidfront\\artifacts\\presentation-final-integrity-2026-09-20.json"
+  "reviews": [
+    "C:/dev/voidfront/.voidfront-agent/review-presentation-2026-09-25.md"
+  ],
+  "profile_reports": [
+    "C:/dev/voidfront/artifacts/presentation-ordinary12-final-2026-09-25.json",
+    "C:/dev/voidfront/artifacts/presentation-ordinary200-final-2026-09-25.json",
+    "C:/dev/voidfront/artifacts/presentation-ordinary500-final-2026-09-25.json"
+  ],
+  "profile_integrity": "C:/dev/voidfront/.voidfront-agent/presentation-results-2026-09-25.json",
+  "frame_interval_p99_ms": {
+    "units500": 137.834,
+    "foundry12": 17.336,
+    "units200": 27.531
+  },
+  "timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
+  "next": "Purposeful backward crowd decompression with retained passing side on unchanged fixture; engine-side advancing animation/render profiling; preserve full-game scope",
+  "package_pck_sha256": "0aba62bef45793b57b928ab72c99b886d09dbcda9ef1feb4e11fb12914a56f0a",
+  "package_bridge_sha256": "b234e1fa1bc58a190951861d0fba0b0a4920262c3f50b33fa28943e49af148be",
+  "remote_backup": true
 }
