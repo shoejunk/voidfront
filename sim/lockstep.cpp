@@ -74,6 +74,9 @@ ReceiveResult Lockstep::receive(const TickFrame& frame) {
     if (frame.tick - sim_.tick() > kMaxFutureTicks) return ReceiveResult::TooFar;
     for (const auto& c : frame.commands) {
         if (c.x>=sim_.width()*kScale || c.z>=sim_.height()*kScale) return ReceiveResult::Invalid;
+        // The currently supported network setup is the combat map. Economic
+        // structure commands cannot alias ordinary unit IDs on that setup.
+        if (c.order==Order::TrainStrider || c.order==Order::CancelProduction) return ReceiveResult::Invalid;
         for (const auto id : c.units) {
             if (id > sim_.units().size() || sim_.units()[id - 1].player != frame.player)
                 return ReceiveResult::Invalid;

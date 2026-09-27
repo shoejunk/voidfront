@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
         if (profile!="ai" && map!=vf::Map::Scale128) throw std::invalid_argument("traffic profiles require scale128 map");
         vf::Sim sim(seed,count,map);
         if (map==vf::Map::Economy) count=3;
-        const auto initial=sim.units();
+        auto initial=sim.units();
         std::array<uint32_t,2> sequence{};
         std::ofstream trace;
         if (!trace_path.empty()) { trace.open(trace_path); if(!trace) throw std::runtime_error("trace open failed"); }
@@ -229,6 +229,13 @@ int main(int argc, char** argv) {
             if (!metrics_path.empty()) {
                 step_ns.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>(end-step_begin).count());
                 harness_ns.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count());
+                // Production appends stable IDs during the step. Initialize
+                // diagnostics at each unit's spawn, never index the old roster.
+                while (initial.size()<sim.units().size()) {
+                    const auto& spawned=sim.units()[initial.size()];
+                    initial.push_back(spawned); previous.push_back({spawned.x,spawned.z});
+                    first_motion.push_back(-1); idle.push_back(0); max_idle.push_back(0); last_motion.push_back(0);
+                }
                 for (const auto& u:sim.units()) {
                     const auto i=u.id-1;
                     if (!(previous[i]==vf::nav::Point{u.x,u.z})) {
@@ -256,12 +263,17 @@ int main(int argc, char** argv) {
                 <<",\"seed\":"<<seed<<",\"ticks\":"<<ticks<<",\"units_per_team\":"<<count<<",\"protocol\":"<<vf::kProtocolVersion
                 <<",\"content_id\":\""<<vf::kLockstepContentId<<"\",\"replay\":"<<(!replay_path.empty()?"true":"false")
                 <<",\"winner\":"<<sim.winner()<<",\"peak_resident_bytes\":"<<peak
-                <<",\"salvage\":["<<sim.salvage(0)<<','<<sim.salvage(1)<<"],\"structures\":[";
+                <<",\"salvage\":["<<sim.salvage(0)<<','<<sim.salvage(1)
+                <<"],\"population_used\":["<<sim.population_used(0)<<','<<sim.population_used(1)
+                <<"],\"population_reserved\":["<<sim.population_reserved(0)<<','<<sim.population_reserved(1)
+                <<"],\"population_cap\":"<<sim.population_cap(0)<<",\"structures\":[";
             bool economy_comma=false;
             for (const auto& s:sim.structures()) {
                 if(economy_comma) metrics<<','; economy_comma=true;
                 metrics<<"{\"id\":"<<s.id<<",\"player\":"<<static_cast<int>(s.player)<<",\"kind\":"<<static_cast<int>(s.kind)
-                    <<",\"x\":"<<s.x<<",\"z\":"<<s.z<<",\"hp\":"<<s.hp<<",\"build_ticks\":"<<s.build_ticks<<'}';
+                    <<",\"x\":"<<s.x<<",\"z\":"<<s.z<<",\"hp\":"<<s.hp<<",\"build_ticks\":"<<s.build_ticks
+                    <<",\"production_queue\":"<<s.production_queue<<",\"production_ticks\":"<<s.production_ticks
+                    <<",\"spawn_blocked\":"<<(s.spawn_blocked?"true":"false")<<'}';
             }
             metrics<<"],\"deposits\":["; economy_comma=false;
             for (const auto& d:sim.deposits()) {

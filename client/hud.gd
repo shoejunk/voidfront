@@ -101,8 +101,8 @@ func _process(_delta: float) -> void:
 	if game.economy:
 		var resources: Array = game.current.get("salvage", [0, 0])
 		var cost: int = game.current.foundry_cost
-		status.text = "CAIRN SALVAGE OUTPOST   /   SALVAGE  %d   /   FOUNDRY COST %d" % [resources[game.local_player], cost]
-		connection.text = "Economy prototype: gather salvage, then construct a foundry. Production and victory are forthcoming."
+		status.text = "SALVAGE %d   /   POPULATION %d + %d QUEUED / %d   /   FOUNDRY %d • STRIDER %d" % [resources[game.local_player], game.current.population_used[game.local_player], game.current.population_reserved[game.local_player], game.current.population_cap, cost, game.current.strider_cost]
+		connection.text = "Gather salvage, build a Foundry and train Striders. Economic AI and match victory are forthcoming."
 		var workers: int = game._selected_workers()
 		selection.text = "%02d WORKERS / %02d STRIDERS" % [workers, game.selected.size() - workers]
 		if workers > 0:
@@ -114,9 +114,14 @@ func _process(_delta: float) -> void:
 			var entity: Dictionary = game.selected_entity
 			if entity.category == "deposit": selection.text = "SALVAGE DEPOSIT   /   %d REMAINING" % entity.remaining
 			elif entity.kind == 0: selection.text = "COMMAND ANCHOR   /   WORKER DROP-OFF"
-			else: selection.text = "FOUNDRY   /   %s" % ("CONSTRUCTION COMPLETE" if entity.build_ticks >= game.current.build_duration else "CONSTRUCTING %d%%" % int(float(entity.build_ticks) / game.current.build_duration * 100))
+			else:
+				selection.text = "FOUNDRY   /   %s" % ("READY" if entity.build_ticks >= game.current.build_duration else "CONSTRUCTING %d%%" % int(float(entity.build_ticks) / game.current.build_duration * 100))
+				if entity.build_ticks >= game.current.build_duration:
+					selection.text += "   /   QUEUE %d/%d" % [entity.production_queue, game.current.production_queue_limit]
+					if entity.production_queue > 0: selection.text += "   /   STRIDER %d%%" % int(float(entity.production_ticks) / game.current.train_ticks * 100)
+					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
 		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
-		tip.text = "LMB / drag  select workers    RMB deposit  gather    RMB anchor  return cargo    B + click  build foundry (%d)\nRMB unfinished foundry  resume construction    S  stop    Esc / RMB  cancel placement    R  restart economy\n" % cost + game.economy_notice
+		tip.text = "LMB / drag  select    RMB deposit  gather    B + click  build Foundry (%d)    T  train Strider (%d)    X  cancel last/refund\nRMB  move / return / resume build    A + click  attack-move    S  stop    H  hold    F2  all units    R  restart\n" % [cost, game.current.strider_cost] + game.economy_notice
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error

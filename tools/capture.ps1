@@ -1,7 +1,8 @@
-param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[switch]$Crowd,[switch]$Scale,[switch]$Economy,[ValidateRange(1,250)][int]$UnitsPerTeam=250,[int]$Ticks=400,[string]$Name='runtime')
+param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[switch]$Crowd,[switch]$Scale,[switch]$Economy,[switch]$Production,[ValidateRange(1,250)][int]$UnitsPerTeam=250,[int]$Ticks=400,[string]$Name='runtime')
 . "$PSScriptRoot/common.ps1"
 Assert-RunningAllowed
 Assert-Godot
+if ($Production -and ($Economy -or $Movement -or $Crowd -or $Scale -or $Ticks -lt 1 -or $Ticks -gt 2400)) { throw 'Production capture requires its own 1..2400 tick fixture.' }
 if ($Economy -and ($Movement -or $Crowd -or $Scale -or $Ticks -lt 1 -or $Ticks -gt 2400)) { throw 'Economy capture requires its own 1..2400 tick fixture.' }
 if ($Movement -and ($Ticks -lt 1 -or $Ticks -gt 600)) { throw 'Movement capture requires 1..600 ticks.' }
 if ($Crowd -and ($Movement -or $Ticks -lt 1 -or $Ticks -gt 600)) { throw 'Crowd capture requires its own 1..600 tick fixture.' }
@@ -13,7 +14,7 @@ $executable = if ($Packaged) { "$Repo/artifacts/package/Voidfront.exe" } else { 
 $arguments = @('--log-file',"$out/$Name-engine.log",'--resolution','1920x1080')
 if (-not $Packaged) { $arguments += @('--path',"$Repo/client") }
 if ($Movie) { $arguments += @('--write-movie',"$out/$Name.avi",'--fixed-fps','60') }
-$smokeOption = if ($Economy) { '--economy-smoke' } elseif ($Scale) { '--scale-smoke' } elseif ($Movement) { '--movement-smoke' } elseif ($Crowd) { '--crowd-smoke' } else { '--smoke' }
+$smokeOption = if ($Production) { '--production-smoke' } elseif ($Economy) { '--economy-smoke' } elseif ($Scale) { '--scale-smoke' } elseif ($Movement) { '--movement-smoke' } elseif ($Crowd) { '--crowd-smoke' } else { '--smoke' }
 $arguments += @('--',$smokeOption,"--ticks=$Ticks","--capture=$out/$Name.png","--report=$out/$Name.json")
 if ($Scale) { $arguments += "--units-per-team=$UnitsPerTeam" }
 $originalAppData = $env:APPDATA
@@ -24,10 +25,13 @@ try {
     Write-Output "Capture process: $($process.Id)"
     $timer = [Diagnostics.Stopwatch]::StartNew()
     $peakResident = 0L
+    # Offline movie encoding can run slower than the fixed simulation clock.
+    # Scale only the helper watchdog; tick counts and gameplay budgets stay fixed.
+    $watchdogSeconds = if ($Movie) { [Math]::Max(180, [Math]::Ceiling($Ticks / 20.0 * 4 + 60)) } elseif ($Scale) { 300 } else { 180 }
     while (-not $process.WaitForExit(1000)) {
         $process.Refresh()
         $peakResident = [Math]::Max($peakResident, $process.PeakWorkingSet64)
-        if ($timer.Elapsed.TotalSeconds -gt $(if ($Scale) { 300 } else { 180 })) {
+        if ($timer.Elapsed.TotalSeconds -gt $watchdogSeconds) {
             $process.Kill()
             throw 'Owned capture process exceeded its bounded smoke watchdog.'
         }

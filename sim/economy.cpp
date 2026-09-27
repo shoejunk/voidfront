@@ -62,6 +62,7 @@ bool Sim::can_build(uint8_t player,int32_t x,int32_t z) const {
 }
 
 void Sim::apply_economy(const Command& c) {
+    if (c.order==Order::TrainStrider || c.order==Order::CancelProduction) { apply_production(c); return; }
     result_sequences_[c.player]=c.sequence;
     results_[c.player]=CommandResult::InvalidWorker;
     if (map_!=Map::Economy) return;

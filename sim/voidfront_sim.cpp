@@ -30,7 +30,8 @@ int64_t distance2(const Unit& a, const Unit& b) {
     return dx * dx + dz * dz;
 }
 bool canonical(const Command& c) {
-    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 6 &&
+    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 8 &&
+        (static_cast<uint8_t>(c.order)<7 || (c.units.size()==1 && c.x==0 && c.z==0)) &&
         !c.units.empty() && c.units.size() <= 256 && c.x >= 0 && c.z >= 0 &&
         c.x < kMaxMapSize * kScale && c.z < kMaxMapSize * kScale &&
         std::is_sorted(c.units.begin(), c.units.end()) &&
@@ -124,7 +125,10 @@ bool Sim::submit(Command command) {
     for (const auto& c : pending_)
         if (c.player == command.player && ((c.sequence < command.sequence && c.tick > command.tick) ||
             (c.sequence > command.sequence && c.tick < command.tick))) return false;
-    for (const auto id : command.units)
+    if (command.order==Order::TrainStrider || command.order==Order::CancelProduction) {
+        const auto id=command.units.front();
+        if (map_!=Map::Economy || id>structures_.size() || structures_[id-1].player!=command.player) return false;
+    } else for (const auto id : command.units)
         if (id > units_.size() || units_[id - 1].player != command.player) return false;
     pending_.push_back(std::move(command));
     std::sort(pending_.begin(), pending_.end(), command_less);
@@ -181,6 +185,7 @@ void Sim::step() {
     while (applied < pending_.size() && pending_[applied].tick == tick_) apply(pending_[applied++]);
     pending_.erase(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(applied));
     economy_step();
+    production_step();
     std::vector<int32_t> damage(units_.size(), 0);
     std::vector<nav::Point> tick_start;
     tick_start.reserve(units_.size());
@@ -479,7 +484,8 @@ uint64_t Sim::state_hash() const {
     }
     for (int p=0;p<2;++p) { add(salvage_[p]); add(static_cast<uint8_t>(results_[p])); add(result_sequences_[p]); }
     add(structures_.size());
-    for (const auto& b:structures_) { add(b.id); add(b.player); add(static_cast<uint8_t>(b.kind)); add(b.x); add(b.z); add(b.hp); add(b.build_ticks); }
+    for (const auto& b:structures_) { add(b.id); add(b.player); add(static_cast<uint8_t>(b.kind)); add(b.x); add(b.z); add(b.hp); add(b.build_ticks);
+        add(b.production_queue); add(b.production_ticks); add(b.spawn_blocked); }
     add(deposits_.size());
     for (const auto& d:deposits_) { add(d.id); add(d.x); add(d.z); add(d.remaining); }
     return h;

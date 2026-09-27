@@ -9,22 +9,27 @@ namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
 inline constexpr int kMaxMapSize = 128;
-inline constexpr uint32_t kProtocolVersion = 6;
+inline constexpr uint32_t kProtocolVersion = 7;
 enum class Map : uint32_t { Foundry = 0, Scale128 = 1, Economy = 2 };
 int map_width(Map map);
 int map_height(Map map);
 const std::vector<nav::Rect>& map_terrain(Map map);
-enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build };
+enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build, TrainStrider, CancelProduction };
 enum class UnitKind : uint8_t { Strider, Worker };
 enum class StructureKind : uint8_t { Anchor, Foundry };
-enum class CommandResult : uint8_t { None, Accepted, InvalidTarget, InsufficientSalvage, InvalidPlacement, InvalidWorker };
+enum class CommandResult : uint8_t { None, Accepted, InvalidTarget, InsufficientSalvage, InvalidPlacement, InvalidWorker,
+    InvalidStructure, NotReady, QueueFull, PopulationFull, RosterFull, EmptyQueue };
 inline constexpr int kFoundryCost=100, kBuildTicks=100, kCargoCapacity=10, kGatherTicks=10;
+inline constexpr int kStriderCost=50;
+inline constexpr uint32_t kProductionTicks=100, kProductionQueueLimit=5, kPopulationCap=12, kLifetimeUnitLimit=4096;
 struct Structure {
     uint32_t id=0;
     uint8_t player=0;
     StructureKind kind=StructureKind::Anchor;
     int32_t x=0,z=0,hp=1000;
     uint32_t build_ticks=kBuildTicks;
+    uint32_t production_queue=0,production_ticks=0;
+    bool spawn_blocked=false;
 };
 struct Deposit { uint32_t id=0; int32_t x=0,z=0,remaining=2000; };
 struct Command {
@@ -64,6 +69,9 @@ public:
     const std::vector<Structure>& structures() const { return structures_; }
     const std::vector<Deposit>& deposits() const { return deposits_; }
     int32_t salvage(uint8_t player) const { return player<2?salvage_[player]:0; }
+    uint32_t population_used(uint8_t player) const;
+    uint32_t population_reserved(uint8_t player) const;
+    uint32_t population_cap(uint8_t player) const { return player<2 && map_==Map::Economy?kPopulationCap:0; }
     CommandResult command_result(uint8_t player) const { return player<2?results_[player]:CommandResult::None; }
     uint32_t result_sequence(uint8_t player) const { return player<2?result_sequences_[player]:0; }
     bool can_build(uint8_t player,int32_t x,int32_t z) const;
@@ -89,6 +97,8 @@ private:
     void apply(const Command& command);
     void apply_economy(const Command& command);
     void economy_step();
+    void apply_production(const Command& command);
+    void production_step();
     void rebuild_navigation();
     void set_goal(Unit& unit,nav::Point goal);
     nav::Point service_point(const Unit& unit,int32_t x,int32_t z,int32_t extent,const nav::World* world=nullptr) const;

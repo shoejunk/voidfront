@@ -229,7 +229,7 @@ public:
     }
     bool issue(int64_t order, PackedInt32Array ids, int64_t x, int64_t z) {
         if (network) return false;
-        if (order < 0 || order > 6 || ids.size() == 0 || ids.size() > 256 ||
+        if (order < 0 || order > 8 || ids.size() == 0 || ids.size() > 256 ||
             x < 0 || z < 0 || x >= simulation.width() * vf::kScale || z >= simulation.height() * vf::kScale) return false;
         if (human_sequence == UINT32_MAX || (simulation.map() == vf::Map::Economy &&
                 economy_commands.size() >= max_recorded_commands)) return false;
@@ -277,6 +277,17 @@ public:
         Array resources; resources.push_back(state.salvage(0)); resources.push_back(state.salvage(1));
         result["salvage"] = resources; result["foundry_cost"] = vf::kFoundryCost;
         result["build_duration"] = vf::kBuildTicks;
+        result["strider_cost"] = vf::kStriderCost;
+        result["train_ticks"] = vf::kProductionTicks;
+        result["production_queue_limit"] = vf::kProductionQueueLimit;
+        result["population_cap"] = vf::kPopulationCap;
+        Array population_used, population_reserved;
+        for (uint8_t player = 0; player < 2; ++player) {
+            population_used.push_back(state.population_used(player));
+            population_reserved.push_back(state.population_reserved(player));
+        }
+        result["population_used"] = population_used;
+        result["population_reserved"] = population_reserved;
         Array results, sequences;
         for (uint8_t player = 0; player < 2; ++player) {
             results.push_back(static_cast<int>(state.command_result(player)));
@@ -289,7 +300,11 @@ public:
             row["id"] = structure.id; row["player"] = structure.player;
             row["kind"] = static_cast<int>(structure.kind);
             row["x"] = structure.x; row["z"] = structure.z; row["hp"] = structure.hp;
-            row["build_ticks"] = structure.build_ticks; structures.push_back(row);
+            row["build_ticks"] = structure.build_ticks;
+            row["production_queue"] = structure.production_queue;
+            row["production_ticks"] = structure.production_ticks;
+            row["spawn_blocked"] = structure.spawn_blocked;
+            structures.push_back(row);
         }
         result["structures"] = structures;
         Array deposits;

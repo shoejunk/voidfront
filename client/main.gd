@@ -97,6 +97,8 @@ var economy := false
 var skirmish := false
 var economy_smoke := false
 var economy_fixture: RefCounted
+var production_smoke := false
+var production_fixture: RefCounted
 var build_pending := false
 var economy_actors: Dictionary = {}
 var selected_entity: Dictionary = {}
@@ -114,6 +116,9 @@ func _ready() -> void:
 		if argument == "--smoke": smoke = true
 		elif argument == "--skirmish": skirmish = true
 		elif argument == "--economy": economy = true
+		elif argument == "--production-smoke":
+			economy = true
+			production_smoke = true
 		elif argument == "--economy-smoke":
 			economy = true
 			economy_smoke = true
@@ -164,6 +169,8 @@ func _ready() -> void:
 	var legacy_mode := skirmish or smoke or movement_smoke or crowd_smoke or controls_smoke or scale128 or profile_presentation or network
 	if economy and legacy_mode: option_error = "Economy requires its own offline match."
 	if not legacy_mode: economy = true
+	if production_smoke and not ticks_specified: finish_tick = 2400
+	if production_smoke and (economy_smoke or finish_tick < 300 or finish_tick > 3600): option_error = "Production smoke requires its own 300..3600 tick fixture."
 	if economy_smoke and not ticks_specified: finish_tick = 1600
 	if economy_smoke and (finish_tick < 300 or finish_tick > 2400): option_error = "Economy smoke requires 300..2400 ticks."
 	if economy and not option_error.is_empty():
@@ -213,6 +220,9 @@ func _ready() -> void:
 	hud.game = self
 	canvas.add_child(hud)
 	_reset()
+	if production_smoke:
+		production_fixture = preload("res://production_smoke.gd").new(self)
+		production_fixture.run.call_deferred()
 	if economy_smoke:
 		economy_fixture = preload("res://economy_smoke.gd").new(self)
 		economy_fixture.run.call_deferred()
@@ -543,9 +553,15 @@ func _present_economy() -> void:
 		match int(current.get("command_results", [0, 0])[local_player]):
 			1: economy_notice = "Order accepted by simulation"
 			2: economy_notice = "Invalid target: select a salvage deposit or your command anchor"
-			3: economy_notice = "Not enough salvage: foundry costs %d" % current.foundry_cost
+			3: economy_notice = "Not enough salvage: Foundry %d / Strider %d" % [current.foundry_cost, current.strider_cost]
 			4: economy_notice = "Placement blocked: requires clear space away from structures, deposits and workers"
 			5: economy_notice = "Select a living worker to gather or construct"
+			6: economy_notice = "Select your living Foundry to produce units"
+			7: economy_notice = "Finish construction before training units"
+			8: economy_notice = "Production queue full (%d slots)" % current.production_queue_limit
+			9: economy_notice = "Population limit reached (%d including queued units)" % current.population_cap
+			10: economy_notice = "Unit roster limit reached"
+			11: economy_notice = "Production queue is empty; nothing to cancel"
 	if not build_preview:
 		build_preview = _box(Vector3(2, 0.1, 2), Vector3.ZERO, _material(Color("4bbca5")))
 		build_preview.visible = false
@@ -598,7 +614,11 @@ func _present_economy() -> void:
 				var progress := int(entity.build_ticks)
 				var fraction := minf(float(progress) / float(current.build_duration), 1.0)
 				entry.label.text = "COMMAND ANCHOR" if anchor else ("FOUNDRY" if fraction >= 1.0 else "FOUNDRY  %d%%" % int(fraction * 100))
-				if not anchor: entry.body.scale.y = 0.2 + 0.8 * fraction
+				if not anchor:
+					entry.body.scale.y = 0.2 + 0.8 * fraction
+					if fraction >= 1.0 and int(entity.get("production_queue", 0)) > 0:
+						entry.label.text = "FOUNDRY  %d QUEUED / %d%%" % [entity.production_queue, int(float(entity.production_ticks) / current.train_ticks * 100)]
+						if entity.get("spawn_blocked", false): entry.label.text = "FOUNDRY / EXIT BLOCKED"
 
 func _apply_team(node: Node, color: Color) -> void:
 	if node is MeshInstance3D:
@@ -660,7 +680,7 @@ func _process(delta: float) -> void:
 	else:
 		accumulator += delta
 		var ticks := 0
-		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke or scale_smoke) or current.tick < finish_tick):
+		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke or scale_smoke or economy_smoke or production_smoke) or current.tick < finish_tick):
 			previous = current
 			var start := Time.get_ticks_usec()
 			bridge.advance()
@@ -676,6 +696,7 @@ func _process(delta: float) -> void:
 			if crowd_smoke: crowd_fixture.tick()
 			if scale_smoke: scale_fixture.tick()
 			if economy_smoke and economy_fixture: economy_fixture.tick()
+			if production_smoke and production_fixture: production_fixture.tick()
 	var present_start := Time.get_ticks_usec() if presentation_profiler else 0
 	_present(clampf(accumulator / STEP, 0, 1), delta)
 	if presentation_profiler: presentation_profiler.record("present", Time.get_ticks_usec() - present_start)
@@ -837,6 +858,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_ESCAPE:
 				attack_pending = false
 				build_pending = false
+			KEY_T:
+				if economy: _issue(7, Vector3.ZERO)
+			KEY_X:
+				if economy: _issue(8, Vector3.ZERO)
 			KEY_S: _issue(0, Vector3(0, 0, 0))
 			KEY_H: _issue(3, Vector3(0, 0, 0))
 	if event is InputEventMouseButton:
@@ -929,32 +954,43 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 		print("VOIDFRONT_SELECTION from=", from, " to=", to, " ids=", selected)
 
 func _issue(order: int, at: Vector3) -> void:
-	if selected.is_empty(): return
+	var command_actors: Array[int] = selected.duplicate()
+	if order in [7, 8]:
+		if selected_entity.get("category", "") != "structure" or selected_entity.get("player", -1) != local_player:
+			economy_notice = "Select your Foundry to train or cancel a Strider"
+			return
+		command_actors = [int(selected_entity.id)]
+		at = Vector3.ZERO
+	if command_actors.is_empty(): return
 	if at.x < 0 or at.x >= map_size.x or at.z < 0 or at.z >= map_size.y: return
 	var accepted := false
 	var sequence := -1
 	if network:
 		if not network_state.get("ready", false): return
-		sequence = bridge.network_issue(order, PackedInt32Array(selected), int(at.x * SCALE), int(at.z * SCALE), event_usec)
+		sequence = bridge.network_issue(order, PackedInt32Array(command_actors), int(at.x * SCALE), int(at.z * SCALE), event_usec)
 		accepted = sequence >= 0
 		if accepted and network_smoke:
 			network_inputs.append({"sequence": sequence, "input_usec": event_usec, "order": order, "units": selected.duplicate(), "x": int(at.x * SCALE), "z": int(at.z * SCALE), "event_tick": current.tick})
 		elif not accepted: network_notice = "Order rejected: " + str(bridge.network_status().get("error", "session unavailable"))
 	else:
-		accepted = bridge.issue(order, PackedInt32Array(selected), int(at.x * SCALE), int(at.z * SCALE))
+		accepted = bridge.issue(order, PackedInt32Array(command_actors), int(at.x * SCALE), int(at.z * SCALE))
 	if movement_smoke:
 		movement_inputs.append({"label": movement_label, "accepted": accepted, "order": order, "units": selected.duplicate(), "x": int(at.x * SCALE), "z": int(at.z * SCALE), "event_tick": current.tick, "input_usec": event_usec})
 		if not accepted: movement_errors.append("Rejected input: " + movement_label)
 	if crowd_smoke: crowd_fixture.record_input(accepted, order, at)
 	if scale_smoke: scale_fixture.record_input(accepted, order, at)
 	if economy_smoke and economy_fixture: economy_fixture.record_input(accepted, order, at)
+	if production_smoke and production_fixture: production_fixture.record_input(accepted, order, at, command_actors)
 	if economy:
 		economy_notice = "Order submitted" if accepted else "Order rejected"
+		if accepted and order == 7: economy_notice = "Training order submitted: %d salvage" % current.strider_cost
+		elif accepted and order == 8: economy_notice = "Cancel last queued Strider; awaiting refund"
 		if order == 6:
 			economy_notice = "Foundry order submitted: %d salvage" % current.foundry_cost if bridge.can_build(int(at.x * SCALE), int(at.z * SCALE)) else "Cannot place here: blocked, unaffordable, or occupied; no salvage spent"
 	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
 		var feedback_at := Vector3(at.x, 0.05, at.z)
+		if order in [7, 8]: feedback_at = Vector3(selected_entity.x / SCALE, 0.05, selected_entity.z / SCALE)
 		if order == 0 or order == 3:
 			var center := Vector3.ZERO
 			var count := 0
