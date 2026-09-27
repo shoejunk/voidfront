@@ -1,0 +1,206 @@
+{
+  "run": "2026-09-27-playable-production",
+  "source_commit": "19847ccffd098d6d88a7991d4dc8adf53be32543",
+  "branch": "dev",
+  "protocol": 7,
+  "content_id": "6b60e3504b2e7828",
+  "package": "C:\\dev\\voidfront\\artifacts\\package\\Voidfront.exe",
+  "package_sha256": {
+    "Voidfront.exe": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+    "Voidfront.pck": "272bffcfdeb9036c34dfe9f39f357aba67d7256aa2421e3c0c9e1bc845f98de8",
+    "voidfront_bridge.dll": "bb100611b891fc41c96c8704151929ae8ed2922785104c1c8b60328414085e1a"
+  },
+  "package_ticks": 1795,
+  "package_checks": 27,
+  "package_hash": "73ccf6ab3b32fdae",
+  "production_audit": {
+    "ticks": 1795,
+    "unit_rows": 10912,
+    "conserved_salvage": 4000,
+    "purchases": 3,
+    "refunds": 1,
+    "spawns": 2,
+    "production_progress_ticks": 200,
+    "blocked_spawn_ticks": 0,
+    "construction_progress_ticks": 100,
+    "started_utc": "2026-09-27T19:12:02.764736+00:00",
+    "report_sha256": "ca6d349a6c74d4dab75971e0a70588b56f709d961fbc0752042d0281b54aee75",
+    "replay_sha256": "3692ab80e131eec7405d00bafeb014880cb08bbecbae32b6c56e58628516ff68",
+    "binaries": {
+      "Debug": "b0eef5abe147c550b01c11303f430c2108fbaf283af0f36ab2f63c597639e23b",
+      "Release": "bdd80e29caccd7f1bb0230153f39d324365d337880e6e710524786d5766e69a8"
+    },
+    "commands": [
+      {
+        "tick": 6,
+        "sequence": 1,
+        "player": 0,
+        "order": 4,
+        "x": 1920,
+        "z": 1920,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 1422,
+        "sequence": 2,
+        "player": 0,
+        "order": 0,
+        "x": 0,
+        "z": 0,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 1425,
+        "sequence": 3,
+        "player": 0,
+        "order": 6,
+        "x": 2432,
+        "z": 3200,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 1578,
+        "sequence": 4,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1580,
+        "sequence": 5,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1585,
+        "sequence": 6,
+        "player": 0,
+        "order": 8,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1588,
+        "sequence": 7,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1591,
+        "sequence": 8,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1780,
+        "sequence": 9,
+        "player": 0,
+        "order": 1,
+        "x": 3200,
+        "z": 3712,
+        "units": [
+          7
+        ]
+      }
+    ],
+    "rejected_corruptions": [
+      "trace-gap",
+      "ledger-gap",
+      "resource-created",
+      "queue-overflow",
+      "progress-jump",
+      "population-lie",
+      "spawn-overlap"
+    ],
+    "runs": [
+      "Debug-0",
+      "Release-0",
+      "Release-1",
+      "Release-2",
+      "Release-3",
+      "Release-4",
+      "Release-5",
+      "Release-6",
+      "Release-7",
+      "Release-8",
+      "Release-9"
+    ],
+    "completed_utc": "2026-09-27T19:12:03.317124+00:00",
+    "limitations": "Scripted offline production only. No human play, economic AI, full matches, production networking, broad blocked-spawn coverage, performance acceptance or shipping approval."
+  },
+  "evidence": {
+    "build": "artifacts/production-build-2026-09-27.log",
+    "runtime": "artifacts/production-package-2026-09-27.json",
+    "network": "artifacts/production-network-2026-09-27/summary.json",
+    "client_network": "artifacts/production-client-network-2026-09-27/summary.json",
+    "crowds": "artifacts/production-crowds-2026-09-27/summary.json",
+    "economy_regression": "artifacts/production-economy-regression-replay-2026-09-27/summary.json",
+    "review": ".voidfront-agent/review-production-2026-09-27.md",
+    "movie": "artifacts/production-movie-final-2026-09-27.mp4",
+    "movie_audit": "artifacts/production-movie-replay-2026-09-27/summary.json"
+  },
+  "next": "Economic AI through canonical gather/build/train/attack commands and anchor combat/victory/restart. Define destroyed-queue treatment. Then flux/tech/fog/setup and complete matches.",
+  "unaccepted": [
+    "Full match and economic AI",
+    "Economy networking",
+    "Packaged queue/population saturation and blocked exits",
+    "Human play and response/performance acceptance",
+    "Dense Scale128 crowd progress",
+    "Authored production content/art/audio/VFX",
+    "AAA and shipping"
+  ],
+  "preserved_user_edits": [
+    "PROGRESS.md",
+    ".voidfront-agent/roadmap.md",
+    ".voidfront-agent/last-run.json"
+  ],
+  "movie": {
+    "frames": 5377,
+    "fps": 60,
+    "seconds": 89.616667,
+    "size": [
+      1600,
+      900
+    ],
+    "ticks": 1791,
+    "unit_rows": 10886,
+    "first_attempt": "180-second helper watchdog timeout; retained AVI/logs",
+    "limitations": "Encoding-distorted timing; sampled frames only, no continuous playback or human responsiveness proof",
+    "primary_and_independent_contact_inspection": true
+  },
+  "checkpoint_utc": "2026-09-27T19:22:14.336498+00:00"
+}

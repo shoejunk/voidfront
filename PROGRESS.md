@@ -1,5 +1,46 @@
 # Voidfront progress
 
+## 2026-09-27 12:03 America/Los_Angeles - playable production run
+
+Baseline dev `1862abc`; STOP, COMPLETE and prior marker absent. Exclusively
+acquired task marker `01a0e43d-f6e6-7d31-9ff6-6f6347cb0e5b`. Existing user edits
+in this file, roadmap and last-run.json are preserved, with preimages in
+`artifacts/production-baseline-2026-09-27`. Goal: spend harvested salvage on
+Foundry production, expose queues/population and verify commandable spawned
+units. Separate simulation/client specialists implemented; primary integrated
+bridge/builds/Git; an independent critic reviewed source and actual evidence.
+
+Implemented and pushed `19847cc`. Select a completed Foundry, press T to spend
+50 salvage and reserve population, or X to refund the last queued Strider.
+Training takes 100 ticks, queues hold five, and each player has 12 live-plus-
+reserved population. Completed units wait at blocked exits, then spawn with
+stable IDs and ordinary combat/movement controls. Canonical structure commands
+and protocol 7 preserve the integer simulation/snapshot architecture. The
+opposing economy is still passive and anchor victory is not implemented.
+
+MSVC Debug/Release passed 9/9 suites each, malformed/alias checks, 2,000 matching
+cross-build hashes and ten repeats. The package passed 27 checks over 1,795
+ticks: purchases, refund, rejection, two spawns, selection/movement and restart.
+The independent audit conserves 4,000 salvage across 10,912 swept unit rows and
+100 construction/200 production increments; Debug plus ten Release replays
+match all client hashes. Saturated queues/population and eight blocked exits
+have bounded C++ fixture evidence, not packaged coverage. Existing crowd,
+replay-negative, 22 headless/six rendered network, and packaged combat/economy
+regressions pass. Concurrent timing is diagnostic only. TESTING.md records
+commands, artifact paths and measured limitations.
+
+Primary and critic inspected package PNGs. The critic accepts this bounded
+capability, rejects full-match/AAA/shipping claims, and retains blockout cubes,
+worker reuse and overlapping labels as visual debt. An isolated 89.6-second
+movie passes its own 1,791-tick audit and Debug plus ten Release replays; sampled
+frame review is retained, with no continuous-playback or animation-quality claim.
+The first encoding run exceeded its helper watchdog and remains as failed
+evidence; only the movie encoding watchdog changed, not gameplay budgets.
+Next: economic AI using Gather/Build/Train/AttackMove plus anchor combat,
+victory/defeat and restart; then flux/technology/fog/setup and complete matches.
+Queued movement/targeting, economy networking, dense-crowd progress, reference
+frame/response budgets, content/art/audio and shipping gates remain. No COMPLETE.md.
+
 ## 2026-09-26 09:49 America/Los_Angeles - playable economy increment
 
 Baseline dev ad59512 with existing user-owned roadmap, progress and last-run

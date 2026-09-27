@@ -1,5 +1,95 @@
 # Verification ledger
 
+## 2026-09-27 paid unit production verification
+
+Source checkpoint: `19847cc`, pushed to origin/dev. Protocol 7 and content
+`6b60e3504b2e7828` add structure-based TrainStrider/CancelProduction commands.
+VFC1 layout is unchanged. Protocol 6 recordings reject without changing an
+existing output (`artifacts/production-protocol-rejection-2026-09-27.json`).
+
+`./tools/verify.ps1` verifies pinned Godot 4.7.2, templates and godot-cpp, builds
+MSVC Debug/Release, and passes 9/9 CTest suites each, 15 malformed replays and
+seven output aliases each, 2,000 cross-build tick hashes and ten Release repeats.
+Log: `artifacts/production-build-2026-09-27.log`.
+Production tests cover ownership/producer IDs, readiness, same-tick overdrafts,
+five-item queues, tail refunds, exact 100-tick spawning, commandable new IDs,
+shared population 12, death release, lifetime roster reservation (4,096), eight
+blocked exits/recovery, hashing and receipt-order determinism. Injected funds
+and geometry isolate these rules; these are not full gameplay fixtures.
+
+Pinned import/export passed (`production-import-2026-09-27.log` and
+`production-package-2026-09-27.log`). Package: `artifacts/package/Voidfront.exe`.
+The prior package remains at `artifacts/production-prior-package-2026-09-27`.
+PCK SHA256: `272bffcfdeb9036c34dfe9f39f357aba67d7256aa2421e3c0c9e1bc845f98de8`.
+DLL SHA256: `bb100611b891fc41c96c8704151929ae8ed2922785104c1c8b60328414085e1a`.
+No authoritative/client source changed after the successful builds and export.
+
+`./tools/capture.ps1 -Packaged -Production -Ticks 2400 -Name production-package-2026-09-27`
+passes 27 software InputEvent checks, ending at tick 1,795, hash
+`73ccf6ab3b32fdae`. The player gathers 200 salvage, builds a Foundry, queues two
+Striders, refunds the tail without resetting front progress, requeues it, sees
+an unaffordable purchase rejected, then selects/moves a spawned Strider and
+restarts into the identical initial state. HUD and world labels expose costs,
+queue occupancy, progress and population reservations.
+
+`python tools/verify_production_capture.py artifacts/production-package-2026-09-27.json --out artifacts/production-replay-2026-09-27`
+audits 10,912 unit rows, conserves 4,000 total salvage, and verifies three
+purchases, one refund, two spawns, 200 production increments and 100 construction
+increments. It checks every recorded movement/static/unit-relative sweep, safe
+spawns and nine actual canonical inputs. Debug and ten Release replays match
+every client hash and final economic state; seven corrupt reports reject.
+The source probe separately passed 27 checks over 1,794 ticks; its input schedule
+differs from the package. Queue/population saturation and fully blocked exits
+remain C++ fixture evidence, not coverage in this two-Strider packaged route.
+
+Preservation checks:
+- Packaged economy: 25 checks, 1,045 ticks, 6,276 worker rows, conservation and
+  construction audit, Debug plus ten Release replays, seven corruptions rejected.
+  Paths: `production-economy-regression-2026-09-27.json` and
+  `production-economy-regression-replay-2026-09-27/summary.json`.
+- Packaged combat: 400 ticks, selection/movement/Stop/combat/restart pass, winner 1.
+  Path: `production-combat-regression-2026-09-27.json`.
+- `verify_crowds.py`: 17 bounded fixtures, 20 runs, 30,254 audited rows and 22
+  mutation rejections (`production-crowds-2026-09-27/summary.json`).
+- `verify_scale_inputs.py`: 25 replay/setup negatives, 18 aliases, 14 corrupt
+  ledgers and two analytic controls (`production-replay-inputs-2026-09-27/summary.json`).
+- `verify_network.py --out artifacts/production-network-2026-09-27 --jobs 3`:
+  22 separate-process UDP cases, cross-build replays and repeats pass.
+- `verify_client_network.py --out artifacts/production-client-network-2026-09-27`:
+  six rendered cases, cross-build replays and ten repeats pass.
+
+Rendered 80 ms RTT execution p95 was 141.940/141.888 ms, display
+153.419/153.687 ms and feedback 3.317/3.217 ms, from only three software inputs
+per peer. Headless jobs and captures overlapped. These are regression diagnostics,
+not isolated timing acceptance. Strict 20 Hz, broader response sampling, physical
+endpoints and full-match soak remain open. Network sessions still use the combat
+scenario; economy/production multiplayer is neither implemented nor proven.
+The historical failed dense-progress/scale-performance gates remain unchanged.
+
+Primary and independent critic inspected fresh 1920x1080 package PNGs. The review
+at `.voidfront-agent/review-production-2026-09-27.md` accepts bounded offline
+production only. Similar cube buildings, scaled worker silhouettes, overlapping
+health bars/names and crowded spawn labels remain. No human play, balance,
+SC2 comparison, new art/audio/VFX, or shipping acceptance is claimed.
+The isolated final movie (`production-movie-final-2026-09-27.mp4`, original AVI
+retained) passes all 27 checks with its own 1,791-tick input schedule. Its audit
+(`production-movie-replay-2026-09-27/summary.json`) checks 10,886 unit rows,
+identical conservation/progression requirements and Debug plus ten Release
+replays. The movie has 5,377 frames at 60 FPS, 1600x900, lasting 89.616667 seconds.
+Encoding took approximately 275 seconds; movie timings are excluded from
+performance acceptance. A three-second-spaced contact sheet samples the final
+construction/queue/first-spawn sequence; it is not continuous playback or
+proof of animation quality, human input responsiveness or fun.
+
+The concurrent first movie attempt exceeded its 180-second helper watchdog;
+failed AVI/logs remain under `production-movie-2026-09-27.*`. The movie-only wall
+watchdog now scales with requested clip length for offline encoding. The
+isolated rerun passed without changing simulation ticks or SPEC budgets.
+
+Next: canonical-command economic AI and anchor combat/victory/restart. Queued
+movement orders, explicit enemy context targeting, flux/technology/fog,
+complete 1v1/1vAI matches, authored content and all scale/quality gates remain.
+
 ## 2026-09-26 first playable economy verification
 
 Final source uses simulation protocol 6 and a new Map::Economy=2. Existing

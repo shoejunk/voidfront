@@ -1,5 +1,18 @@
 # Continuing roadmap
 
+## 2026-09-27 production checkpoint: economic AI and victory next
+
+Paid Foundry queues/population now work in the package: T trains a 50-salvage
+Strider, X refunds the last queued unit, five queue slots, 100 training ticks and
+12 live-plus-reserved population. New units can be selected and commanded.
+See current PROGRESS/TESTING and independent production review for exact scope.
+Continue the small-match sequence at economic AI and anchor combat/victory,
+using the same canonical commands. Define destruction treatment for paid queues
+when adding building combat. Finish queued unit orders/enemy context targeting
+alongside that match integration. Flux/technology/fog/setup follow. This current
+checkpoint supersedes older production-next instructions below while preserving
+all gameplay-first priorities and final scale/quality/shipping gates.
+
 ## 2026-09-26 economy checkpoint: production is next
 
 The first packaged worker/salvage/construction increment is verified; see the

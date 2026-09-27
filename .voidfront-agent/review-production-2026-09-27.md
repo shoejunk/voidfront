@@ -123,3 +123,35 @@ cannot establish production multiplayer, full-match AI or the failed dense
 Scale128 traffic requirement. The source includes a hard lifetime4096 roster
 cap, which must remain visible as a bounded implementation limitation when
 future long-match/soak behavior is designed.
+
+## Follow-up packaged movie evidence
+
+Personally inspected `artifacts/production-movie-contact-2026-09-27.png`, an
+eight-frame contact sheet from the successful final packaged movie. Samples
+show worker resource trips, Foundry construction, the selected ready factory's
+paid queue, increasing front progress and a produced Strider beside the factory.
+This is sampled-state inspection, not continuous video playback; the sparse
+frames do not independently capture every cancellation, second birth or move.
+The separate interaction report and replay supply those execution checks.
+
+`artifacts/production-movie-final-2026-09-27.json` passes27 checks at tick1791,
+hash `c07e55a5e7d8a4c1`. Its separately recorded commands and all1,791 hashes
+match Debug plus ten Release runs in
+`artifacts/production-movie-replay-2026-09-27/summary.json`:10,886 audited unit
+rows,4,000 conserved salvage, three purchases, one refund, two births and
+100/200 construction/production increments. No blocked spawn occurs.
+
+Read `production-movie-metadata-2026-09-27.json`: the final1600x900 recording
+has5,377 frames at60fps,89.616667seconds. AVI and converted MP4 are retained as
+`production-movie-final-2026-09-27.avi` and `.mp4`. Host sampling reports
+275.3946924seconds wall time and309,153,792 peak resident bytes. Encoding slowed
+the capture; these timings are excluded from performance acceptance. The first
+concurrent movie was stopped by the180second capture-helper watchdog and its
+artifacts remain separately retained. The primary reports increasing only the
+movie capture watchdog according to requested recording duration; no gameplay
+speed or SPEC performance budget changed.
+
+The contact sheet retains the same blockout silhouettes, bright resource/cargo
+cubes and label/healthbar congestion. It does not add human input, animation
+deformation/smoothness, audio, frame-pacing, SC2 comparison or shipping approval.
+The bounded increment verdict above is unchanged.
