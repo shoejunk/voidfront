@@ -1,5 +1,23 @@
 # Continuing roadmap
 
+## 2026-09-29 economic AI and anchor outcome checkpoint
+
+The default offline economy now has canonical-command Gather/Build/Train/
+AttackMove AI, attackable structures, anchor victory/defeat/draw and restart.
+Destroyed Foundries forfeit paid queues and reopen their navigation footprints.
+The package has audited player production, opposing economy, attacks, defeat
+and restart at accelerated and ordinary speed; player-victory remains unverified
+in the package. Enemy-building context is proximity AttackMove, not exclusive
+focus targeting. Queued unit orders remain missing.
+
+Next retain a packaged player-victory route against economic AI, then implement
+contested flux plus meaningful technology and AI use through canonical commands.
+Fog/scouting and a minimal setup screen follow. Do not claim the full small-match
+milestone before that complete route, full required systems and direct playtest.
+Preserve all dense-crowd, latency/frame-budget and production-quality failures.
+See current PROGRESS/TESTING and review-match-2026-09-29.md for evidence limits.
+This checkpoint supersedes the older economic-AI-next instruction below.
+
 ## 2026-09-27 production checkpoint: economic AI and victory next
 
 Paid Foundry queues/population now work in the package: T trains a 50-salvage

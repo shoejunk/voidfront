@@ -14,6 +14,7 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
+#include <tuple>
 
 using namespace godot;
 
@@ -149,7 +150,7 @@ protected:
     static void _bind_methods() {
         ClassDB::bind_method(D_METHOD("reset", "seed", "ai"), &VoidfrontBridge::reset);
         ClassDB::bind_method(D_METHOD("reset_scale", "seed", "units_per_team", "enemy_ai"), &VoidfrontBridge::reset_scale);
-        ClassDB::bind_method(D_METHOD("reset_economy", "seed"), &VoidfrontBridge::reset_economy);
+        ClassDB::bind_method(D_METHOD("reset_economy", "seed", "enemy_ai"), &VoidfrontBridge::reset_economy);
         ClassDB::bind_method(D_METHOD("can_build", "x", "z"), &VoidfrontBridge::can_build);
         ClassDB::bind_method(D_METHOD("replay_bytes"), &VoidfrontBridge::replay_bytes);
         ClassDB::bind_method(D_METHOD("advance"), &VoidfrontBridge::advance);
@@ -184,12 +185,17 @@ public:
     }
     void advance() {
         if (network) return;
-        if (ai_enabled && simulation.tick() >= 100 && simulation.tick() % 20 == 0) {
-            for (auto &command : vf::make_ai_commands(simulation, 1, ai_sequence)) simulation.submit(command);
+        if (ai_enabled && (simulation.map() == vf::Map::Economy || simulation.tick() >= 100) && simulation.tick() % 20 == 0) {
+            for (auto &command : vf::make_ai_commands(simulation, 1, ai_sequence)) {
+                if (simulation.submit(command) && simulation.map() == vf::Map::Economy) {
+                    if (economy_commands.size() < max_recorded_commands) economy_commands.push_back(command);
+                    else evidence_complete = false;
+                }
+            }
         }
         simulation.step();
     }
-    bool reset_economy(int64_t seed) {
+    bool reset_economy(int64_t seed, bool enemy_ai) {
         if (seed < 0 || seed > UINT32_MAX || (network &&
                 network->status() != vf::net::SessionStatus::Complete &&
                 network->status() != vf::net::SessionStatus::Error)) return false;
@@ -197,7 +203,7 @@ public:
             vf::Sim replacement(static_cast<uint32_t>(seed), 3, vf::Map::Economy);
             simulation = std::move(replacement);
             clear_network(); economy_seed = static_cast<uint32_t>(seed);
-            human_sequence = ai_sequence = 0; ai_enabled = false;
+            human_sequence = ai_sequence = 0; ai_enabled = enemy_ai;
             return true;
         } catch (...) { return false; }
     }
@@ -208,7 +214,7 @@ public:
     }
     PackedByteArray replay_bytes() const {
         PackedByteArray result;
-        if (network || simulation.map() != vf::Map::Economy || simulation.tick() == 0) return result;
+        if (network || simulation.map() != vf::Map::Economy || simulation.tick() == 0 || !evidence_complete) return result;
         std::vector<uint8_t> bytes{'V','F','R',3};
         append_u32(bytes, vf::kProtocolVersion); append_u32(bytes, economy_seed);
         append_u32(bytes, 3); append_u32(bytes, simulation.tick());
@@ -218,7 +224,11 @@ public:
         append_u32(bytes, static_cast<uint32_t>(vf::kLockstepContentId));
         append_u32(bytes, static_cast<uint32_t>(vf::kLockstepContentId >> 32));
         append_u32(bytes, static_cast<uint32_t>(vf::Map::Economy));
-        for (const auto& command : economy_commands) if (command.tick < simulation.tick()) {
+        auto ordered = economy_commands;
+        std::sort(ordered.begin(), ordered.end(), [](const auto& a, const auto& b) {
+            return std::tie(a.tick, a.player, a.sequence) < std::tie(b.tick, b.player, b.sequence);
+        });
+        for (const auto& command : ordered) if (command.tick < simulation.tick()) {
             const auto encoded = vf::serialize_command(command);
             append_u32(bytes, static_cast<uint32_t>(encoded.size()));
             bytes.insert(bytes.end(), encoded.begin(), encoded.end());
@@ -228,11 +238,10 @@ public:
         return result;
     }
     bool issue(int64_t order, PackedInt32Array ids, int64_t x, int64_t z) {
-        if (network) return false;
+        if (network || (simulation.map() == vf::Map::Economy && simulation.winner() != -1)) return false;
         if (order < 0 || order > 8 || ids.size() == 0 || ids.size() > 256 ||
             x < 0 || z < 0 || x >= simulation.width() * vf::kScale || z >= simulation.height() * vf::kScale) return false;
-        if (human_sequence == UINT32_MAX || (simulation.map() == vf::Map::Economy &&
-                economy_commands.size() >= max_recorded_commands)) return false;
+        if (human_sequence == UINT32_MAX) return false;
         vf::Command command{};
         command.tick = simulation.tick(); command.sequence = human_sequence + 1;
         command.player = 0; command.order = static_cast<vf::Order>(order);
@@ -245,7 +254,10 @@ public:
         command.units.erase(std::unique(command.units.begin(), command.units.end()), command.units.end());
         if (!simulation.submit(command)) return false;
         ++human_sequence;
-        if (simulation.map() == vf::Map::Economy) economy_commands.push_back(command);
+        if (simulation.map() == vf::Map::Economy) {
+            if (economy_commands.size() < max_recorded_commands) economy_commands.push_back(command);
+            else evidence_complete = false;
+        }
         return true;
     }
     bool is_blocked(int64_t x, int64_t z) const {
@@ -260,6 +272,8 @@ public:
         result["content_id"] = hash_string(vf::kLockstepContentId);
         result["protocol"] = vf::kProtocolVersion;
         result["tick"] = state.tick(); result["winner"] = state.winner();
+        result["enemy_ai"] = !network && ai_enabled;
+        result["replay_complete"] = evidence_complete;
         result["hash"] = hash_string(network ? state.state_hash() : state.hash());
         Array units;
         for (const auto &unit : state.units()) {
@@ -267,6 +281,7 @@ public:
             row["id"] = unit.id; row["player"] = unit.player;
             row["x"] = unit.x; row["z"] = unit.z; row["hp"] = unit.hp;
             row["moving"] = unit.moving; row["target"] = unit.target_id;
+            row["target_structure"] = unit.target_structure_id;
             row["cooldown"] = unit.cooldown; row["order"] = static_cast<int>(unit.order);
             row["kind"] = static_cast<int>(unit.kind); row["cargo"] = unit.cargo;
             row["resource_id"] = unit.resource_id; row["work_ticks"] = unit.work_ticks;

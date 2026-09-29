@@ -1,5 +1,52 @@
 # Voidfront progress
 
+## 2026-09-29 10:58 America/Los_Angeles - economic opponent and anchor outcomes
+
+Baseline dev `8fa6528`; STOP/COMPLETE and previous marker absent. Acquired this
+task's marker exclusively. Preserved existing user changes in PROGRESS, roadmap
+and last-run.json; preimages in `artifacts/match-baseline-2026-09-29`. Separate
+simulation/client specialists implemented; primary integrated bridge/tools/Git;
+independent critic inspected code, reports, replays and actual package PNGs.
+
+Default offline play now has an opponent that gathers, builds a Foundry, pays
+for Striders and attacks through canonical commands. Striders attack structures;
+anchor destruction decides victory/defeat/draw and freezes further gameplay.
+Destroyed buildings release navigation blockers; paid queues are forfeited,
+without refund. Production resolves before combat in a tick. Enemy-building RMB
+is proximity AttackMove, not exclusive focus targeting. Structure-target facing,
+beams and attack clip requests now work; dead buildings/selections disappear.
+Restart restores workers, anchors and active AI. Both players' accepted commands
+are recorded in canonical order; evidence capacity cannot disable live AI.
+
+MSVC Debug/Release passed 10/10 suites each, malformed/alias checks, 2,000
+cross-build hashes and ten repeats. Final strengthened Debug match test rebuilt
+and passed separately. Uninjected AI duel records all 7,000 ticks identically
+across builds. Packaged accelerated and ordinary-speed routes pass 27 checks
+at ticks 2,856/2,849; each matches Debug plus ten Release replays. Independent
+audits retain 18,573/18,393 swept unit rows, 4,000 salvage, building damage,
+anchor defeat, input restart and eight corrupt-report rejections. Production
+regression passes 27 checks/1,799 ticks and its full audit/replays; combat400,
+22 headless network cases and six rendered network cases pass. See TESTING.md.
+
+Primary/critic inspected production, attack, defeat and restart images. Ordinary
+capture uses the normal 20Hz accumulator, but is software input, not human play
+or frame-pacing acceptance. Sparse concurrent rendered80ms execution p95 is
+150.335/134.243ms: first peer FAILS150ms. Combat framep99=17.473ms FAILS16.67ms.
+Paid queue destruction and simultaneous anchor draw are bounded C++ tests, not
+packaged routes. The package proves defeat/restart, not a player-victory route.
+A separately audited 6.183second time-compressed movie and sampled contact
+sheet are retained; no ordinary-motion/animation-quality claim.
+Blockout buildings, reused workers, overlapping labels, absent production art/
+audio/VFX, dense-crowd and reference-performance failures remain unresolved.
+
+Next: first retain a packaged player-victory route against economic AI, then add
+contested flux and useful technology through canonical commands with AI support;
+complete fog/scouting and setup next. Queued unit orders/exclusive focus targeting,
+economy networking, complete small-match acceptance, full content, balance,
+human play and shipping review remain required. No COMPLETE.md; keep automation
+active. Current match-results and this entry supersede stale last-run metadata,
+which retains the user's original edit.
+
 ## 2026-09-27 12:03 America/Los_Angeles - playable production run
 
 Baseline dev `1862abc`; STOP, COMPLETE and prior marker absent. Exclusively

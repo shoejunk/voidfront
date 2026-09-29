@@ -1,6 +1,6 @@
 # Voidfront — salvage outpost
 
-Launch `Voidfront.exe` beside its .pck and DLL. The default offline mode starts with three workers, a command anchor and a finite salvage deposit for each side. The opposing outpost is passive in this first economy increment. Gather salvage, construct a Foundry and train Striders. Economic AI, technology, fog and match victory are still being developed.
+Launch `Voidfront.exe` beside its .pck and DLL. The default offline mode starts with three workers, a command anchor and a finite salvage deposit for each side. The opponent gathers salvage, constructs a Foundry, trains Striders and attacks through the same simulation commands. Destroy its command anchor while protecting yours. This is an early one-unit-type economy match; technology, flux, fog, faction breadth and balance remain unfinished.
 
 - Left click selects a worker, anchor, deposit or Foundry. Drag selects units; F2 selects all your living workers and Striders.
 - Select workers and right click a salvage deposit. They mine, carry up to 10 salvage each, return it to your anchor, and repeat until the deposit is depleted.
@@ -9,8 +9,9 @@ Launch `Voidfront.exe` beside its .pck and DLL. The default offline mode starts 
 - S stops work without losing carried salvage or an unfinished foundation. Right click an unfinished Foundry with workers selected to resume it without paying again.
 - Select your completed Foundry and press T to train a Strider for 50 salvage. Each unit takes five seconds, and a Foundry holds up to five queued units. The population cap is 12, including living workers, Striders and reserved queue slots.
 - With a Foundry selected, X cancels its last queued unit and refunds 50 salvage. Remaining active training keeps its progress; canceling the only unit clears progress. A blocked exit keeps the completed unit queued: move nearby units to open space.
-- Select a newly produced Strider and right click to move it; A then click attack-moves, S stops and H holds.
-- Escape or right click cancels placement. R restarts the economy.
+- Select a newly produced Strider and right click to move it; A then click attack-moves, S stops and H holds. Right click an enemy building to attack-move toward it; nearby enemy units can take priority, so this is not a target lock.
+- Destroyed buildings disappear from the field and minimap. Losing a Foundry loses its paid queue without a refund. Destroying a command anchor ends gameplay and displays victory or defeat; workers alone cannot shoot buildings.
+- Escape or right click cancels placement. R restarts the economy, clears selections and control groups, and starts the opponent again.
 - Ctrl + 0–9 saves a control group; 0–9 recalls it. Ctrl + Shift + number adds to a group; Shift + number adds a group to selection. Groups clear on restart.
 - Arrow keys pan; wheel zooms. Close the window to quit.
 

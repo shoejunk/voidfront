@@ -99,6 +99,9 @@ var economy_smoke := false
 var economy_fixture: RefCounted
 var production_smoke := false
 var production_fixture: RefCounted
+var match_smoke := false
+var match_realtime := false
+var match_fixture: RefCounted
 var build_pending := false
 var economy_actors: Dictionary = {}
 var selected_entity: Dictionary = {}
@@ -116,6 +119,10 @@ func _ready() -> void:
 		if argument == "--smoke": smoke = true
 		elif argument == "--skirmish": skirmish = true
 		elif argument == "--economy": economy = true
+		elif argument == "--match-realtime": match_realtime = true
+		elif argument == "--match-smoke":
+			economy = true
+			match_smoke = true
 		elif argument == "--production-smoke":
 			economy = true
 			production_smoke = true
@@ -169,6 +176,9 @@ func _ready() -> void:
 	var legacy_mode := skirmish or smoke or movement_smoke or crowd_smoke or controls_smoke or scale128 or profile_presentation or network
 	if economy and legacy_mode: option_error = "Economy requires its own offline match."
 	if not legacy_mode: economy = true
+	if match_realtime and not match_smoke: option_error = "--match-realtime requires --match-smoke."
+	if match_smoke and not ticks_specified: finish_tick = 12000
+	if match_smoke and (production_smoke or economy_smoke or finish_tick < 2000 or finish_tick > 12000): option_error = "Match smoke requires its own 2000..12000 tick fixture."
 	if production_smoke and not ticks_specified: finish_tick = 2400
 	if production_smoke and (economy_smoke or finish_tick < 300 or finish_tick > 3600): option_error = "Production smoke requires its own 300..3600 tick fixture."
 	if economy_smoke and not ticks_specified: finish_tick = 1600
@@ -203,7 +213,7 @@ func _ready() -> void:
 		push_error("Required C++ simulation extension failed to load")
 		get_tree().quit(2)
 		return
-	if economy: bridge.reset_economy(1)
+	if economy: bridge.reset_economy(1, not (economy_smoke or production_smoke))
 	if scale128:
 		if not option_error.is_empty() or not bridge.reset_scale(1, scale_count, not scale_smoke):
 			push_error(option_error if not option_error.is_empty() else "Scale setup rejected")
@@ -220,6 +230,9 @@ func _ready() -> void:
 	hud.game = self
 	canvas.add_child(hud)
 	_reset()
+	if match_smoke:
+		match_fixture = preload("res://match_smoke.gd").new(self)
+		match_fixture.run.call_deferred()
 	if production_smoke:
 		production_fixture = preload("res://production_smoke.gd").new(self)
 		production_fixture.run.call_deferred()
@@ -470,7 +483,7 @@ func _reset() -> void:
 			push_error("Scale reset rejected")
 			get_tree().quit(2)
 			return
-	elif economy: bridge.reset_economy(1)
+	elif economy: bridge.reset_economy(1, not (economy_smoke or production_smoke))
 	else: bridge.reset(1, not (movement_smoke or crowd_smoke))
 	if network and option_error.is_empty():
 		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick):
@@ -547,6 +560,17 @@ func _economy_entity_at(screen: Vector2) -> Dictionary:
 	return result
 
 func _present_economy() -> void:
+	# Tombstones stay in authoritative snapshots; selection must not retain them.
+	for unit in current.units:
+		if unit.hp <= 0: selected.erase(unit.id)
+	if selected_entity.get("category", "") == "structure":
+		for structure in current.structures:
+			if structure.id == selected_entity.id and structure.hp <= 0:
+				selected_entity.clear()
+				break
+	if current.winner != -1:
+		build_pending = false
+		attack_pending = false
 	var sequence: int = current.get("result_sequences", [-1, -1])[local_player]
 	if sequence != economy_result_sequence:
 		economy_result_sequence = sequence
@@ -603,6 +627,7 @@ func _present_economy() -> void:
 				economy_actors[key] = {"root": root, "body": body, "label": label, "ring": ring}
 			var entry: Dictionary = economy_actors[key]
 			entry.root.visible = int(entity.get("hp", 1)) > 0
+			if not entry.root.visible: continue
 			entry.ring.visible = selected_entity.get("id", -1) == entity.id and selected_entity.get("category", "") == ("deposit" if deposit else "structure")
 			if entry.ring.visible:
 				selected_entity = entity.duplicate()
@@ -614,6 +639,7 @@ func _present_economy() -> void:
 				var progress := int(entity.build_ticks)
 				var fraction := minf(float(progress) / float(current.build_duration), 1.0)
 				entry.label.text = "COMMAND ANCHOR" if anchor else ("FOUNDRY" if fraction >= 1.0 else "FOUNDRY  %d%%" % int(fraction * 100))
+				entry.label.text += "  %d HP" % entity.hp
 				if not anchor:
 					entry.body.scale.y = 0.2 + 0.8 * fraction
 					if fraction >= 1.0 and int(entity.get("production_queue", 0)) > 0:
@@ -678,9 +704,11 @@ func _process(delta: float) -> void:
 		if network_smoke and network_state.get("ready", false) and str(network_state.get("state", "")) in ["running", "stalled"]:
 			_network_smoke_tick()
 	else:
-		accumulator += delta
+		# This bounded fixture advances eight canonical ticks per rendered frame.
+		# It is reachability/replay evidence, never real-time responsiveness evidence.
+		accumulator += STEP * 8 if match_smoke and not match_realtime else delta
 		var ticks := 0
-		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke or scale_smoke or economy_smoke or production_smoke) or current.tick < finish_tick):
+		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke or scale_smoke or economy_smoke or production_smoke or match_smoke) or current.tick < finish_tick):
 			previous = current
 			var start := Time.get_ticks_usec()
 			bridge.advance()
@@ -697,6 +725,7 @@ func _process(delta: float) -> void:
 			if scale_smoke: scale_fixture.tick()
 			if economy_smoke and economy_fixture: economy_fixture.tick()
 			if production_smoke and production_fixture: production_fixture.tick()
+			if match_smoke and match_fixture: match_fixture.tick()
 	var present_start := Time.get_ticks_usec() if presentation_profiler else 0
 	_present(clampf(accumulator / STEP, 0, 1), delta)
 	if presentation_profiler: presentation_profiler.record("present", Time.get_ticks_usec() - present_start)
@@ -783,15 +812,27 @@ func _present(alpha: float, delta: float) -> void:
 				selected.erase(unit.id)
 			continue
 		var direction := to - from
+		var attack_target := Vector3.ZERO
+		var has_attack_target := false
 		if unit.target != 0 and actors.has(unit.target):
-			direction = actors[unit.target].root.position - entry.root.position
+			attack_target = actors[unit.target].root.position
+			has_attack_target = true
+		elif int(unit.get("target_structure", 0)) != 0:
+			for structure in current.get("structures", []):
+				if structure.id == unit.target_structure:
+					attack_target = Vector3(structure.x / SCALE, 0, structure.z / SCALE)
+					has_attack_target = true
+					break
+		if has_attack_target: direction = attack_target - entry.root.position
 		if direction.length_squared() > 0.0001:
 			entry.root.rotation.y = lerp_angle(entry.root.rotation.y, atan2(-direction.x, -direction.z), minf(delta * 12, 1))
-		if unit.cooldown > entry.cooldown and unit.target != 0 and actors.has(unit.target):
-			_beam(entry.root.position, actors[unit.target].root.position, unit.player)
+		if unit.cooldown > entry.cooldown and has_attack_target:
+			_beam(entry.root.position, attack_target, unit.player)
 			entry.clip = ""
 			_play(entry, "attack")
 			entry.flash = 0.25
+			if match_smoke and match_fixture and int(unit.get("target_structure", 0)) != 0:
+				match_fixture.record_structure_attack(unit, entry.clip)
 		elif unit.hp < entry.hp:
 			entry.clip = ""
 			_play(entry, "hit")
@@ -833,6 +874,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_reset()
 		return
 	if not option_error.is_empty(): return
+	if economy and current.winner != -1: return
 	if network and (not network_state.get("ready", false) or str(network_state.get("state", "")) not in ["running", "stalled"]): return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode >= KEY_0 and event.physical_keycode <= KEY_9:
@@ -874,6 +916,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				var destination := _world_at(event.position)
 				var entity := _economy_entity_at(event.position) if economy else {}
 				var order := 1
+				if not entity.is_empty() and entity.category == "structure" and entity.player != local_player:
+					order = 2
+					destination = Vector3(entity.x / SCALE, 0, entity.z / SCALE)
 				if _selected_workers() > 0 and not entity.is_empty():
 					if entity.category == "deposit": order = 4
 					elif entity.player == local_player and entity.kind == 0: order = 5
@@ -981,6 +1026,7 @@ func _issue(order: int, at: Vector3) -> void:
 	if scale_smoke: scale_fixture.record_input(accepted, order, at)
 	if economy_smoke and economy_fixture: economy_fixture.record_input(accepted, order, at)
 	if production_smoke and production_fixture: production_fixture.record_input(accepted, order, at, command_actors)
+	if match_smoke and match_fixture: match_fixture.record_input(accepted, order, at, command_actors)
 	if economy:
 		economy_notice = "Order submitted" if accepted else "Order rejected"
 		if accepted and order == 7: economy_notice = "Training order submitted: %d salvage" % current.strider_cost

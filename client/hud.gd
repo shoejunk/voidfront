@@ -102,7 +102,12 @@ func _process(_delta: float) -> void:
 		var resources: Array = game.current.get("salvage", [0, 0])
 		var cost: int = game.current.foundry_cost
 		status.text = "SALVAGE %d   /   POPULATION %d + %d QUEUED / %d   /   FOUNDRY %d • STRIDER %d" % [resources[game.local_player], game.current.population_used[game.local_player], game.current.population_reserved[game.local_player], game.current.population_cap, cost, game.current.strider_cost]
-		connection.text = "Gather salvage, build a Foundry and train Striders. Economic AI and match victory are forthcoming."
+		connection.text = "DESTROY THE ENEMY COMMAND ANCHOR / Protect your own. Gather salvage, build a Foundry and train Striders."
+		if not game.current.get("enemy_ai", false): connection.text += " Passive economy fixture."
+		if game.current.winner == game.local_player: result.text = "VICTORY / ENEMY ANCHOR DESTROYED\nR  /  new match"
+		elif game.current.winner in [0, 1]: result.text = "DEFEAT / YOUR ANCHOR DESTROYED\nR  /  new match"
+		result.size.x = 920
+		result.position.x = (view.x - result.size.x) / 2
 		var workers: int = game._selected_workers()
 		selection.text = "%02d WORKERS / %02d STRIDERS" % [workers, game.selected.size() - workers]
 		if workers > 0:
@@ -113,7 +118,7 @@ func _process(_delta: float) -> void:
 		if not game.selected_entity.is_empty():
 			var entity: Dictionary = game.selected_entity
 			if entity.category == "deposit": selection.text = "SALVAGE DEPOSIT   /   %d REMAINING" % entity.remaining
-			elif entity.kind == 0: selection.text = "COMMAND ANCHOR   /   WORKER DROP-OFF"
+			elif entity.kind == 0: selection.text = "COMMAND ANCHOR   /   %d HP" % entity.hp
 			else:
 				selection.text = "FOUNDRY   /   %s" % ("READY" if entity.build_ticks >= game.current.build_duration else "CONSTRUCTING %d%%" % int(float(entity.build_ticks) / game.current.build_duration * 100))
 				if entity.build_ticks >= game.current.build_duration:
@@ -121,7 +126,7 @@ func _process(_delta: float) -> void:
 					if entity.production_queue > 0: selection.text += "   /   STRIDER %d%%" % int(float(entity.production_ticks) / game.current.train_ticks * 100)
 					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
 		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
-		tip.text = "LMB / drag  select    RMB deposit  gather    B + click  build Foundry (%d)    T  train Strider (%d)    X  cancel last/refund\nRMB  move / return / resume build    A + click  attack-move    S  stop    H  hold    F2  all units    R  restart\n" % [cost, game.current.strider_cost] + game.economy_notice
+		tip.text = "LMB / drag  select    RMB deposit  gather    B + click  build Foundry (%d)    T  train Strider (%d)    X  cancel last/refund\nRMB  move / work / attack enemy building    A + click  attack-move    S  stop    H  hold    F2  all units    R  restart\n" % [cost, game.current.strider_cost] + game.economy_notice
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
@@ -153,6 +158,7 @@ func _draw() -> void:
 	var selected_ids := {}
 	if game.economy:
 		for structure in game.current.get("structures", []):
+			if structure.hp <= 0: continue
 			var at := map_rect.position + Vector2(structure.x, structure.z) / 256.0 * map_scale
 			draw_rect(Rect2(at - Vector2(4, 4), Vector2(8, 8)), Color("62d7d1") if structure.player == 0 else Color("ef9259"))
 		for deposit in game.current.get("deposits", []):

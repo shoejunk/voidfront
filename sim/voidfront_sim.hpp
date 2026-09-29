@@ -9,7 +9,7 @@ namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
 inline constexpr int kMaxMapSize = 128;
-inline constexpr uint32_t kProtocolVersion = 7;
+inline constexpr uint32_t kProtocolVersion = 8;
 enum class Map : uint32_t { Foundry = 0, Scale128 = 1, Economy = 2 };
 int map_width(Map map);
 int map_height(Map map);
@@ -45,6 +45,7 @@ struct Unit {
     int32_t x = 0, z = 0, hp = 100;
     Order order = Order::Stop;
     uint32_t target_id = 0;
+    uint32_t target_structure_id = 0;
     uint16_t cooldown = 0;
     bool moving = false;
     UnitKind kind=UnitKind::Strider;

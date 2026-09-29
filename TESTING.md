@@ -1,5 +1,83 @@
 # Verification ledger
 
+## 2026-09-29 economic AI and anchor combat verification
+
+`tools/verify.ps1` built pinned Godot4.7.2/MSVC Debug+Release, passed10/10
+CTest each,15 malformed VFR cases+7 output aliases/config,2,000 cross-build
+hashes+ten repeats (`artifacts/match-build-2026-09-29.log`). Final strengthened
+`voidfront_match_tests` was rebuilt and rerun in Debug after the full suite;
+Release already included those assertions. Rule tests cover unit-before-building
+priority, footprint range, Hold/Move, separate hashed building target/reset,
+simultaneous anchor draw, paid-queue loss/no refund, spawn-before-lethal-damage,
+destroyed-footprint traversal and receipt-time-independent terminal commands.
+These combat isolation tests mutate fixtures; uninjected AI tests separately
+reach passive defeat at2304 and AI-duel outcome at6348. Full7,000tick AI-duel
+recordings/traces match Debug/Release in `artifacts/match-headless-2026-09-29`.
+Protocol8 and changed content reject the previous protocol7 production replay
+before touching an existing output; rejection log retained in that directory.
+
+Pinned import/export passed, package `artifacts/package/Voidfront.exe`; prior
+package retained at `artifacts/match-prior-package-2026-09-29`. Launch normally
+for active economic AI. Legacy economy/production fixtures explicitly disable
+AI. `tools/capture.ps1 -Packaged -Match -Ticks 12000 -Name match-package-2026-09-29`
+passes27 software InputEvent checks over2,856ticks, hash`0c492e6de53740e4`.
+`-Match -MatchRealtime -Ticks 5000 -Name match-realtime-2026-09-29` passes27checks
+over2,849ticks, hash`15ed20dd06504f87`, using the ordinary20Hz accumulator.
+Schedules/hashes differ because software event dispatch occurs at different
+ticks; each own stream is fully retained. Both routes gather/build/train a
+player Strider, context AttackMove toward enemy anchor, observe economic AI,
+lose the player Foundry/anchor, show defeat, then restart to initial hash and
+observe AI resume. No injected funds/units or hidden authoritative changes.
+
+`python tools/verify_match_capture.py <report> --out <unique-dir>` binds both
+players' VFR3 commands to ownership and player input evidence; audits resources,
+population, full-tick static/relative sweeps including structures destroyed at
+tick end, conservative structure firing budgets, anchor outcome, terminal
+freeze, restart and rendered structure-target/attack-clip request bindings.
+It is not an independent complete combat-priority simulator. Accelerated/
+ordinary audits check18,573/18,393unit rows,194/188building-damage observations,
+4,000salvage and193/187rendered attack requests. Both compare every tick with
+Debug+ten Release replays and reject8 report mutations. Evidence directories:
+`artifacts/match-replay-2026-09-29` and `match-realtime-replay-2026-09-29`.
+No paid queue is lost in these package routes; forfeiture remains rule-test
+coverage. Package player victory and simultaneous draw remain unverified.
+
+Preservation: `match-production-regression-2026-09-29.json` passes27checks/
+1,799ticks; `match-production-replay-2026-09-29` audits10,938unit rows,3purchases,
+1refund,2spawns,100construction/200production increments,4,000salvage,
+Debug+10Release and7corruptions. `match-combat-regression-2026-09-29.json`
+passes400tick selection/orders/combat/restart, winner1. `verify_network.py --out
+artifacts/match-network-2026-09-29 --jobs 3` passes22actual separate-process
+cases and cross-build/repeat replays. `verify_client_network.py --out
+artifacts/match-client-network-2026-09-29` passes6rendered cases and repeats.
+These network tests still exercise combat skirmishes, not economic multiplayer.
+
+Concurrent timing is diagnostic only: rendered80ms executionp95=150.335/134.243ms,
+first peer misses150ms; combat framep99=17.473ms misses16.67ms. Headless80ms
+rates19.934/19.928Hz and160ms(delay2)~17.75Hz retain strict20Hz failure. No isolated
+reference-hardware, latency, frame stability, large-battle or soak acceptance.
+Ordinary match host wall148.994s and peak resident356,945,920B are process
+observations, not budget acceptance. Historical dense500crossing remains failed.
+
+Primary+critic inspected package1920x1080 production/attack/defeat/restart PNGs,
+including ordinary-speed992HP anchor beam. Blocks/reused workers/overlapping
+health text remain production-art failures. No human play, balance, continuous
+animation-quality, new SC2 side-by-side comparison or shipping approval.
+Independent review: `.voidfront-agent/review-match-2026-09-29.md`. Full RTS
+flux/tech/fog/setup, queued orders/focus targeting, economic multiplayer,
+complete-match/player-victory evidence and all SPEC gates remain required.
+
+Movie evidence: `tools/capture.ps1 -Packaged -Match -Movie -Ticks 12000 -Name
+match-movie-2026-09-29` passes27checks/2,856ticks with the same canonical input
+stream as the accelerated package. Its separate full audit/replays pass in
+`artifacts/match-movie-replay-2026-09-29`. Retained AVI and MP4 are371frames,
+60fps,1600x900,6.183333seconds; eight ticks/frame compress roughly143seconds
+of simulation into six seconds of video. Primary and critic inspect extracted
+half-second samples at `artifacts/match-movie-contact-2026-09-29.png`, showing
+harvesting, construction, production and advancing/attacking units. This is
+sampled-state visual evidence, not continuous playback, ordinary-motion or
+animation-quality evidence. Encoding timing is excluded from performance claims.
+
 ## 2026-09-27 paid unit production verification
 
 Source checkpoint: `19847cc`, pushed to origin/dev. Protocol 7 and content

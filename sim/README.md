@@ -2,7 +2,7 @@
 
 `voidfront_sim` is C++20 with no Godot dependency. Coordinates are integer 1/256 world units; one `step()` is exactly 1/20 second. The default 32x24 Foundry map has two ridges and three passages, with six walkers per side. Construct a new `Sim(seed,count)` to restart; 1..250 units per side are supported. `Sim(seed,count,Map::Scale128)` constructs a real 128x128 terrain scenario with opposing formations and an eight-cell central passage. Map identity is fixed for the lifetime of a simulation and included in state hashes. The offline client exposes Scale128 through --scale128 and --units-per-team; network session setup still selects Foundry and large-map session negotiation remains separate work.
 
-Submit commands for the current or a future tick before advancing it. IDs must exist and belong to the issuing player. Admission does not depend on unit health at receipt time; commands skip dead units at execution time. Submission sorts IDs; duplicate IDs are rejected. Positive sequence numbers are unique per player; tick order and sequence order must agree. Arrival order may vary. All commands execute in `(tick,player,sequence)` order. `state_hash()` serializes map identity, last applied sequences, RNG state and every executed authoritative field into FNV-1a, excluding pending receipts. `hash()` extends that checksum with queued commands. Simulation compatibility version 7 invalidates previous recordings; VFC command wire layout remains version 1. Wire coordinates are bounded to 0..32767 on each axis; Sim and lockstep receipt additionally enforce the selected map's bounds. Neither hash is a cryptographic integrity check.
+Submit commands for the current or a future tick before advancing it. IDs must exist and belong to the issuing player. Admission does not depend on unit health at receipt time; commands skip dead units at execution time. Submission sorts IDs; duplicate IDs are rejected. Positive sequence numbers are unique per player; tick order and sequence order must agree. Arrival order may vary. All commands execute in `(tick,player,sequence)` order. `state_hash()` serializes map identity, last applied sequences, RNG state and every executed authoritative field into FNV-1a, excluding pending receipts. `hash()` extends that checksum with queued commands. Simulation compatibility version 8 invalidates previous recordings; VFC command wire layout remains version 1. Wire coordinates are bounded to 0..32767 on each axis; Sim and lockstep receipt additionally enforce the selected map's bounds. Neither hash is a cryptographic integrity check.
 
 Economy production: `TrainStrider=7` and `CancelProduction=8` use exactly one
 structure ID and zero x/z operands. They cannot alias unit IDs on combat maps.
@@ -15,8 +15,20 @@ have monotonic IDs and enter the collision index before movement that tick;
 existing units are never displaced to make room. Tombstones retain dead IDs,
 and all queues reserve lifetime roster space within the 4096-entry limit.
 Population, production and readiness rules are tested independently from actual
-packaged gathering/construction/production replay evidence. Economic AI,
-structure combat/victory and economy networking remain unfinished.
+packaged gathering/construction/production replay evidence. Destruction loses
+all remaining paid items without refunds, releases reservations, and clears
+production progress and blocked-spawn flags. Production executes before combat:
+a unit completed on the lethal tick has already spawned and survives independently.
+Dead structures retain IDs and remove their navigation footprints immediately.
+
+Economy combat uses enemy-unit priority, then nearest enemy structure footprint
+distance with stable ID ties. Striders acquire buildings within six world units
+of the footprint and fire within three; only AttackMove pursues them. Unit and
+structure target IDs remain distinct and are both hashed. Workers cannot fire.
+Destroying an anchor wins; simultaneous anchor destruction draws. Losing workers
+does not end a match. After the result, gameplay is frozen, targets/movement are
+cleared, and fixed ticks plus buffered command sequence receipts continue. Thus
+already-scheduled inputs remain replayable but cannot spend/refund/move/attack.
 
 The canonical command byte format is little-endian: magic bytes `56 46 43 01`, u32 tick, u32 sequence, u8 player, u8 order, u32 x, u32 z, u32 count, then count u32 IDs in strictly increasing order. Exact length, version, ID ordering, coordinate bounds, player/order values and list limits are validated before output is changed. Maximum list size is 256, future horizon 1200 ticks, pending queue 4096 commands. The lockstep wrapper closes commands into one immutable frame per player/tick, including empty input. Protocol 2 separates executed-state checksums from future input frames: a sender cannot know a future state hash when scheduling input. Both players' commands validate on a copy before a tick is committed, so an invalid second player cannot partially apply the first. Frames are bounded to 16 commands and 64 future ticks, with static ownership checks, strict canonical ordering and conflicting-duplicate rejection. The transport verifies tick-tagged executed-state hashes with bounded lag; the independent simulation contains no pacing clock. See `net/README.md` for separate-process transport and source content compatibility.
 
@@ -30,7 +42,26 @@ Unit collision uses stable sequential iteration and conservative square swept bo
 
 After two blocked ticks, a unit can plan a local maneuver around the first blocking sweep: four padded corners, at most two segments, twelve candidate corner pairs, integer costs and a right-hand tie preference. Every actual step rechecks current swept clearance. Paths reserve no future space; waiting, pending detours and route cache keys are hashed. Pursuit updates preserve local avoidance; explicit Stop/Hold/retarget clears it immediately. Completing or abandoning a detour refreshes the global route. A stationary unit occupying the actual destination is waited for, never pushed or reported as arrival. Seven small fixtures cover stationary blockers/chains, a swap, moving blockers, Stop/retarget, occupied goals and avoidance activation while chasing a moving target. They do not establish successful pursuit, arbitrary crowd deadlock resolution, choke/stream robustness or dynamic construction. Many simultaneous retries remain a scale concern. Static route quality must not be presented as dynamic crowd acceptance. Damage remains accumulated after iteration, with existing side-dependent acquisition timing. See `.voidfront-agent/navigation-contract.md` for geometry limits, independent reference and predeclared route tolerance.
 
-`make_ai_commands` is only skirmish attack AI through the public command interface, not the completed economy/build/technology AI. Winner means the other side has no walkers; command anchors and the complete match loop are absent. Queued orders, fog, dynamic structure blocking, production crowd routing and reconnect are absent. Network tick exchange, timeout and desync diagnostics exist in a headless loopback harness; two packaged loopback clients are integrated, with physical-network and full-match gates still open. Neither in-process decoded-command tests nor separate file replay processes establish network behavior.
+`make_ai_commands` uses Gather, Build, TrainStrider and AttackMove through the
+public command interface on Economy. It starts with workers/anchor and zero
+salvage, funds a forward Foundry, restores an interrupted builder, keeps idle
+workers harvesting and sends produced Striders toward the enemy anchor. It is a
+bounded small-match opponent, without technology, scouting/fog, tactical
+counterplay or balance acceptance. Foundry/Scale128 retain unit-elimination
+skirmish behavior. Economy networking, queued orders, flux, technology, fog,
+general production crowd routing and reconnect remain open. Network tick
+exchange, timeout and desync diagnostics exist in a headless loopback harness;
+two packaged loopback clients are integrated, with physical-network and full-match
+gates still open. Neither in-process decoded-command tests nor separate file
+replay processes establish network behavior.
+
+`voidfront_headless --map economy --profile economic-ai --ticks 6000` runs player
+1 AI against a passive player 0. The default `--profile ai` runs both AIs. Both
+profiles support canonical recordings, hash traces and metrics. `match_tests`
+covers real unmodified-start economy command/replay matches, plus explicitly
+injected boundary fixtures for target priority, simultaneous kills, destruction,
+navigation recovery and commands arriving around terminal victory. Fixture
+success is not evidence of human play or complete small-match acceptance.
 
 Standalone build: `cmake -S sim -B build/sim -G "Visual Studio 17 2022" -A x64`, then `cmake --build build/sim --config Debug -- /m:1` and `ctest --test-dir build/sim -C Debug --output-on-failure`; repeat Release. On this host normalize duplicate PATH/Path environment entries before CMake/MSBuild. The headless harness accepts `--ticks`, `--units-per-team`, `--seed`, `--trace`. It prints hash and p95/p99 wall-time microseconds for both the whole run and only ticks before victory; timing is measured outside authoritative code and includes AI/command work but excludes trace hashing/writes. Trace rows are tick plus state hash. Timing a small prototype map does not satisfy the 128x128 production performance gate.
 
