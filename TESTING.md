@@ -1,5 +1,65 @@
 # Verification ledger
 
+## 2026-09-29 worker/army selection and player victory
+
+`tools/verify.ps1` passed pinned Godot 4.7.2/templates/godot-cpp, MSVC integrated
+Debug/Release builds, 10/10 CTest each, 15 malformed replays + 7 aliases each,
+2,000 cross-build hashes and ten repeats. `victory-build-2026-09-29.log` retains
+results. No sim/network/bridge/rule change; protocol 8 / content unchanged.
+Final `tools/package.ps1` passed import/export/Release regression; log at
+`artifacts/victory-final-package-build-2026-09-29.log`. PCK SHA256
+`ba97185f30d99b40fdfd94bcfda97870a9e19b785f9a039804c45520df21fcb3`; DLL
+`f5dbc1c19ea85dd4d6231fc47fa2c2c9618bdc3a5f0ca536a8f077457f311ca8`. Previous package copied to
+`artifacts/victory-prior-package-2026-09-29`; source snapshots remain preserved.
+
+`tools/capture.ps1 -Packaged -Victory -Ticks 12000 -Name victory-package-2026-09-29`
+passes 29 checks / 6,408 ticks, hash`cfad785ac934e8e0`. This first package
+had the old help-panel height; final HUD repair is exercised by
+`-Packaged -Victory -MatchRealtime -Ticks 12000 -Name victory-realtime-2026-09-29`:
+29 checks / 6,556 ticks, hash`c0ba2300ef0084ab`, winner 0.
+The real-time route uses the normal 20 Hz accumulator; script decisions remain
+snapshot-driven software input, with no injected resources/units/damage.
+It starts with workers, gathers/builds/trains/defends/counterattacks, destroys
+the opposing anchor, shows victory, hides that anchor, restarts and observes AI
+resume. Two earlier source probes also won; final source 29 checks / 6,408 ticks and
+its audit remain under `victory-source-final*`. No route failures were suppressed.
+
+`python tools/verify_match_capture.py <report> --out <unique-directory>` audits
+both-player command ownership and player-input bindings, resource/population,
+static/relative swept clearance, conservative structure-damage budgets, outcome,
+terminal freeze and restart. Victory role events bind exact live-owned kinds,
+empty starting army, pending-mode reset, F2 selection to actual army AttackMove,
+and next-tick Gather/resource preservation for all working miners. Accelerated
+51,847 unit rows / 145 damage observations; ordinary
+51,674 unit rows / 148 damage observations;4,000 salvage
+conserved. Both compare all hashes against Debug plus ten Release replays and
+reject 11 corruptions (including wrong route/role selection/retained build mode).
+Summaries: `artifacts/victory-package-replay-2026-09-29/summary.json` and
+`artifacts/victory-realtime-replay-2026-09-29/summary.json`.
+
+Preservation on first package: defeat 27 checks / 2,856 ticks plus 9 corruptions;
+production 27 checks / 1,798 ticks, 10,930 rows, 3 purchases / 1 refund / 2 spawns / 7 corruptions;
+economy 25 checks / 1,055 ticks, 6,336 rows, 100 construction increments / 7 corruptions.
+Each includes Debug+ten Release hash replay equality. Reports use
+`artifacts/victory-{defeat,production,economy}-regression-2026-09-29.json`;
+audits use `victory-{defeat,production,economy}-replay-2026-09-29/summary.json`.
+Combat 400 passes F2/selection/orders/restart with winner 1; frame p99 = 17.212 ms
+FAIL 16.67 ms. Only HUD panel height changed between these and final package.
+Final `verify_client_network.py --case clean --out artifacts/victory-client-network-2026-09-29`
+passes distinct rendered peer processes, 240 ticks / 3 inputs each, trace agreement,
+cross-build replays and ten repeats. This is combat-only loopback, no impairment
+or physical-endpoint/full-match test; unchanged broader suites were not rerun.
+
+Primary and independent critic inspect actual final-package production,
+counterattack/victory/restart PNGs. Critic found and confirmed the help clipping
+repair; report `.voidfront-agent/review-victory-2026-09-29.md` retains findings.
+Ordinary host wall 335.908 s, peak RSS 1,079,848,960 B
+are fixture observations with every snapshot retained; initial network
+verification overlapped. These do not measure normal gameplay memory. No isolated
+frame/input/performance acceptance, new movie/animation assessment, human play,
+SC2 comparison, full-small-match, AAA or shipping claim. Existing dense-crowd,
+response/frame and production-content failures remain. No COMPLETE.md.
+
 ## 2026-09-29 economic AI and anchor combat verification
 
 `tools/verify.ps1` built pinned Godot4.7.2/MSVC Debug+Release, passed10/10

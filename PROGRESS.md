@@ -1,5 +1,50 @@
 # Voidfront progress
 
+## 2026-09-29 12:39 America/Los_Angeles - player victory and separate army controls
+
+Baseline dev `2954573`; STOP/COMPLETE and prior marker absent. Exclusively held
+current task marker. User PROGRESS/roadmap/last-run edits preserved in
+`artifacts/victory-baseline-2026-09-29`. Specialist owned victory fixture/main
+mode wiring; primary integrated controls/help/audit/builds/Git; independent
+critic examined code, actual PNGs, audit reports and additional corruptions.
+
+F1 now selects live own workers; F2 selects live own Striders, so army commands
+leave miners gathering. Role selection also cancels pending build/attack modes.
+HUD and PLAY expose these roles plus group/camera controls. Critic caught the
+fourth help row clipping; the final package expands the panel and keeps the
+notice inside it. No simulation rules, costs, protocol or content changed.
+
+New ordinary-InputEvent victory route keeps miners working, builds with one
+worker, funds reinforcements, defends and counterattacks with five Striders.
+The initial package passes 29 checks / 6,408 ticks, winner 0; final package
+normal 20 Hz route passes 29 checks / 6,556 ticks, winner 0.
+Both retain seven role events, both-player commands, all tick snapshots and
+replays; Debug plus ten Release runs match every observed hash. Audits conserve
+4,000 salvage, check swept motion/structure damage and reject 11 corruptions.
+Victory, destroyed opposing anchor and input restart are visible in PNGs.
+These are scripted routes, not human play or balance/complete-RTS acceptance.
+
+MSVC Debug/Release 10/10 CTest each, malformed/alias checks, 2,000 cross-build hashes
+and ten baseline repeats pass. Packaged defeat 2,856, production 1,798, economy 1,055
+plus their audits/replays and combat 400 pass. Final-package clean two-rendered-
+peer 240 tick combat check and ten repeats pass; impaired/negative transport
+suite not rerun because simulation/network code is unchanged. Build/package
+logs and exact evidence paths are in TESTING.md. Current package remains
+`artifacts/package/Voidfront.exe`; previous package retained.
+
+Critic accepts bounded controls/victory/HUD repair only. New ordinary capture
+wall 335.908 s / peak RSS 1,079,848,960 B are process
+observations from a fixture retaining every snapshot, not normal gameplay
+memory or performance acceptance; network work overlapped its opening.
+Combat capture frame p99 = 17.212 ms still fails 16.67 ms. Dense-crowd, response/frame
+budgets, blockout art, reused workers, label overlaps, audio/VFX, full content,
+human play/balance and all shipping gates remain. No COMPLETE.md.
+
+Next: contested flux with useful technology and AI participation through canonical
+commands, followed by fog/scouting and setup. Queued unit orders, exclusive
+focus targeting and economy networking remain required. Current victory-results,
+this entry and roadmap supersede the intentionally untouched older last-run.json.
+
 ## 2026-09-29 10:58 America/Los_Angeles - economic opponent and anchor outcomes
 
 Baseline dev `8fa6528`; STOP/COMPLETE and previous marker absent. Acquired this

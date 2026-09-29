@@ -78,7 +78,7 @@ func run() -> void:
 	await frames()
 	check(initial.map_id == 2 and initial.units.size() == 6, "Production starts from economy workers")
 	var deposit: Dictionary = initial.deposits[0]
-	await key(KEY_F2)
+	await key(KEY_F1)
 	label = "gather_for_production"
 	await mouse(MOUSE_BUTTON_RIGHT, Vector3(deposit.x / 256.0, 0.5, deposit.z / 256.0))
 	check(await until(func(): return int(game.current.salvage[0]) >= 200, game.finish_tick - 450), "Gathering funds Foundry and two Striders")

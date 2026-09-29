@@ -100,6 +100,7 @@ var economy_fixture: RefCounted
 var production_smoke := false
 var production_fixture: RefCounted
 var match_smoke := false
+var victory_smoke := false
 var match_realtime := false
 var match_fixture: RefCounted
 var build_pending := false
@@ -120,6 +121,10 @@ func _ready() -> void:
 		elif argument == "--skirmish": skirmish = true
 		elif argument == "--economy": economy = true
 		elif argument == "--match-realtime": match_realtime = true
+		elif argument == "--victory-smoke":
+			economy = true
+			match_smoke = true
+			victory_smoke = true
 		elif argument == "--match-smoke":
 			economy = true
 			match_smoke = true
@@ -231,7 +236,7 @@ func _ready() -> void:
 	canvas.add_child(hud)
 	_reset()
 	if match_smoke:
-		match_fixture = preload("res://match_smoke.gd").new(self)
+		match_fixture = preload("res://victory_smoke.gd").new(self) if victory_smoke else preload("res://match_smoke.gd").new(self)
 		match_fixture.run.call_deferred()
 	if production_smoke:
 		production_fixture = preload("res://production_smoke.gd").new(self)
@@ -881,11 +886,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			_control_group(event.physical_keycode - KEY_0, event.ctrl_pressed, event.shift_pressed)
 			return
 		match event.physical_keycode:
-			KEY_F2:
+			KEY_F1, KEY_F2:
+				attack_pending = false
+				build_pending = false
 				selected_entity.clear()
 				selected.clear()
 				for unit in current.units:
-					if unit.player == local_player and unit.hp > 0: selected.append(unit.id)
+					if unit.player == local_player and unit.hp > 0 and int(unit.get("kind", 0)) == (1 if event.physical_keycode == KEY_F1 else 0): selected.append(unit.id)
 				if network_smoke:
 					own_selection_passed = not selected.is_empty()
 					for unit in current.units:

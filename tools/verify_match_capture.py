@@ -52,6 +52,35 @@ def commands_from_replay(raw, report):
     return commands
 
 
+
+def audit_roles(report, commands):
+    events, rows = report.get('role_selection_events', []), report['snapshots']
+    require(len(events) >= 7, 'missing role selection evidence')
+    for event in events:
+        before, after = event['before'], event['after']
+        require(before == rows[before['tick']] and after == rows[after['tick']] and event['tick'] == after['tick'], 'role snapshot binding')
+        require(event['key'] in ('F1', 'F2'), 'unknown role key')
+        kind = 1 if event['key'] == 'F1' else 0
+        expected = [u['id'] for u in before['units'] if u['player'] == 0 and u['hp'] > 0 and u['kind'] == kind]
+        require(event['selected'] == expected, 'role selection includes wrong units')
+        require(not any(event['pending_after'].values()), 'role switch retained targeting')
+    require(any(e['pending_before']['attack'] for e in events) and any(e['pending_before']['build'] for e in events), 'missing pending mode cancellation')
+    require(any(e['key'] == 'F2' and not e['selected'] for e in events), 'missing empty army selection')
+    attack_inputs = [i for i in report['inputs'] if i['label'] == 'army_hotkey_anchor_attack' and i['accepted']]
+    require(len(attack_inputs) == 1, 'missing whole-army input')
+    event = attack_inputs[0]
+    command = next(c for c in commands if c['player'] == 0 and c['tick'] == event['event_tick'] and c['order'] == 2)
+    role = [e for e in events if e['key'] == 'F2' and e['tick'] <= command['tick']][-1]
+    require(command['units'] == role['selected'] and len(command['units']) >= 5, 'army input selection binding')
+    before, after = rows[command['tick']], rows[command['tick']+1]
+    miners = [u for u in before['units'] if u['player'] == 0 and u['kind'] == 1 and u['hp'] > 0 and u['order'] == 4]
+    require(miners, 'army command has no working miners')
+    for miner in miners:
+        current = after['units'][miner['id']-1]
+        require(miner['id'] not in command['units'] and current['hp'] > 0 and current['order'] == 4 and current['resource_id'] == miner['resource_id'], 'army order disrupted miner')
+    return len(events)
+
+
 def audit(report, commands):
     require(report['ok'] and not report['errors'], 'fixture failed')
     initial, final = report['initial_snapshot'], report['final_snapshot']
@@ -140,7 +169,11 @@ def audit(report, commands):
         if prior['winner'] != -1:
             require(all(row[k] == prior[k] for k in ('units', 'structures', 'deposits', 'salvage', 'winner')), 'terminal gameplay changed')
         prior = row
-    require(final['winner'] == 1 and final['structures'][0]['hp'] == 0, 'defeat route missing')
+    require(report['mode'] in ('match', 'victory'), 'unknown match route')
+    expected_winner = 0 if report['mode'] == 'victory' else 1
+    require(final['winner'] == expected_winner and
+            any(s['kind'] == 0 and s['player'] == 1-expected_winner and s['hp'] == 0 for s in final['structures']),
+            'expected anchor outcome missing')
     require(damage_ticks > 0 and dead, 'no executed building combat')
     require(all(any(u['player'] == p and u['kind'] == 0 for u in final['units']) for p in (0, 1)), 'missing paid production')
     return dict(ticks=final['tick'], unit_rows=unit_rows, damage_ticks=damage_ticks, damaged_structures=sorted(damaged),
@@ -158,8 +191,11 @@ def main():
     raw = Path(report['replay_path']).read_bytes()
     commands = commands_from_replay(raw, report)
     summary = audit(report, commands)
+    if report['mode'] == 'victory': summary['role_selection_events'] = audit_roles(report, commands)
     rejected = []
-    for name in ('ledger-gap', 'trace-gap', 'resource-created', 'population-lie', 'unfunded-damage', 'wrong-outcome', 'restart-ai-off', 'shot-target-lie'):
+    mutations = ['ledger-gap', 'trace-gap', 'resource-created', 'population-lie', 'unfunded-damage', 'wrong-outcome', 'restart-ai-off', 'shot-target-lie', 'wrong-route']
+    if report['mode'] == 'victory': mutations += ['wrong-role-selection', 'retained-build-mode']
+    for name in mutations:
         bad = copy.deepcopy(report)
         if name == 'ledger-gap': bad['snapshots'].pop(1)
         elif name == 'trace-gap': bad['trace'].pop(1)
@@ -167,11 +203,16 @@ def main():
         elif name == 'population-lie': bad['snapshots'][1]['population_used'][0] += 1
         elif name == 'unfunded-damage': bad['snapshots'][1]['structures'][0]['hp'] -= 8
         elif name == 'wrong-outcome':
-            bad['final_snapshot']['winner'] = 0
-            bad['snapshots'][-1]['winner'] = 0
+            bad['final_snapshot']['winner'] = 1 - report['final_snapshot']['winner']
+            bad['snapshots'][-1]['winner'] = bad['final_snapshot']['winner']
+        elif name == 'wrong-role-selection': bad['role_selection_events'][0]['selected'] = [1]
+        elif name == 'retained-build-mode': bad['role_selection_events'][0]['pending_after']['build'] = True
+        elif name == 'wrong-route': bad['mode'] = 'match' if report['mode'] == 'victory' else 'victory'
         elif name == 'shot-target-lie': bad['structure_attack_requests'][0]['target_structure'] += 100
         else: bad['restart_snapshot']['enemy_ai'] = False
-        try: audit(bad, commands)
+        try:
+            audit(bad, commands)
+            if report['mode'] == 'victory': audit_roles(bad, commands)
         except AssertionError: rejected.append(name)
         else: raise AssertionError(f'corrupted evidence accepted: {name}')
     args.out.mkdir(parents=True, exist_ok=False)
@@ -200,7 +241,7 @@ def main():
     summary['completed_utc'] = datetime.now(timezone.utc).isoformat()
     summary['timing_mode'] = report['timing_mode']
     summary['rendered_structure_attack_requests'] = len(report['structure_attack_requests'])
-    summary['limitations'] = 'Software InputEvents against economic AI; defeat/restart route only. No human play, victory route, full RTS scope, networking or performance acceptance. Attack clip requests do not prove animation quality.'
+    summary['limitations'] = 'Software InputEvents against economic AI; observed anchor outcome and restart only. No human play, full RTS scope, networking or performance acceptance. Attack clip requests do not prove animation quality.'
     (args.out/'summary.json').write_text(json.dumps(summary, indent=2))
     print(json.dumps({k: v for k, v in summary.items() if k != 'commands'}))
 

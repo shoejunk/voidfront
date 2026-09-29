@@ -1,5 +1,20 @@
 # Continuing roadmap
 
+## 2026-09-29 player-victory and role-control checkpoint
+
+Packaged player victory against active economic AI is now retained at accelerated
+and ordinary 20 Hz pace, with input restart and every tick matching Debug plus ten
+Release replays. F1 selects workers, F2 army; the counterattack leaves miners
+working. HUD includes role/group/camera help. See current TESTING/PROGRESS and
+review-victory-2026-09-29.md for evidence and limits. Scripted success does not
+establish human play, balance or the complete small-match gate.
+
+Next implement contested flux and meaningful technology through canonical commands
+with economic-AI participation; fog/scouting and minimal setup follow. Preserve
+queued-orders/focus-targeting/economy-network requirements and every failed dense-
+crowd, response/frame, production-content and shipping gate. This supersedes the
+player-victory-next line in the historical checkpoint below. No COMPLETE.md.
+
 ## 2026-09-29 economic AI and anchor outcome checkpoint
 
 The default offline economy now has canonical-command Gather/Build/Train/

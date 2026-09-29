@@ -30,7 +30,7 @@ func run() -> void:
 	await frames()
 	check(initial.map_id == 2 and initial.get("enemy_ai", false), "Ordinary economy starts with opposing AI enabled")
 	var deposit: Dictionary = initial.deposits[0]
-	await key(KEY_F2)
+	await key(KEY_F1)
 	label = "gather_for_defence"
 	await mouse(MOUSE_BUTTON_RIGHT, Vector3(deposit.x / 256.0, 0.5, deposit.z / 256.0))
 	check(await until(func(): return int(game.current.salvage[0]) >= 150, game.finish_tick - 1000), "Workers gather salvage for a Foundry and Strider")

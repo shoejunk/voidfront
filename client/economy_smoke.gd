@@ -81,7 +81,7 @@ func run() -> void:
 	var worker: Dictionary = initial.units[0]
 	await mouse(MOUSE_BUTTON_LEFT, Vector3(worker.x / 256.0, 0.5, worker.z / 256.0))
 	check(game.selected == [worker.id] and game.selected_entity.is_empty(), "Worker click selects worker and clears deposit readout")
-	await key(KEY_F2)
+	await key(KEY_F1)
 	check(game.selected.size() == 3 and game._selected_workers() == 3 and game.selected_entity.is_empty(), "Input selects own workers")
 	label = "gather_for_return"
 	await mouse(MOUSE_BUTTON_RIGHT, Vector3(deposit.x / 256.0, 0.5, deposit.z / 256.0))

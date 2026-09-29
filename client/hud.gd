@@ -55,8 +55,8 @@ func _process(_delta: float) -> void:
 		return
 	var profile_start := Time.get_ticks_usec() if game.presentation_profiler else 0
 	var view := get_viewport_rect().size
-	selection.position.y = view.y - 112
-	tip.position.y = view.y - 88
+	selection.position.y = view.y - (144 if game.economy else 112)
+	tip.position.y = view.y - (120 if game.economy else 88)
 	selection.text = "%02d  /  CAIRN STRIDERS" % game.selected.size()
 	if game.attack_pending:
 		selection.text += "     —     SELECT ATTACK DESTINATION"
@@ -126,7 +126,7 @@ func _process(_delta: float) -> void:
 					if entity.production_queue > 0: selection.text += "   /   STRIDER %d%%" % int(float(entity.production_ticks) / game.current.train_ticks * 100)
 					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
 		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
-		tip.text = "LMB / drag  select    RMB deposit  gather    B + click  build Foundry (%d)    T  train Strider (%d)    X  cancel last/refund\nRMB  move / work / attack enemy building    A + click  attack-move    S  stop    H  hold    F2  all units    R  restart\n" % [cost, game.current.strider_cost] + game.economy_notice
+		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building\nB + click  Foundry (%d)    T  Strider (%d)    X  refund last    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Shift  add    arrows  camera    wheel  zoom    R  restart\n" % [cost, game.current.strider_cost] + game.economy_notice
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
@@ -140,8 +140,9 @@ func _draw() -> void:
 	var panel_size := Vector2(920, 128) if network_panel else Vector2(548, 80)
 	draw_rect(Rect2(Vector2(16, 12), panel_size), Color(0.025, 0.047, 0.055, 0.94))
 	draw_rect(Rect2(16, 12, 3, panel_size.y), Color("61c9c6"))
-	draw_rect(Rect2(16, view.y - 131, 965, 114), Color(0.025, 0.047, 0.055, 0.96))
-	draw_line(Vector2(16, view.y - 131), Vector2(981, view.y - 131), Color("4b777b"), 1)
+	var extra_help_height := 32 if is_instance_valid(game) and game.economy else 0
+	draw_rect(Rect2(16, view.y - 131 - extra_help_height, 965, 114 + extra_help_height), Color(0.025, 0.047, 0.055, 0.96))
+	draw_line(Vector2(16, view.y - 131 - extra_help_height), Vector2(981, view.y - 131 - extra_help_height), Color("4b777b"), 1)
 	if not is_instance_valid(game) or game.current.is_empty():
 		return
 	if not result.text.is_empty():

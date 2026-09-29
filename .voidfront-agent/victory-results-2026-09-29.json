@@ -1,0 +1,134 @@
+{
+  "started_utc": "2026-09-29T19:39:37.4198042Z",
+  "completed_utc": "2026-09-29T19:56:31.583388+00:00",
+  "baseline": "2954573",
+  "task_id": "01a0eead-3787-7470-9f96-616a600f8d81",
+  "package": {
+    "Voidfront.exe": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+    "Voidfront.pck": "ba97185f30d99b40fdfd94bcfda97870a9e19b785f9a039804c45520df21fcb3",
+    "voidfront_bridge.dll": "f5dbc1c19ea85dd4d6231fc47fa2c2c9618bdc3a5f0ca536a8f077457f311ca8"
+  },
+  "accelerated": {
+    "ticks": 6408,
+    "unit_rows": 51847,
+    "damage_ticks": 145,
+    "damaged_structures": [
+      2,
+      3,
+      4
+    ],
+    "destroyed_structures": [
+      2,
+      3
+    ],
+    "conserved_salvage": 4000,
+    "forfeited_salvage": 0,
+    "final_hash": "cfad785ac934e8e0",
+    "winner": 0,
+    "role_selection_events": 7,
+    "started_utc": "2026-09-29T19:47:43.526668+00:00",
+    "report_sha256": "6664b9a715a36ddf8ad6c81427068ad485e7deb305a345d38d68d51423c7aba8",
+    "replay_sha256": "641f26018df02616c7cd1a348a65e290759ea8b9dca78f6ee3a2b2a468c5fb2c",
+    "binaries": {
+      "Debug": "c7db382b20d93de520a4eec9aacf0c87c6a83934fd120b75edfe74928b2e94d0",
+      "Release": "37d51cc7a5c77b61f2f2e1ffa0d96947a4e2811962376fedaab2701400a28524"
+    },
+    "rejected_corruptions": [
+      "ledger-gap",
+      "trace-gap",
+      "resource-created",
+      "population-lie",
+      "unfunded-damage",
+      "wrong-outcome",
+      "restart-ai-off",
+      "shot-target-lie",
+      "wrong-route",
+      "wrong-role-selection",
+      "retained-build-mode"
+    ],
+    "runs": [
+      "Debug-0",
+      "Release-0",
+      "Release-1",
+      "Release-2",
+      "Release-3",
+      "Release-4",
+      "Release-5",
+      "Release-6",
+      "Release-7",
+      "Release-8",
+      "Release-9"
+    ],
+    "completed_utc": "2026-09-29T19:47:46.969496+00:00",
+    "timing_mode": "accelerated_eight_ticks_per_frame",
+    "rendered_structure_attack_requests": 213,
+    "limitations": "Software InputEvents against economic AI; observed anchor outcome and restart only. No human play, full RTS scope, networking or performance acceptance. Attack clip requests do not prove animation quality."
+  },
+  "realtime": {
+    "ticks": 6556,
+    "unit_rows": 51674,
+    "damage_ticks": 148,
+    "damaged_structures": [
+      2,
+      3,
+      4
+    ],
+    "destroyed_structures": [
+      2,
+      3
+    ],
+    "conserved_salvage": 4000,
+    "forfeited_salvage": 0,
+    "final_hash": "c0ba2300ef0084ab",
+    "winner": 0,
+    "role_selection_events": 7,
+    "started_utc": "2026-09-29T19:56:09.390209+00:00",
+    "report_sha256": "742b2a93072918c9da1d38792fcfee2b3b988bc8874cdfaabc9f223e8e5dd2e6",
+    "replay_sha256": "a3f19466906961db9e84b56f386a3a673827db552857b49c8233adc1a1347be0",
+    "binaries": {
+      "Debug": "c7db382b20d93de520a4eec9aacf0c87c6a83934fd120b75edfe74928b2e94d0",
+      "Release": "37d51cc7a5c77b61f2f2e1ffa0d96947a4e2811962376fedaab2701400a28524"
+    },
+    "rejected_corruptions": [
+      "ledger-gap",
+      "trace-gap",
+      "resource-created",
+      "population-lie",
+      "unfunded-damage",
+      "wrong-outcome",
+      "restart-ai-off",
+      "shot-target-lie",
+      "wrong-route",
+      "wrong-role-selection",
+      "retained-build-mode"
+    ],
+    "runs": [
+      "Debug-0",
+      "Release-0",
+      "Release-1",
+      "Release-2",
+      "Release-3",
+      "Release-4",
+      "Release-5",
+      "Release-6",
+      "Release-7",
+      "Release-8",
+      "Release-9"
+    ],
+    "completed_utc": "2026-09-29T19:56:11.383242+00:00",
+    "timing_mode": "real_time_20hz",
+    "rendered_structure_attack_requests": 192,
+    "limitations": "Software InputEvents against economic AI; observed anchor outcome and restart only. No human play, full RTS scope, networking or performance acceptance. Attack clip requests do not prove animation quality."
+  },
+  "host_observations": {
+    "wall_seconds": 335.9084067,
+    "peak_resident_bytes": 1079848960,
+    "movie": false,
+    "source": "Windows process PeakWorkingSet64 sampled once per second"
+  },
+  "simulation_changes": false,
+  "protocol": 8,
+  "review": ".voidfront-agent/review-victory-2026-09-29.md",
+  "next": "Contested flux and meaningful technology through canonical commands with economic AI; then fog/scouting/setup.",
+  "limitations": "Software input routes, not human play, balance, animation quality, isolated performance or full-match/shipping acceptance. Dense-crowd, latency/frame, content and final SPEC gates remain open."
+}
