@@ -1,0 +1,131 @@
+{
+  "run": "2026-09-29-economic-ai-anchor-combat",
+  "checkpoint_utc": "2026-09-29T18:15:39.550656+00:00",
+  "source_commit": "3fa92ad657d77562beccc13bab68f60bd39f110e",
+  "branch": "dev",
+  "package": "C:\\dev\\voidfront\\artifacts\\package\\Voidfront.exe",
+  "package_pck_sha256": "643d1bfa0cd2af175b47699287a635c8a2f709b9e1bf1148be2792b0015ac7f6",
+  "package_bridge_sha256": "7d00cbbf84d6669f368feffa9372d1a7b80a8aafd15ab38e261e48d37a7449d7",
+  "protocol": 8,
+  "content_id": "5140bcb79d3711bd",
+  "build_log": "artifacts/match-build-2026-09-29.log",
+  "ctest_each_configuration": 10,
+  "match_audits": {
+    "match-replay-2026-09-29": {
+      "ticks": 2856,
+      "unit_rows": 18573,
+      "damage_ticks": 194,
+      "final_hash": "0c492e6de53740e4",
+      "winner": 1,
+      "conserved_salvage": 4000,
+      "forfeited_salvage": 0,
+      "runs": [
+        "Debug-0",
+        "Release-0",
+        "Release-1",
+        "Release-2",
+        "Release-3",
+        "Release-4",
+        "Release-5",
+        "Release-6",
+        "Release-7",
+        "Release-8",
+        "Release-9"
+      ],
+      "timing_mode": "accelerated_eight_ticks_per_frame",
+      "rendered_structure_attack_requests": 193,
+      "replay_sha256": "76d7aad09d0dc3c87935a7aec2390fa96d51e948747fc6274f32333bf14a4a86"
+    },
+    "match-realtime-replay-2026-09-29": {
+      "ticks": 2849,
+      "unit_rows": 18393,
+      "damage_ticks": 188,
+      "final_hash": "15ed20dd06504f87",
+      "winner": 1,
+      "conserved_salvage": 4000,
+      "forfeited_salvage": 0,
+      "runs": [
+        "Debug-0",
+        "Release-0",
+        "Release-1",
+        "Release-2",
+        "Release-3",
+        "Release-4",
+        "Release-5",
+        "Release-6",
+        "Release-7",
+        "Release-8",
+        "Release-9"
+      ],
+      "timing_mode": "real_time_20hz",
+      "rendered_structure_attack_requests": 187,
+      "replay_sha256": "9f471b618cce94111db3a5bcc96181d09129f57f1e342b58d0b0847a87326a65"
+    },
+    "match-movie-replay-2026-09-29": {
+      "ticks": 2856,
+      "unit_rows": 18573,
+      "damage_ticks": 194,
+      "final_hash": "0c492e6de53740e4",
+      "winner": 1,
+      "conserved_salvage": 4000,
+      "forfeited_salvage": 0,
+      "runs": [
+        "Debug-0",
+        "Release-0",
+        "Release-1",
+        "Release-2",
+        "Release-3",
+        "Release-4",
+        "Release-5",
+        "Release-6",
+        "Release-7",
+        "Release-8",
+        "Release-9"
+      ],
+      "timing_mode": "accelerated_eight_ticks_per_frame",
+      "rendered_structure_attack_requests": 193,
+      "replay_sha256": "76d7aad09d0dc3c87935a7aec2390fa96d51e948747fc6274f32333bf14a4a86"
+    }
+  },
+  "network": "artifacts/match-network-2026-09-29/summary.json",
+  "client_network": "artifacts/match-client-network-2026-09-29/summary.json",
+  "production_audit": "artifacts/match-production-replay-2026-09-29/summary.json",
+  "headless_duel": "artifacts/match-headless-2026-09-29/summary.json",
+  "review": ".voidfront-agent/review-match-2026-09-29.md",
+  "movie": "artifacts/match-movie-2026-09-29.mp4",
+  "movie_media": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 1600,
+        "height": 900,
+        "r_frame_rate": "60/1",
+        "nb_frames": "371"
+      },
+      {
+        "r_frame_rate": "0/0",
+        "nb_frames": "291"
+      }
+    ],
+    "format": {
+      "duration": "6.183333"
+    }
+  },
+  "user_changes_preserved": [
+    "PROGRESS.md",
+    ".voidfront-agent/roadmap.md",
+    ".voidfront-agent/last-run.json"
+  ],
+  "next": "Retain packaged player-victory route against economic AI, then contested flux and useful technology with AI support; fog/scouting and setup follow. Queued orders/focus targeting and economic networking remain open.",
+  "limits": "Bounded offline AI/anchor-combat acceptance only. Packaged defeat/restart, no player victory or full RTS gate. Paid queue loss and draw are injected C++ rule tests. No human play, balance, ordinary-motion movie, SC2 comparison, performance, AAA or shipping approval.",
+  "retained_failed_metrics": {
+    "rendered_rtt80_execution_p95_ms": [
+      150.335,
+      134.243
+    ],
+    "combat_frame_interval_p99_ms": 17.473,
+    "dense_500_crossing": "still failed, not rerun or weakened"
+  },
+  "complete": false
+}
