@@ -41,6 +41,14 @@ func key(code: Key) -> void:
 
 func mouse(button: MouseButton, point: Vector3) -> void:
 	var screen: Vector2 = game.camera.unproject_position(point)
+	var view: Vector2 = game.get_viewport().get_visible_rect().size
+	if not Rect2(Vector2(100, 150), view - Vector2(200, 340)).has_point(screen):
+		var rect: Rect2 = game.hud.minimap_rect()
+		var nav_point := rect.position + Vector2(point.x, point.z) / Vector2(game.map_size) * rect.size
+		game._smoke_mouse(MOUSE_BUTTON_LEFT, nav_point, true)
+		game._smoke_mouse(MOUSE_BUTTON_LEFT, nav_point, false)
+		await frames()
+		screen = game.camera.unproject_position(point)
 	game._smoke_mouse(button, screen, true)
 	game._smoke_mouse(button, screen, false)
 	await frames()

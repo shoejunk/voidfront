@@ -289,6 +289,14 @@ public:
             units.push_back(row);
         }
         result["units"] = units;
+        Array vision;
+        if (state.map()==vf::Map::Economy) for (uint8_t player=0;player<2;++player) {
+            PackedByteArray cells; const auto& source=state.vision(player);
+            cells.resize(source.size());
+            for (size_t i=0;i<source.size();++i) cells.set(i,source[i]);
+            vision.push_back(cells);
+        }
+        result["vision"] = vision;
         Array resources; resources.push_back(state.salvage(0)); resources.push_back(state.salvage(1));
         result["salvage"] = resources; result["foundry_cost"] = vf::kFoundryCost;
         result["build_duration"] = vf::kBuildTicks;

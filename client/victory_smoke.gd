@@ -67,9 +67,10 @@ func run() -> void:
 		for unit in striders():
 			if commanded.has(unit.id): continue
 			await select_unit(unit)
-			label = "enemy_anchor_context_attack" if attacking else "defensive_rally"
+			label = "enemy_spawn_scout_attack" if attacking else "defensive_rally"
 			if attacking:
-				await mouse(MOUSE_BUTTON_RIGHT, Vector3(anchor.x / 256.0, 0.5, anchor.z / 256.0))
+				await key(KEY_A)
+				await mouse(MOUSE_BUTTON_LEFT, Vector3(anchor.x / 256.0, 0.5, anchor.z / 256.0))
 			else:
 				await key(KEY_A)
 				await mouse(MOUSE_BUTTON_LEFT, Vector3(10.0, 0, 12.5 + float(unit.id % 3) * 0.6))

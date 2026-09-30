@@ -7,7 +7,7 @@ var dragging := false
 var title: Label
 var status: Label
 var selection: Label
-var tip: Label
+var tip: RichTextLabel
 var result: Label
 var connection: Label
 var minimap_obstacles: MultiMesh
@@ -23,7 +23,14 @@ func _ready() -> void:
 	connection.size.x = 888
 	connection.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	selection = _label(Vector2(36, 785), 22, Color("eaf1e9"))
-	tip = _label(Vector2(36, 825), 14, Color("a4b9b6"))
+	tip = RichTextLabel.new()
+	tip.position = Vector2(36, 825)
+	tip.size = Vector2(930, 100)
+	tip.scroll_active = false
+	tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tip.add_theme_font_size_override("normal_font_size", 14)
+	tip.add_theme_color_override("default_color", Color("a4b9b6"))
+	add_child(tip)
 	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
 	result = _label(Vector2(590, 350), 34, Color("f0d19b"))
 	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -44,6 +51,7 @@ func _ready() -> void:
 func _label(at: Vector2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
 	label.position = at
+	label.size = Vector2(930, 100)
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -57,14 +65,15 @@ func _process(_delta: float) -> void:
 	var view := get_viewport_rect().size
 	selection.position.y = view.y - (144 if game.economy else 112)
 	tip.position.y = view.y - (120 if game.economy else 88)
-	selection.text = "%02d  /  CAIRN STRIDERS" % game.selected.size()
-	if game.attack_pending:
-		selection.text += "     —     SELECT ATTACK DESTINATION"
-	status.text = "THE GLASS REACH   /   FIELD TRIAL 01     •     %02d:%02d" % [int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
+	if not game.economy:
+		selection.text = "%02d  /  CAIRN STRIDERS" % game.selected.size()
+		if game.attack_pending:
+			selection.text += "     —     SELECT ATTACK DESTINATION"
+		status.text = "THE GLASS REACH   /   FIELD TRIAL 01     •     %02d:%02d" % [int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
 	if game.scale128:
 		status.text = "SCALE FIELD   /   128 × 128   /   %d STRIDERS     •     %02d:%02d" % [game.current.units.size(), int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
-	connection.text = ""
-	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
+	if not game.economy: connection.text = ""
+	if not game.economy: tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
 	result.size.x = 700 if game.network or not game.option_error.is_empty() else 500
 	result.position = Vector2((view.x - result.size.x) / 2, view.y / 2 - 30)
 	if game.current.winner == game.local_player:
@@ -102,7 +111,7 @@ func _process(_delta: float) -> void:
 		var resources: Array = game.current.get("salvage", [0, 0])
 		var cost: int = game.current.foundry_cost
 		status.text = "SALVAGE %d   /   POPULATION %d + %d QUEUED / %d   /   FOUNDRY %d • STRIDER %d" % [resources[game.local_player], game.current.population_used[game.local_player], game.current.population_reserved[game.local_player], game.current.population_cap, cost, game.current.strider_cost]
-		connection.text = "DESTROY THE ENEMY COMMAND ANCHOR / Protect your own. Gather salvage, build a Foundry and train Striders."
+		connection.text = "64 x 48 EXPLORATION / Scout the dark ground. Destroy the enemy anchor; protect yours. Gather, build and train."
 		if not game.current.get("enemy_ai", false): connection.text += " Passive economy fixture."
 		if game.current.winner == game.local_player: result.text = "VICTORY / ENEMY ANCHOR DESTROYED\nR  /  new match"
 		elif game.current.winner in [0, 1]: result.text = "DEFEAT / YOUR ANCHOR DESTROYED\nR  /  new match"
@@ -126,7 +135,7 @@ func _process(_delta: float) -> void:
 					if entity.production_queue > 0: selection.text += "   /   STRIDER %d%%" % int(float(entity.production_ticks) / game.current.train_ticks * 100)
 					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
 		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
-		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building\nB + click  Foundry (%d)    T  Strider (%d)    X  refund last    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Shift  add    arrows  camera    wheel  zoom    R  restart\n" % [cost, game.current.strider_cost] + game.economy_notice
+		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building\nB + click  Foundry (%d)    T  Strider (%d)    X  refund last    A + click  attack-move    S  stop    H  hold\nCtrl+0-9  save / 0-9  recall    Arrows  pan (Shift fast)    MMB / minimap  pan    Home  base    Wheel  zoom    R  restart\n" % [cost, game.current.strider_cost] + game.economy_notice
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
@@ -148,27 +157,27 @@ func _draw() -> void:
 	if not result.text.is_empty():
 		var result_width := 740 if network_panel else 530
 		draw_rect(Rect2((view.x - result_width) / 2, view.y / 2 - 48, result_width, 128), Color(0.025, 0.047, 0.055, 0.94))
-	var map_rect := Rect2(view.x - 220, view.y - 174, 204, 153)
-	if game.map_size.x == game.map_size.y: map_rect = Rect2(view.x - 169, view.y - 174, 153, 153)
+	var map_rect := minimap_rect()
 	var map_scale := map_rect.size / Vector2(game.map_size)
 	draw_rect(map_rect.grow(6), Color("12252c"))
 	draw_rect(map_rect, Color("27373b"))
 	draw_set_transform(map_rect.position, 0, map_scale)
 	draw_multimesh(minimap_obstacles, null)
 	draw_set_transform(Vector2.ZERO)
+	if game.economy and game.fog_texture: draw_texture_rect(game.fog_texture, map_rect, false)
 	var selected_ids := {}
 	if game.economy:
 		for structure in game.current.get("structures", []):
-			if structure.hp <= 0: continue
+			if structure.hp <= 0 or not game._entity_visible(structure): continue
 			var at := map_rect.position + Vector2(structure.x, structure.z) / 256.0 * map_scale
 			draw_rect(Rect2(at - Vector2(4, 4), Vector2(8, 8)), Color("62d7d1") if structure.player == 0 else Color("ef9259"))
 		for deposit in game.current.get("deposits", []):
-			if deposit.remaining > 0:
+			if deposit.remaining > 0 and game._entity_visible(deposit):
 				var at := map_rect.position + Vector2(deposit.x, deposit.z) / 256.0 * map_scale
 				draw_circle(at, 3.0, Color("d6b869"))
 	for id in game.selected: selected_ids[id] = true
 	for u in game.current.units:
-		if u.hp <= 0:
+		if u.hp <= 0 or not game._entity_visible(u):
 			continue
 		var color := Color("64e5df") if u.player == 0 else Color("fda06d")
 		var at := map_rect.position + Vector2(u.x, u.z) / 256.0 * map_scale
@@ -180,7 +189,18 @@ func _draw() -> void:
 				var bar_width: float = clampf(24.0 * 27.0 / game.camera.size, 3, 24) if game.scale128 else 36.0
 				draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width, 4)), Color("102128"))
 				draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width * clampf(float(u.hp) / game.max_hp, 0, 1), 3)), color)
+	if game.economy:
+		var corners := PackedVector2Array()
+		for screen in [Vector2.ZERO, Vector2(view.x, 0), view, Vector2(0, view.y), Vector2.ZERO]:
+			var world: Vector3 = game._world_at(screen)
+			var bounded := Vector2(clampf(world.x, 0, game.map_size.x), clampf(world.z, 0, game.map_size.y))
+			corners.append(map_rect.position + bounded * map_scale)
+		draw_polyline(corners, Color("d8f3e8"), 1.0, true)
 	if dragging:
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color(0.3, 0.85, 0.83, 0.1))
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color("64d8d0"), false, 1)
 	if game.presentation_profiler: game.presentation_profiler.record("hud_draw", Time.get_ticks_usec() - profile_start)
+
+func minimap_rect() -> Rect2:
+	var view := get_viewport_rect().size
+	return Rect2(view.x - 169, view.y - 174, 153, 153) if game.map_size.x == game.map_size.y else Rect2(view.x - 220, view.y - 174, 204, 153)

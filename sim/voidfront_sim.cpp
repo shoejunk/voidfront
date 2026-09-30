@@ -8,17 +8,25 @@
 
 namespace vf {
 int map_width(Map map) {
-    if ((map==Map::Foundry || map==Map::Economy)) return kMapWidth;
+    if (map==Map::Foundry) return kMapWidth;
+    if (map==Map::Economy) return 64;
     if (map==Map::Scale128) return 128;
     throw std::invalid_argument("unsupported map");
 }
-int map_height(Map map) { return (map==Map::Foundry || map==Map::Economy)?kMapHeight:map_width(map); }
+int map_height(Map map) { return map==Map::Economy?48:(map==Map::Foundry?kMapHeight:map_width(map)); }
 const std::vector<nav::Rect>& map_terrain(Map map) {
     static const std::vector<nav::Rect> foundry{{15*kScale,3*kScale,17*kScale,9*kScale},
         {15*kScale,16*kScale,17*kScale,21*kScale}};
     static const std::vector<nav::Rect> scale{{63*kScale,8*kScale,65*kScale,60*kScale},
         {63*kScale,68*kScale,65*kScale,120*kScale}};
-    if ((map==Map::Foundry || map==Map::Economy)) return foundry;
+    static const std::vector<nav::Rect> economy{{15*kScale,3*kScale,17*kScale,9*kScale},
+        {15*kScale,16*kScale,17*kScale,21*kScale},
+        {31*kScale,5*kScale,33*kScale,19*kScale},
+        {31*kScale,29*kScale,33*kScale,43*kScale},
+        {47*kScale,27*kScale,49*kScale,32*kScale},
+        {47*kScale,39*kScale,49*kScale,45*kScale}};
+    if (map==Map::Foundry) return foundry;
+    if (map==Map::Economy) return economy;
     if (map==Map::Scale128) return scale;
     throw std::invalid_argument("unsupported map");
 }
@@ -72,17 +80,18 @@ Sim::Sim(uint32_t seed, uint32_t count, Map map) : map_(map), rng_(seed ? seed :
     if (count < 1 || count > 250) throw std::invalid_argument("units_per_team must be 1..250");
     if (map==Map::Economy) {
         for (uint8_t p=0;p<2;++p) {
-            structures_.push_back({uint32_t(p)+1,p,StructureKind::Anchor,(p==0?4:27)*kScale+128,12*kScale+128});
-            deposits_.push_back({uint32_t(p)+1,(p==0?7:24)*kScale+128,7*kScale+128,2000});
+            structures_.push_back({uint32_t(p)+1,p,StructureKind::Anchor,(p==0?4:59)*kScale+128,(p==0?12:36)*kScale+128});
+            deposits_.push_back({uint32_t(p)+1,(p==0?7:56)*kScale+128,(p==0?7:31)*kScale+128,2000});
             for (int n=0;n<3;++n) {
                 Unit u;
                 u.id=static_cast<uint32_t>(units_.size())+1; u.player=p; u.kind=UnitKind::Worker;
-                u.x=u.goal_x=u.next_x=(p==0?6:25)*kScale+128;
-                u.z=u.goal_z=u.next_z=(11+n)*kScale+128;
+                u.x=u.goal_x=u.next_x=(p==0?6:57)*kScale+128;
+                u.z=u.goal_z=u.next_z=(11+n+(p==0?0:24))*kScale+128;
                 units_.push_back(u);
             }
         }
         rebuild_navigation();
+        update_vision();
         return;
     }
     for (uint8_t p = 0; p < 2; ++p) {
@@ -101,6 +110,29 @@ Sim::Sim(uint32_t seed, uint32_t count, Map map) : map_(map), rng_(seed ? seed :
             units_.push_back(u);
         }
     }
+}
+
+uint8_t Sim::visibility(uint8_t player,int x,int z) const {
+    if (player>=2 || x<0 || z<0 || x>=width() || z>=height()) return 0;
+    return map_==Map::Economy?vision_[player][z*width()+x]:2;
+}
+void Sim::update_vision() {
+    if (map_!=Map::Economy) return;
+    for (auto& cells:vision_) {
+        cells.resize(width()*height(),0);
+        for (auto& cell:cells) if (cell==2) cell=1;
+    }
+    const auto reveal=[&](uint8_t player,int32_t x,int32_t z,int radius) {
+        const int cx=x/kScale,cz=z/kScale;
+        for (int row=std::max(0,cz-radius);row<=std::min(height()-1,cz+radius);++row)
+            for (int col=std::max(0,cx-radius);col<=std::min(width()-1,cx+radius);++col) {
+                const int64_t dx=int64_t(col*kScale+kScale/2)-x,dz=int64_t(row*kScale+kScale/2)-z;
+                if (dx*dx+dz*dz<=int64_t(radius*kScale)*(radius*kScale)) vision_[player][row*width()+col]=2;
+            }
+    };
+    // Shared circular team vision. Ridges block movement, not sight in this increment.
+    for (const auto& u:units_) if (u.hp>0) reveal(u.player,u.x,u.z,u.kind==UnitKind::Worker?7:9);
+    for (const auto& b:structures_) if (b.hp>0) reveal(b.player,b.x,b.z,b.kind==StructureKind::Anchor?10:7);
 }
 
 bool Sim::blocked(int x, int z) const {
@@ -185,6 +217,7 @@ void Sim::apply(const Command& c) {
 }
 
 void Sim::step() {
+    update_vision();
     size_t applied = 0;
     while (applied < pending_.size() && pending_[applied].tick == tick_) apply(pending_[applied++]);
     pending_.erase(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(applied));
@@ -468,6 +501,7 @@ void Sim::step() {
         }
     }
     if (destroyed) rebuild_navigation();
+    update_vision();
     if (map_==Map::Economy && winner()!=-1)
         for (auto& u:units_) { u.moving=false; u.target_id=0; u.target_structure_id=0; }
     ++tick_;
@@ -533,6 +567,7 @@ uint64_t Sim::state_hash() const {
         add(b.production_queue); add(b.production_ticks); add(b.spawn_blocked); }
     add(deposits_.size());
     for (const auto& d:deposits_) { add(d.id); add(d.x); add(d.z); add(d.remaining); }
+    for (const auto& player : vision_) for (auto cell : player) add(cell);
     return h;
 }
 
@@ -587,7 +622,7 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
             u.id!=assigned_builder && u.order!=Order::Build && u.order!=Order::Gather && u.order!=Order::ReturnCargo) {
             const Deposit* nearest=nullptr;
             int64_t distance=std::numeric_limits<int64_t>::max();
-            for (const auto& d:sim.deposits()) if (d.remaining>0) {
+            for (const auto& d:sim.deposits()) if (d.remaining>0 && sim.visibility(player,d.x/kScale,d.z/kScale)>0) {
                 const int64_t dx=int64_t(u.x)-d.x,dz=int64_t(u.z)-d.z;
                 if (dx*dx+dz*dz<distance) { distance=dx*dx+dz*dz; nearest=&d; }
             }
@@ -601,7 +636,7 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         std::vector<uint32_t> army;
         for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Strider && u.order!=Order::AttackMove)
             army.push_back(u.id);
-        if (!army.empty()) emit(Order::AttackMove,std::move(army),enemy->x,enemy->z);
+        if (!army.empty()) emit(Order::AttackMove,std::move(army),(player==0?59:4)*kScale+128,(player==0?36:12)*kScale+128);
         return commands;
     }
     Command c;

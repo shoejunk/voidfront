@@ -1,7 +1,8 @@
-param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[switch]$Crowd,[switch]$Scale,[switch]$Economy,[switch]$Production,[switch]$Match,[switch]$Victory,[switch]$MatchRealtime,[ValidateRange(1,250)][int]$UnitsPerTeam=250,[int]$Ticks=400,[string]$Name='runtime')
+param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[switch]$Crowd,[switch]$Scale,[switch]$Economy,[switch]$Production,[switch]$Match,[switch]$Victory,[switch]$Exploration,[switch]$MatchRealtime,[ValidateRange(1,250)][int]$UnitsPerTeam=250,[int]$Ticks=400,[string]$Name='runtime')
 . "$PSScriptRoot/common.ps1"
 Assert-RunningAllowed
 Assert-Godot
+if ($Exploration -and ($Victory -or $Match -or $Production -or $Economy -or $Movement -or $Crowd -or $Scale)) { throw 'Exploration requires its own fixture.' }
 if ($Victory -and $Match) { throw 'Choose Victory or Match.' }
 if ($Victory) { $Match = $true }
 if ($MatchRealtime -and -not $Match) { throw 'MatchRealtime requires Match.' }
@@ -18,7 +19,7 @@ $executable = if ($Packaged) { "$Repo/artifacts/package/Voidfront.exe" } else { 
 $arguments = @('--log-file',"$out/$Name-engine.log",'--resolution','1920x1080')
 if (-not $Packaged) { $arguments += @('--path',"$Repo/client") }
 if ($Movie) { $arguments += @('--write-movie',"$out/$Name.avi",'--fixed-fps','60') }
-$smokeOption = if ($Victory) { '--victory-smoke' } elseif ($Match) { '--match-smoke' } elseif ($Production) { '--production-smoke' } elseif ($Economy) { '--economy-smoke' } elseif ($Scale) { '--scale-smoke' } elseif ($Movement) { '--movement-smoke' } elseif ($Crowd) { '--crowd-smoke' } else { '--smoke' }
+$smokeOption = if ($Exploration) { '--exploration-smoke' } elseif ($Victory) { '--victory-smoke' } elseif ($Match) { '--match-smoke' } elseif ($Production) { '--production-smoke' } elseif ($Economy) { '--economy-smoke' } elseif ($Scale) { '--scale-smoke' } elseif ($Movement) { '--movement-smoke' } elseif ($Crowd) { '--crowd-smoke' } else { '--smoke' }
 $arguments += @('--',$smokeOption,"--ticks=$Ticks","--capture=$out/$Name.png","--report=$out/$Name.json")
 if ($Scale) { $arguments += "--units-per-team=$UnitsPerTeam" }
 if ($MatchRealtime) { $arguments += "--match-realtime" }

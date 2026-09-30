@@ -115,7 +115,8 @@ void economic_match(bool duel) {
     Sim sim(42,3,Map::Economy),replay(42,3,Map::Economy);
     std::array<uint32_t,2> sequences{}; std::array<int,9> command_counts{};
     uint32_t finish=0;
-    for (int tick=0;tick<10000;++tick) {
+    // The 64x48 field increases travel and duel attrition; observed finish is ~12k ticks.
+    for (int tick=0;tick<16000;++tick) {
         for (uint8_t p=duel?0:1;p<2;++p) for (const auto& c:make_ai_commands(sim,p,sequences[p])) {
             check(c.player==p,"AI used enemy command ownership");
             Command decoded; check(deserialize_command(serialize_command(c),decoded),"AI command wire roundtrip");

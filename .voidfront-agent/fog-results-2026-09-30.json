@@ -1,0 +1,827 @@
+{
+  "task": "larger-map-and-fog",
+  "baseline": "4826d5e",
+  "package_hashes": {
+    "Voidfront.exe": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+    "Voidfront.pck": "f5c199c841ea3892cb2042f4c18d836fe1901dabad8a8f79051898d1127fac1c",
+    "voidfront_bridge.dll": "9c87b0fc0987293fc4dbb4cc96552d386d58fa10c229f82233c2203b2ddec11f"
+  },
+  "exploration": {
+    "ok": true,
+    "ticks": 2896,
+    "checks": 36,
+    "human_commands": 5,
+    "ai_commands": 15,
+    "replays": [
+      {
+        "config": "Debug",
+        "repeat": 0,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=496 p99_us=974 active_ticks=2866 active_p95_us=498 active_p99_us=974"
+      },
+      {
+        "config": "Release",
+        "repeat": 0,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=48 p99_us=75 active_ticks=2866 active_p95_us=48 active_p99_us=75"
+      },
+      {
+        "config": "Release",
+        "repeat": 1,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=57 p99_us=77 active_ticks=2866 active_p95_us=57 active_p99_us=77"
+      },
+      {
+        "config": "Release",
+        "repeat": 2,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=52 p99_us=72 active_ticks=2866 active_p95_us=52 active_p99_us=72"
+      },
+      {
+        "config": "Release",
+        "repeat": 3,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=64 p99_us=89 active_ticks=2866 active_p95_us=64 active_p99_us=89"
+      },
+      {
+        "config": "Release",
+        "repeat": 4,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=55 p99_us=72 active_ticks=2866 active_p95_us=55 active_p99_us=72"
+      },
+      {
+        "config": "Release",
+        "repeat": 5,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=52 p99_us=74 active_ticks=2866 active_p95_us=52 active_p99_us=74"
+      },
+      {
+        "config": "Release",
+        "repeat": 6,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=52 p99_us=72 active_ticks=2866 active_p95_us=52 active_p99_us=72"
+      },
+      {
+        "config": "Release",
+        "repeat": 7,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=48 p99_us=71 active_ticks=2866 active_p95_us=48 active_p99_us=71"
+      },
+      {
+        "config": "Release",
+        "repeat": 8,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=49 p99_us=72 active_ticks=2866 active_p95_us=49 active_p99_us=72"
+      },
+      {
+        "config": "Release",
+        "repeat": 9,
+        "output": "ticks=2896 units=6 hash=1931737061047128848 winner=1 p95_us=55 p99_us=83 active_ticks=2866 active_p95_us=55 active_p99_us=83"
+      }
+    ],
+    "replay_sha256": "8ef13333bf25aed9edf534b8aafd55e870866de959d266a2f5a4f40fccfc4a31"
+  },
+  "victory": {
+    "ticks": 4856,
+    "unit_rows": 43323,
+    "damage_ticks": 142,
+    "damaged_structures": [
+      2,
+      3
+    ],
+    "destroyed_structures": [
+      2
+    ],
+    "conserved_salvage": 4000,
+    "forfeited_salvage": 0,
+    "final_hash": "76771f9dd1e7ea5c",
+    "winner": 0,
+    "role_selection_events": 7,
+    "started_utc": "2026-09-30T20:10:46.484302+00:00",
+    "report_sha256": "da1a4c873e7d9887130e6d4b1efa6275e06156e1965651cae542494a95c9e710",
+    "replay_sha256": "b82369cea595ff33d2e906a7c0bccf68c45201089c962fe8074cef0c1a6e86d4",
+    "binaries": {
+      "Debug": "12b4ec60ba840f3a6236966c206d71a1486f632d77f2f558cf6a1be17c76c037",
+      "Release": "6edfae45b2933123ffd564e30e2910f24247dcdaba875aef2793f0751d6d4cae"
+    },
+    "commands": [
+      {
+        "tick": 0,
+        "sequence": 1,
+        "player": 1,
+        "order": 4,
+        "x": 14464,
+        "z": 8064,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 0,
+        "sequence": 2,
+        "player": 1,
+        "order": 4,
+        "x": 14464,
+        "z": 8064,
+        "units": [
+          5
+        ]
+      },
+      {
+        "tick": 0,
+        "sequence": 3,
+        "player": 1,
+        "order": 4,
+        "x": 14464,
+        "z": 8064,
+        "units": [
+          6
+        ]
+      },
+      {
+        "tick": 128,
+        "sequence": 1,
+        "player": 0,
+        "order": 4,
+        "x": 1920,
+        "z": 1920,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 780,
+        "sequence": 4,
+        "player": 1,
+        "order": 6,
+        "x": 13952,
+        "z": 10112,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 960,
+        "sequence": 2,
+        "player": 0,
+        "order": 6,
+        "x": 2432,
+        "z": 3968,
+        "units": [
+          1
+        ]
+      },
+      {
+        "tick": 980,
+        "sequence": 5,
+        "player": 1,
+        "order": 4,
+        "x": 14464,
+        "z": 8064,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 1176,
+        "sequence": 3,
+        "player": 0,
+        "order": 4,
+        "x": 1920,
+        "z": 1920,
+        "units": [
+          1
+        ]
+      },
+      {
+        "tick": 1180,
+        "sequence": 6,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1280,
+        "sequence": 7,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          7
+        ]
+      },
+      {
+        "tick": 1336,
+        "sequence": 4,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 1480,
+        "sequence": 5,
+        "player": 0,
+        "order": 2,
+        "x": 2560,
+        "z": 3507,
+        "units": [
+          8
+        ]
+      },
+      {
+        "tick": 1580,
+        "sequence": 8,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1640,
+        "sequence": 6,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 1680,
+        "sequence": 9,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          9
+        ]
+      },
+      {
+        "tick": 1784,
+        "sequence": 7,
+        "player": 0,
+        "order": 2,
+        "x": 2560,
+        "z": 3353,
+        "units": [
+          10
+        ]
+      },
+      {
+        "tick": 1900,
+        "sequence": 10,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 2000,
+        "sequence": 11,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          11
+        ]
+      },
+      {
+        "tick": 2024,
+        "sequence": 8,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 2168,
+        "sequence": 9,
+        "player": 0,
+        "order": 2,
+        "x": 2560,
+        "z": 3200,
+        "units": [
+          12
+        ]
+      },
+      {
+        "tick": 2240,
+        "sequence": 12,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 2312,
+        "sequence": 10,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 2340,
+        "sequence": 13,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          13
+        ]
+      },
+      {
+        "tick": 2456,
+        "sequence": 11,
+        "player": 0,
+        "order": 2,
+        "x": 2560,
+        "z": 3507,
+        "units": [
+          14
+        ]
+      },
+      {
+        "tick": 2560,
+        "sequence": 14,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 2660,
+        "sequence": 15,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          15
+        ]
+      },
+      {
+        "tick": 2696,
+        "sequence": 12,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 2840,
+        "sequence": 13,
+        "player": 0,
+        "order": 2,
+        "x": 2560,
+        "z": 3353,
+        "units": [
+          16
+        ]
+      },
+      {
+        "tick": 2940,
+        "sequence": 16,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 3040,
+        "sequence": 17,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          17
+        ]
+      },
+      {
+        "tick": 3064,
+        "sequence": 14,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 3208,
+        "sequence": 15,
+        "player": 0,
+        "order": 2,
+        "x": 2560,
+        "z": 3200,
+        "units": [
+          18
+        ]
+      },
+      {
+        "tick": 3336,
+        "sequence": 16,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 3340,
+        "sequence": 18,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 3440,
+        "sequence": 19,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          20
+        ]
+      },
+      {
+        "tick": 3480,
+        "sequence": 17,
+        "player": 0,
+        "order": 2,
+        "x": 2560,
+        "z": 3353,
+        "units": [
+          19
+        ]
+      },
+      {
+        "tick": 3660,
+        "sequence": 20,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 3688,
+        "sequence": 18,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 3760,
+        "sequence": 21,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          21
+        ]
+      },
+      {
+        "tick": 3880,
+        "sequence": 19,
+        "player": 0,
+        "order": 2,
+        "x": 15232,
+        "z": 9236,
+        "units": [
+          14,
+          16,
+          18,
+          19,
+          22
+        ]
+      },
+      {
+        "tick": 4000,
+        "sequence": 22,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 4088,
+        "sequence": 20,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 4100,
+        "sequence": 23,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          23
+        ]
+      },
+      {
+        "tick": 4248,
+        "sequence": 21,
+        "player": 0,
+        "order": 2,
+        "x": 15232,
+        "z": 9236,
+        "units": [
+          24
+        ]
+      },
+      {
+        "tick": 4320,
+        "sequence": 24,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 4420,
+        "sequence": 25,
+        "player": 1,
+        "order": 2,
+        "x": 1152,
+        "z": 3200,
+        "units": [
+          25
+        ]
+      },
+      {
+        "tick": 4440,
+        "sequence": 22,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 4600,
+        "sequence": 23,
+        "player": 0,
+        "order": 2,
+        "x": 15232,
+        "z": 9236,
+        "units": [
+          26
+        ]
+      },
+      {
+        "tick": 4792,
+        "sequence": 24,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      }
+    ],
+    "rejected_corruptions": [
+      "ledger-gap",
+      "trace-gap",
+      "resource-created",
+      "population-lie",
+      "unfunded-damage",
+      "wrong-outcome",
+      "restart-ai-off",
+      "shot-target-lie",
+      "wrong-route",
+      "wrong-role-selection",
+      "retained-build-mode"
+    ],
+    "runs": [
+      "Debug-0",
+      "Release-0",
+      "Release-1",
+      "Release-2",
+      "Release-3",
+      "Release-4",
+      "Release-5",
+      "Release-6",
+      "Release-7",
+      "Release-8",
+      "Release-9"
+    ],
+    "completed_utc": "2026-09-30T20:10:51.723341+00:00",
+    "timing_mode": "accelerated_eight_ticks_per_frame",
+    "rendered_structure_attack_requests": 144,
+    "limitations": "Software InputEvents against economic AI; observed anchor outcome and restart only. No human play, full RTS scope, networking or performance acceptance. Attack clip requests do not prove animation quality."
+  },
+  "production": {
+    "ticks": 1795,
+    "unit_rows": 10912,
+    "conserved_salvage": 4000,
+    "purchases": 3,
+    "refunds": 1,
+    "spawns": 2,
+    "production_progress_ticks": 200,
+    "blocked_spawn_ticks": 0,
+    "construction_progress_ticks": 100,
+    "started_utc": "2026-09-30T20:12:29.671420+00:00",
+    "report_sha256": "a06aa72e45d31620cb9b9f7ff265009d2593244210712ad3c4ef40b2e320484c",
+    "replay_sha256": "25a4e8e8d8106ecf738eea72d13d7942848c0b3c81016411a2cb014d1e27bc65",
+    "binaries": {
+      "Debug": "12b4ec60ba840f3a6236966c206d71a1486f632d77f2f558cf6a1be17c76c037",
+      "Release": "6edfae45b2933123ffd564e30e2910f24247dcdaba875aef2793f0751d6d4cae"
+    },
+    "commands": [
+      {
+        "tick": 4,
+        "sequence": 1,
+        "player": 0,
+        "order": 4,
+        "x": 1920,
+        "z": 1920,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 1420,
+        "sequence": 2,
+        "player": 0,
+        "order": 0,
+        "x": 0,
+        "z": 0,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 1424,
+        "sequence": 3,
+        "player": 0,
+        "order": 6,
+        "x": 2432,
+        "z": 3200,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 1578,
+        "sequence": 4,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1580,
+        "sequence": 5,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1585,
+        "sequence": 6,
+        "player": 0,
+        "order": 8,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1588,
+        "sequence": 7,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1591,
+        "sequence": 8,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 1780,
+        "sequence": 9,
+        "player": 0,
+        "order": 1,
+        "x": 3200,
+        "z": 3712,
+        "units": [
+          7
+        ]
+      }
+    ],
+    "rejected_corruptions": [
+      "trace-gap",
+      "ledger-gap",
+      "resource-created",
+      "queue-overflow",
+      "progress-jump",
+      "population-lie",
+      "spawn-overlap"
+    ],
+    "runs": [
+      "Debug-0",
+      "Release-0",
+      "Release-1",
+      "Release-2",
+      "Release-3",
+      "Release-4",
+      "Release-5",
+      "Release-6",
+      "Release-7",
+      "Release-8",
+      "Release-9"
+    ],
+    "completed_utc": "2026-09-30T20:12:31.430442+00:00",
+    "limitations": "Scripted offline production only. No human play, economic AI, full matches, production networking, broad blocked-spawn coverage, performance acceptance or shipping approval."
+  },
+  "build_log": "artifacts/fog-verify.log",
+  "final_export_log": "artifacts/fog-help-export.log",
+  "verification_checkpoint": "Verified locally before user-authorized commit and push"
+}

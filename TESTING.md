@@ -1,5 +1,55 @@
 # Verification ledger
 
+## 2026-09-30 - larger 1vAI map, exploration and fog
+
+User requested implementation on DESKTOP-JOE. Economy now uses a 64x48 map,
+four times the former area, with the existing player mining layout preserved
+and the opponent moved to the southeast. Added central/remote terrain routes.
+The deterministic integer simulation maintains hashed, per-team unexplored /
+explored / visible cells. Living workers/Striders/anchors/Foundries supply
+7/9/10/7-unit circular vision. Camera movement does not reveal terrain.
+Enemy models, entity picking, labels, health bars and minimap markers require
+current vision. Explored terrain remains dim after a scout leaves. Restart
+resets exploration. Protocol is now 9; old replay/content identities are rejected.
+
+Camera: arrows, Shift for faster pan, middle-mouse drag, minimap click/drag,
+Home for base and wheel zoom. A minimap outline shows the current view. Camera
+starts at the player economy. Existing gather/build/train and F1/F2 roles remain.
+The help panel uses a dedicated multiline control after screenshot review found
+intermittent missing glyph spans in the old Label refresh path.
+
+MSVC Debug and Release each pass 11/11 CTest suites. tools/verify.ps1 also passes
+malformed/alias cases, 2,000 cross-build hashes and ten repeats. The larger AI
+duel finishes at tick 11,958; its former 10,000-tick regression bound was extended
+to 16,000 after preserving diagnostics that showed active combat, not deadlock.
+AI versus passive still finishes (tick 2,620 in the simulation fixture).
+
+Final package exploration: 36 checks, 2,896 ticks, gathering/construction/training,
+arrows/middle drag/minimap/Home/zoom, hidden enemy picking, surviving scout
+out-and-back, exploration memory, enemy discovery, defeat and restart. Every
+recorded tick matches Debug plus ten Release replays. Packaged player-victory
+route passes at 4,856 ticks; independent audit conserves 4,000 salvage, checks
+43,323 unit rows and rejects 11 corruptions. Ordinary 20Hz packaged production
+passes at 1,795 ticks: queue, refund, rejected purchase, two spawned units and
+selection/movement. Its audit rejects seven corruptions and conserves resources.
+Both also match Debug plus ten Release replays. Victory/production used the
+package before the final HUD-only / minimap-release polish; final exploration
+was rerun on the exported final package. Actual final PNGs were inspected.
+
+Package: artifacts/package/Voidfront.exe. Prior package is preserved under
+artifacts/fog-prior-package-2026-09-30. Existing user changes in PROGRESS,
+roadmap and last-run were preserved (preimages and patch in
+artifacts/fog-baseline-2026-09-30); last-run.json remains intentionally untouched.
+The initial handoff was local; the user subsequently authorized committing and
+pushing this implementation. No separate deployment or release is requested.
+
+Limits: sight is circular and does not respect terrain height/occlusion; there
+are no remembered building silhouettes. AI can raid the known opposite starting
+location and only chooses explored resource deposits; full strategic scouting
+is unfinished. This is software-input/replay evidence, not human balance,
+performance, full RTS content or shipping acceptance. Flux, technology, setup,
+economy networking and existing art/crowd/performance gates remain open.
+
 ## 2026-09-29 worker/army selection and player victory
 
 `tools/verify.ps1` passed pinned Godot 4.7.2/templates/godot-cpp, MSVC integrated

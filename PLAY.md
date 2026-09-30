@@ -1,6 +1,6 @@
 # Voidfront — salvage outpost
 
-Launch `Voidfront.exe` beside its .pck and DLL. The default offline mode starts with three workers, a command anchor and a finite salvage deposit for each side. The opponent gathers salvage, constructs a Foundry, trains Striders and attacks through the same simulation commands. Destroy its command anchor while protecting yours. This is an early one-unit-type economy match; technology, flux, fog, faction breadth and balance remain unfinished.
+Launch `Voidfront.exe` beside its .pck and DLL. The default offline mode uses a 64 x 48 battlefield (four times the former area), with your outpost in the northwest and the opponent in the southeast. It starts with three workers, a command anchor and a finite salvage deposit for each side. The opponent gathers salvage, constructs a Foundry, trains Striders and attacks through the same simulation commands. Destroy its command anchor while protecting yours. This is an early one-unit-type economy match; technology, flux, fog, faction breadth and balance remain unfinished.
 
 - Left click selects a worker, anchor, deposit or Foundry. Drag selects units. F1 selects your living workers; F2 selects your living Striders only, so army orders leave miners working.
 - Select workers and right click a salvage deposit. They mine, carry up to 10 salvage each, return it to your anchor, and repeat until the deposit is depleted.
@@ -13,7 +13,10 @@ Launch `Voidfront.exe` beside its .pck and DLL. The default offline mode starts 
 - Destroyed buildings disappear from the field and minimap. Losing a Foundry loses its paid queue without a refund. Destroying a command anchor ends gameplay and displays victory or defeat; workers alone cannot shoot buildings.
 - Escape or right click cancels placement. R restarts the economy, clears selections and control groups, and starts the opponent again.
 - Ctrl + 0–9 saves a control group; 0–9 recalls it. Ctrl + Shift + number adds to a group; Shift + number adds a group to selection. Groups clear on restart.
-- Arrow keys pan; wheel zooms. Close the window to quit.
+- Arrow keys pan; hold Shift for faster panning. Hold the middle mouse button and drag to pan, or click/drag the minimap. Home returns to your anchor. The mouse wheel zooms; the minimap outline shows your view. Close the window to quit.
+- Explore with workers or Striders: unexplored ground is black, explored ground outside current vision is dim, and nearby terrain is fully visible. Workers reveal a seven-unit radius, Striders nine, anchors ten and Foundries seven. Team vision is shared; ridges currently block movement but do not block sight.
+- Enemy units, structures, deposits, labels, health bars and minimap markers are hidden outside current vision. Explored terrain remains known, but hidden buildings are not shown as remembered silhouettes. Moving the camera reveals nothing. Use right-click movement or A + click to scout dark terrain; R clears exploration for a new match.
+- The AI uses the same vision sources and commands. It can raid the known opposite starting location without first seeing the anchor. Full fog-aware strategic scouting remains future work.
 
 The HUD shows resources, carried salvage, costs, construction, production queue/progress, live and reserved population, and purchase rejection or blocked-exit feedback. Workers reuse the existing walker mesh, and buildings/deposits are readable blockouts, not finished production art. Crowds, audio, animation polish and performance acceptance remain unfinished.
 

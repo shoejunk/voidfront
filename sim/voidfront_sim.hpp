@@ -9,7 +9,7 @@ namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
 inline constexpr int kMaxMapSize = 128;
-inline constexpr uint32_t kProtocolVersion = 8;
+inline constexpr uint32_t kProtocolVersion = 9;
 enum class Map : uint32_t { Foundry = 0, Scale128 = 1, Economy = 2 };
 int map_width(Map map);
 int map_height(Map map);
@@ -79,12 +79,17 @@ public:
     int width() const { return map_width(map_); }
     int height() const { return map_height(map_); }
     bool blocked(int x, int z) const;
+    // Cell visibility: 0 unexplored, 1 explored, 2 currently visible.
+    uint8_t visibility(uint8_t player, int x, int z) const;
+    const std::vector<uint8_t>& vision(uint8_t player) const { return vision_[player]; }
     uint64_t hash() const;
     // Executed authoritative state only; independent of future input arrival order.
     uint64_t state_hash() const;
     // -1 ongoing, 0/1 winning player, 2 draw.
     int winner() const;
 private:
+    std::array<std::vector<uint8_t>,2> vision_;
+    void update_vision();
     Map map_;
     uint32_t tick_ = 0, rng_ = 1;
     std::array<uint32_t, 2> last_sequence_{};

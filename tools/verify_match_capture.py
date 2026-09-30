@@ -9,7 +9,7 @@ from pathlib import Path
 import struct
 import subprocess
 
-from verify_economy_capture import ROOT, BOUNDS, TERRAIN, require
+from verify_economy_capture import ROOT, require, map_geometry
 from verify_navigation import segment_clear, midpoint_enters_open_rect
 
 
@@ -17,6 +17,7 @@ def commands_from_replay(raw, report):
     require(len(raw) >= 36 and raw[:4] == b'VFR\3', 'replay header')
     protocol, seed, count, ticks, n, content, map_id = struct.unpack_from('<5IQI', raw, 4)
     initial, final = report['initial_snapshot'], report['final_snapshot']
+    bounds, terrain = map_geometry(initial)
     require((protocol, seed, count, ticks, content, map_id) ==
             (initial['protocol'], 1, 3, final['tick'], int(initial['content_id'], 16), 2), 'replay setup')
     pos, commands, sequences = 36, [], [0, 0]
@@ -31,7 +32,7 @@ def commands_from_replay(raw, report):
         require(count in range(1, 257) and size == 26 + 4*count, 'command ids size')
         ids = list(struct.unpack_from('<'+'I'*count, frame, 26))
         require(ids == sorted(set(ids)) and player in (0, 1) and order in range(9), 'command canonical fields')
-        require(0 <= tick < ticks and 0 <= x < 8192 and 0 <= z < 6144, 'command bounds')
+        require(0 <= tick < ticks and 0 <= x < initial['width']*256 and 0 <= z < initial['height']*256, 'command bounds')
         require(seq > sequences[player], 'player sequence')
         sequences[player] = seq
         if commands:
@@ -84,6 +85,7 @@ def audit_roles(report, commands):
 def audit(report, commands):
     require(report['ok'] and not report['errors'], 'fixture failed')
     initial, final = report['initial_snapshot'], report['final_snapshot']
+    bounds, terrain = map_geometry(initial)
     rows, trace = report['snapshots'], report['trace']
     require(initial['map_id'] == final['map_id'] == 2 and initial['enemy_ai'], 'active economy setup')
     require([r['tick'] for r in rows] == list(range(final['tick']+1)), 'ledger gap')
@@ -146,7 +148,7 @@ def audit(report, commands):
         # Production/movement precede end-of-tick damage: a structure destroyed
         # this tick still blocks movement, and a newly purchased one already does.
         movement_structures = prior['structures'] + row['structures'][len(prior['structures']):]
-        obstacles = TERRAIN + [(s['x']-320, s['z']-320, s['x']+320, s['z']+320) for s in movement_structures if s['hp'] > 0]
+        obstacles = terrain + [(s['x']-320, s['z']-320, s['x']+320, s['z']+320) for s in movement_structures if s['hp'] > 0]
         obstacles += [(d['x']-192, d['z']-192, d['x']+192, d['z']+192) for d in row['deposits']]
         for i, u in enumerate(row['units']):
             old = prior['units'][i] if i < len(prior['units']) else u
@@ -155,7 +157,7 @@ def audit(report, commands):
             if old['hp'] <= 0: continue
             a, b = (old['x'], old['z']), (u['x'], u['z'])
             require(sum((p-q)**2 for p, q in zip(a, b)) <= 1024, 'speed limit')
-            require(segment_clear(a, b, BOUNDS, obstacles), f'tick {tick} unit {u["id"]}: static sweep')
+            require(segment_clear(a, b, bounds, obstacles), f'tick {tick} unit {u["id"]}: static sweep')
             for j in range(i):
                 v = row['units'][j]
                 previous = prior['units'][j] if j < len(prior['units']) else v

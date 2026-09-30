@@ -16,6 +16,16 @@ TERRAIN = [(15*256-64, 3*256-64, 17*256+64, 9*256+64),
            (15*256-64, 16*256-64, 17*256+64, 21*256+64)]
 
 
+def map_geometry(snapshot):
+    width, height = snapshot['width'], snapshot['height']
+    require((width, height) in ((32, 24), (64, 48)), 'unsupported economy geometry')
+    terrain = list(TERRAIN)
+    if width == 64:
+        terrain += [(x0*256-64, z0*256-64, x1*256+64, z1*256+64)
+                    for x0,z0,x1,z1 in [(31,5,33,19),(31,29,33,43),(47,27,49,32),(47,39,49,45)]]
+    return (320,320,(width-1)*256-64,(height-1)*256-64), terrain
+
+
 def require(ok, message):
     if not ok:
         raise AssertionError(message)
@@ -24,6 +34,7 @@ def require(ok, message):
 def audit(report):
     require(report['ok'] and not report['errors'], 'packaged fixture failed')
     initial, final = report['initial_snapshot'], report['final_snapshot']
+    bounds, terrain = map_geometry(initial)
     require(initial['map_id'] == final['map_id'] == 2, 'wrong economy map')
     require(initial['tick'] == 0 and final['tick'] > 0, 'invalid tick bounds')
     ticks = final['tick']
@@ -50,7 +61,7 @@ def audit(report):
         require(observed == total, f'tick {tick}: salvage created or lost')
         max_deposited = max(max_deposited, row['salvage'][0])
         require(all(d['remaining'] <= prior['deposits'][i]['remaining'] for i,d in enumerate(row['deposits'])), 'deposit replenished')
-        obstacles = TERRAIN + [(s['x']-320, s['z']-320, s['x']+320, s['z']+320) for s in row['structures']]
+        obstacles = terrain + [(s['x']-320, s['z']-320, s['x']+320, s['z']+320) for s in row['structures']]
         # Deposits are fixed service objects with half-size128 plus worker radius64.
         obstacles += [(d['x']-192, d['z']-192, d['x']+192, d['z']+192) for d in row['deposits']]
         for i, unit in enumerate(row['units']):
@@ -58,7 +69,7 @@ def audit(report):
             require(unit['kind'] == 1 and 0 <= unit['cargo'] <= 10, 'worker/cargo bounds')
             a,b = (old['x'],old['z']), (unit['x'],unit['z'])
             require(sum((p-q)**2 for p,q in zip(a,b)) <= 1024, 'worker exceeds speed')
-            require(segment_clear(a,b,BOUNDS,obstacles), f'tick {tick}: worker {unit["id"]} crosses obstacle')
+            require(segment_clear(a,b,bounds,obstacles), f'tick {tick}: worker {unit["id"]} crosses obstacle')
             for j in range(i):
                 other, previous_other = row['units'][j], prior['units'][j]
                 start = (a[0]-previous_other['x'],a[1]-previous_other['z'])

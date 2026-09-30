@@ -51,9 +51,10 @@ func run() -> void:
 		await mouse(MOUSE_BUTTON_LEFT, Vector3(unit.x / 256.0, 0.5, unit.z / 256.0))
 		check(game.selected == [unit.id], "Produced Strider is selectable in active match")
 		var anchor: Dictionary = initial.structures[1]
-		label = "enemy_anchor_context_attack"
-		await mouse(MOUSE_BUTTON_RIGHT, Vector3(anchor.x / 256.0, 0.5, anchor.z / 256.0))
-		check(not inputs.is_empty() and inputs.back().label == label and inputs.back().accepted and inputs.back().order == 2, "Enemy-anchor context click submits canonical AttackMove")
+		label = "enemy_spawn_scout_attack"
+		await key(KEY_A)
+		await mouse(MOUSE_BUTTON_LEFT, Vector3(anchor.x / 256.0, 0.5, anchor.z / 256.0))
+		check(not inputs.is_empty() and inputs.back().label == label and inputs.back().accepted and inputs.back().order == 2, "Scout attack toward enemy spawn submits canonical AttackMove")
 		check(await until(func():
 			for moved in game.current.units:
 				if moved.id == unit.id and Vector2(moved.x - unit.x, moved.z - unit.z).length() > 256: return true

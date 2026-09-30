@@ -9,7 +9,7 @@ from pathlib import Path
 import struct
 import subprocess
 
-from verify_economy_capture import BOUNDS, ROOT, TERRAIN, require
+from verify_economy_capture import ROOT, require, map_geometry
 from verify_navigation import segment_clear, midpoint_enters_open_rect, point_clear
 
 
@@ -54,6 +54,7 @@ def replay_commands(raw, report):
 def audit(report, commands):
     require(report['ok'] and not report['errors'], 'packaged fixture failed')
     initial, final = report['initial_snapshot'], report['final_snapshot']
+    bounds, terrain = map_geometry(initial)
     require(initial['map_id'] == final['map_id'] == 2 and initial['tick'] == 0, 'wrong setup')
     ticks = final['tick']
     ledger, trace = report['snapshots'], report['trace']
@@ -94,7 +95,7 @@ def audit(report, commands):
             reserved = sum(s['production_queue'] for s in row['structures'] if s['player'] == player)
             require((row['population_used'][player], row['population_reserved'][player]) == (used, reserved), 'population accounting')
             require(used+reserved <= 12, 'population overflow')
-        obstacles = TERRAIN + [(s['x']-320, s['z']-320, s['x']+320, s['z']+320) for s in row['structures'] if s['hp'] > 0]
+        obstacles = terrain + [(s['x']-320, s['z']-320, s['x']+320, s['z']+320) for s in row['structures'] if s['hp'] > 0]
         obstacles += [(d['x']-192, d['z']-192, d['x']+192, d['z']+192) for d in row['deposits']]
         added = row['units'][len(prior['units']):]
         for i, unit in enumerate(row['units']):
@@ -104,7 +105,7 @@ def audit(report, commands):
             require(all(unit[k] == old[k] for k in ('id', 'kind', 'player')), 'unit identity changed')
             a, b = (old['x'], old['z']), (unit['x'], unit['z'])
             require(sum((p-q)**2 for p, q in zip(a, b)) <= 1024, 'unit speed overflow')
-            require(segment_clear(a, b, BOUNDS, obstacles), f'tick {tick}: unit {unit["id"]} static sweep')
+            require(segment_clear(a, b, bounds, obstacles), f'tick {tick}: unit {unit["id"]} static sweep')
             for j in range(i):
                 other = row['units'][j]
                 previous = prior['units'][j] if j < len(prior['units']) else other
@@ -173,7 +174,7 @@ def audit(report, commands):
                             for dz in (-352, 0, 352):
                                 if dx == dz == 0: continue
                                 point = (site['x']+dx, site['z']+dz)
-                                free = point_clear(point, BOUNDS, obstacles) and not any(
+                                free = point_clear(point, bounds, obstacles) and not any(
                                     u['hp'] > 0 and abs(u['x']-point[0]) < 128 and abs(u['z']-point[1]) < 128 for u in occupied)
                                 require(not free, 'production stalled with available spawn exit')
                 production_ticks += next_progress > progress

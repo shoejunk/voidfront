@@ -109,6 +109,13 @@ var selected_entity: Dictionary = {}
 var economy_notice := ""
 var build_preview: MeshInstance3D
 var economy_result_sequence := -1
+var fog_texture: ImageTexture
+var fog_material: ShaderMaterial
+var fog_tick := -1
+var camera_dragging := false
+var minimap_dragging := false
+var exploration_smoke := false
+var exploration_fixture: RefCounted
 
 func _ready() -> void:
 	var ticks_specified := false
@@ -120,6 +127,9 @@ func _ready() -> void:
 		if argument == "--smoke": smoke = true
 		elif argument == "--skirmish": skirmish = true
 		elif argument == "--economy": economy = true
+		elif argument == "--exploration-smoke":
+			economy = true
+			exploration_smoke = true
 		elif argument == "--match-realtime": match_realtime = true
 		elif argument == "--victory-smoke":
 			economy = true
@@ -182,6 +192,8 @@ func _ready() -> void:
 	if economy and legacy_mode: option_error = "Economy requires its own offline match."
 	if not legacy_mode: economy = true
 	if match_realtime and not match_smoke: option_error = "--match-realtime requires --match-smoke."
+	if exploration_smoke and not ticks_specified: finish_tick = 10000
+	if exploration_smoke and (match_smoke or economy_smoke or production_smoke): option_error = "Exploration fixture requires its own match."
 	if match_smoke and not ticks_specified: finish_tick = 12000
 	if match_smoke and (production_smoke or economy_smoke or finish_tick < 2000 or finish_tick > 12000): option_error = "Match smoke requires its own 2000..12000 tick fixture."
 	if production_smoke and not ticks_specified: finish_tick = 2400
@@ -228,6 +240,7 @@ func _ready() -> void:
 	map_size = Vector2i(setup.width, setup.height)
 	camera_target = Vector3(map_size.x / 2.0, 0, map_size.y / 2.0)
 	if scale128 and not scale_smoke: camera_target = Vector3(24, 0, 64)
+	if economy: camera_target = Vector3(10, 0, 12)
 	_setup_world()
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
@@ -235,6 +248,9 @@ func _ready() -> void:
 	hud.game = self
 	canvas.add_child(hud)
 	_reset()
+	if exploration_smoke:
+		exploration_fixture = preload("res://exploration_smoke.gd").new(self)
+		exploration_fixture.run.call_deferred()
 	if match_smoke:
 		match_fixture = preload("res://victory_smoke.gd").new(self) if victory_smoke else preload("res://match_smoke.gd").new(self)
 		match_fixture.run.call_deferred()
@@ -436,7 +452,7 @@ func _setup_world() -> void:
 				if (x + z) % 3 == 0:
 					_queue_static_box(static_boxes, Vector3(0.64, 0.02, 0.04), Vector3(x + 0.5, height + 0.02, z + 0.5), _material(Color("769c9c"), 0.2, true))
 	_build_static_boxes(static_boxes)
-	for player in range(2):
+	for player in range(0 if economy else 2):
 		var pad_color := Color("4d9caa") if player == 0 else Color("c78960")
 		var pad := _ring(3.5, pad_color)
 		var pad_x: float = (20 if player == 0 else 108) if scale128 else (5 if player == 0 else 27)
@@ -458,6 +474,14 @@ func _setup_world() -> void:
 	for child in get_children():
 		if child is MeshInstance3D and child.mesh is BoxMesh:
 			child.set_meta("voidfront_static_box", true)
+	if economy:
+		fog_material = ShaderMaterial.new()
+		fog_material.shader = preload("res://fog.gdshader")
+		fog_material.set_shader_parameter("map_extent", Vector2(map_size))
+		fog_material.render_priority = 10
+		for child in get_children():
+			if child is GeometryInstance3D and child != order_mark:
+				child.material_overlay = fog_material
 
 func _reset() -> void:
 	# A peer must never reset the authoritative shared match unilaterally.
@@ -495,6 +519,13 @@ func _reset() -> void:
 			network_notice = "Network session could not start."
 		_update_network_status()
 	current = bridge.snapshot()
+	fog_tick = -1
+	camera_dragging = false
+	minimap_dragging = false
+	if economy:
+		camera.size = 27
+		_home_camera()
+		_update_fog()
 	previous = current.duplicate(true)
 	initial_hash = current.hash
 	accumulator = 0
@@ -513,6 +544,7 @@ func _spawn_actor(unit: Dictionary) -> void:
 	var root := Node3D.new()
 	add_child(root)
 	root.position = Vector3(unit.x / SCALE, 0, unit.z / SCALE)
+	root.visible = _entity_visible(unit)
 	var model: Node3D = WALKER.instantiate()
 	root.add_child(model)
 	if int(unit.get("kind", 0)) == 1:
@@ -555,7 +587,7 @@ func _economy_entity_at(screen: Vector2) -> Dictionary:
 	var nearest := 50.0
 	for category in ["structures", "deposits"]:
 		for entity in current.get(category, []):
-			if int(entity.get("hp", 1)) <= 0: continue
+			if int(entity.get("hp", 1)) <= 0 or not _entity_visible(entity): continue
 			var point := camera.unproject_position(Vector3(entity.x / SCALE, 0.5, entity.z / SCALE))
 			var distance := point.distance_to(screen)
 			if distance < nearest:
@@ -573,6 +605,7 @@ func _present_economy() -> void:
 			if structure.id == selected_entity.id and structure.hp <= 0:
 				selected_entity.clear()
 				break
+	if not selected_entity.is_empty() and not _entity_visible(selected_entity): selected_entity.clear()
 	if current.winner != -1:
 		build_pending = false
 		attack_pending = false
@@ -631,7 +664,7 @@ func _present_economy() -> void:
 				root.add_child(ring)
 				economy_actors[key] = {"root": root, "body": body, "label": label, "ring": ring}
 			var entry: Dictionary = economy_actors[key]
-			entry.root.visible = int(entity.get("hp", 1)) > 0
+			entry.root.visible = int(entity.get("hp", 1)) > 0 and _entity_visible(entity)
 			if not entry.root.visible: continue
 			entry.ring.visible = selected_entity.get("id", -1) == entity.id and selected_entity.get("category", "") == ("deposit" if deposit else "structure")
 			if entry.ring.visible:
@@ -711,9 +744,9 @@ func _process(delta: float) -> void:
 	else:
 		# This bounded fixture advances eight canonical ticks per rendered frame.
 		# It is reachability/replay evidence, never real-time responsiveness evidence.
-		accumulator += STEP * 8 if match_smoke and not match_realtime else delta
+		accumulator += STEP * 8 if (match_smoke and not match_realtime) or exploration_smoke else delta
 		var ticks := 0
-		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke or scale_smoke or economy_smoke or production_smoke or match_smoke) or current.tick < finish_tick):
+		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke or scale_smoke or economy_smoke or production_smoke or match_smoke or exploration_smoke) or current.tick < finish_tick):
 			previous = current
 			var start := Time.get_ticks_usec()
 			bridge.advance()
@@ -731,7 +764,9 @@ func _process(delta: float) -> void:
 			if economy_smoke and economy_fixture: economy_fixture.tick()
 			if production_smoke and production_fixture: production_fixture.tick()
 			if match_smoke and match_fixture: match_fixture.tick()
+			if exploration_smoke and exploration_fixture: exploration_fixture.tick()
 	var present_start := Time.get_ticks_usec() if presentation_profiler else 0
+	if economy: _update_fog()
 	_present(clampf(accumulator / STEP, 0, 1), delta)
 	if presentation_profiler: presentation_profiler.record("present", Time.get_ticks_usec() - present_start)
 	# The first positive interpolation includes the new authoritative state.
@@ -743,7 +778,7 @@ func _process(delta: float) -> void:
 	if Input.is_physical_key_pressed(KEY_DOWN): camera_axis.y += 1
 	if Input.is_physical_key_pressed(KEY_RIGHT): camera_axis.x += 1
 	if Input.is_physical_key_pressed(KEY_LEFT): camera_axis.x -= 1
-	camera_target += Vector3(camera_axis.x, 0, camera_axis.y) * delta * 13
+	camera_target += Vector3(camera_axis.normalized().x, 0, camera_axis.normalized().y) * delta * (26 if Input.is_physical_key_pressed(KEY_SHIFT) else 13)
 	camera_target.x = clampf(camera_target.x, 2, map_size.x - 2)
 	camera_target.z = clampf(camera_target.z, 2, map_size.y - 2)
 	_update_camera()
@@ -802,6 +837,7 @@ func _present(alpha: float, delta: float) -> void:
 	for unit in current.units:
 		if not actors.has(unit.id): _spawn_actor(unit)
 		var entry: Dictionary = actors[unit.id]
+		entry.root.visible = _entity_visible(unit)
 		var old: Dictionary = old_units.get(unit.id, unit)
 		var from := Vector3(old.x / SCALE, 0, old.z / SCALE)
 		var to := Vector3(unit.x / SCALE, 0, unit.z / SCALE)
@@ -831,7 +867,7 @@ func _present(alpha: float, delta: float) -> void:
 		if has_attack_target: direction = attack_target - entry.root.position
 		if direction.length_squared() > 0.0001:
 			entry.root.rotation.y = lerp_angle(entry.root.rotation.y, atan2(-direction.x, -direction.z), minf(delta * 12, 1))
-		if unit.cooldown > entry.cooldown and has_attack_target:
+		if unit.cooldown > entry.cooldown and has_attack_target and entry.root.visible:
 			_beam(entry.root.position, attack_target, unit.player)
 			entry.clip = ""
 			_play(entry, "attack")
@@ -879,6 +915,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_reset()
 		return
 	if not option_error.is_empty(): return
+	if _camera_input(event): return
 	if economy and current.winner != -1: return
 	if network and (not network_state.get("ready", false) or str(network_state.get("state", "")) not in ["running", "stalled"]): return
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -914,8 +951,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_S: _issue(0, Vector3(0, 0, 0))
 			KEY_H: _issue(3, Vector3(0, 0, 0))
 	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed: camera.size = maxf(14, camera.size - 1.5)
-		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed: camera.size = minf(160 if scale128 else 36, camera.size + 1.5)
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 			if build_pending:
 				build_pending = false
@@ -1034,6 +1069,7 @@ func _issue(order: int, at: Vector3) -> void:
 	if economy_smoke and economy_fixture: economy_fixture.record_input(accepted, order, at)
 	if production_smoke and production_fixture: production_fixture.record_input(accepted, order, at, command_actors)
 	if match_smoke and match_fixture: match_fixture.record_input(accepted, order, at, command_actors)
+	if exploration_smoke and exploration_fixture: exploration_fixture.record_input(accepted, order, at, command_actors)
 	if economy:
 		economy_notice = "Order submitted" if accepted else "Order rejected"
 		if accepted and order == 7: economy_notice = "Training order submitted: %d salvage" % current.strider_cost
@@ -1349,3 +1385,81 @@ func _percentile(values: Array[float], fraction: float) -> float:
 	var ordered := values.duplicate()
 	ordered.sort()
 	return ordered[min(ordered.size() - 1, int(ordered.size() * fraction))]
+
+# Fog is authoritative simulation data; moving the camera never reveals terrain.
+func _vision_at(x: float, z: float) -> int:
+	if not economy: return 2
+	var cell := Vector2i(floori(x), floori(z))
+	if cell.x < 0 or cell.y < 0 or cell.x >= map_size.x or cell.y >= map_size.y: return 0
+	var vision: Array = current.get("vision", [])
+	if vision.size() <= local_player: return 0
+	return int(vision[local_player][cell.y * map_size.x + cell.x])
+
+func _entity_visible(entity: Dictionary) -> bool:
+	return not economy or int(entity.get("player", -1)) == local_player or _vision_at(entity.x / SCALE, entity.z / SCALE) == 2
+
+func _update_fog() -> void:
+	if fog_tick == int(current.tick): return
+	fog_tick = int(current.tick)
+	var cells: PackedByteArray = current.vision[local_player]
+	var pixels := PackedByteArray()
+	pixels.resize(map_size.x * map_size.y * 4)
+	for index in cells.size():
+		pixels[index * 4] = 5
+		pixels[index * 4 + 1] = 10
+		pixels[index * 4 + 2] = 15
+		pixels[index * 4 + 3] = 0 if cells[index] == 2 else (185 if cells[index] == 1 else 255)
+	var image := Image.create_from_data(map_size.x, map_size.y, false, Image.FORMAT_RGBA8, pixels)
+	if not fog_texture:
+		fog_texture = ImageTexture.create_from_image(image)
+		fog_material.set_shader_parameter("fog_map", fog_texture)
+	else: fog_texture.update(image)
+
+func _home_camera() -> void:
+	for building in current.get("structures", []):
+		if building.player == local_player and building.kind == 0:
+			camera_target = Vector3(clampf(building.x / SCALE + 5.5, 2, map_size.x - 2), 0, building.z / SCALE)
+			_update_camera()
+			return
+
+func _minimap_camera(point: Vector2) -> void:
+	var rect: Rect2 = hud.minimap_rect()
+	var position_on_map := (point - rect.position) / rect.size * Vector2(map_size)
+	camera_target = Vector3(clampf(position_on_map.x, 2, map_size.x - 2), 0, clampf(position_on_map.y, 2, map_size.y - 2))
+	_update_camera()
+
+func _camera_input(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed and event.physical_keycode == KEY_HOME:
+		_home_camera()
+		return true
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_MIDDLE:
+			camera_dragging = event.pressed
+			return true
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
+			camera.size = maxf(14, camera.size - 1.5)
+			return true
+		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
+			camera.size = minf(160 if scale128 else 36, camera.size + 1.5)
+			return true
+		if event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and minimap_dragging:
+			minimap_dragging = false
+			return true
+		if event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and hud.dragging: return false
+		if hud.minimap_rect().has_point(event.position):
+			if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+				minimap_dragging = true
+				_minimap_camera(event.position)
+			return true
+	if event is InputEventMouseMotion:
+		if minimap_dragging:
+			_minimap_camera(event.position)
+			return true
+		if camera_dragging:
+			var displacement := _world_at(event.position - event.relative) - _world_at(event.position)
+			camera_target += displacement
+			camera_target.x = clampf(camera_target.x, 2, map_size.x - 2)
+			camera_target.z = clampf(camera_target.z, 2, map_size.y - 2)
+			_update_camera()
+			return true
+	return false

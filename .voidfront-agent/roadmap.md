@@ -1,5 +1,16 @@
 # Continuing roadmap
 
+## 2026-09-30 user-requested larger map and fog checkpoint
+
+64x48 economy map, camera/minimap navigation and deterministic shared team fog
+are implemented and packaged. Gathering, construction, production, AI attacks,
+victory/defeat and restart have retained replay evidence. See current PROGRESS,
+TESTING and PLAY. Terrain occlusion and strategic AI scouting remain limited.
+The next content priorities remain contested flux and meaningful technology,
+then minimal setup and remaining small-match integration. Earlier fog-next
+instructions are superseded by this bounded fog implementation; all final
+content, performance, multiplayer and shipping gates remain required.
+
 ## 2026-09-29 player-victory and role-control checkpoint
 
 Packaged player victory against active economic AI is now retained at accelerated

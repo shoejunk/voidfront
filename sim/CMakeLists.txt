@@ -63,3 +63,7 @@ add_test(NAME voidfront_production_tests COMMAND voidfront_production_tests)
 add_executable(voidfront_match_tests match_tests.cpp)
 target_link_libraries(voidfront_match_tests PRIVATE voidfront_sim)
 add_test(NAME voidfront_match_tests COMMAND voidfront_match_tests)
+
+add_executable(voidfront_vision_tests vision_tests.cpp)
+target_link_libraries(voidfront_vision_tests PRIVATE voidfront_sim)
+add_test(NAME voidfront_vision_tests COMMAND voidfront_vision_tests)

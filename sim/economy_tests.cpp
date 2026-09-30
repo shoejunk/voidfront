@@ -31,7 +31,7 @@ nav::Point site(const Sim& s) {
 void validation() {
     Sim s(42,6,Map::Economy);
     check(s.units().size()==6 && s.structures().size()==2 && s.deposits().size()==2,"initial economy entities");
-    check(s.width()==32 && s.height()==24 && s.salvage(0)==0,"initial economy map/resources");
+    check(s.width()==64 && s.height()==48 && s.salvage(0)==0,"initial economy map/resources");
     auto c=command(s,1,Order::Gather,{4},s.deposits()[0].x,s.deposits()[0].z);
     check(!s.submit(c),"foreign gather accepted");
     c.units={1}; auto bytes=serialize_command(c); Command decoded;
