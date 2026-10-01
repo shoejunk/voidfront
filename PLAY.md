@@ -2,6 +2,7 @@
 
 Launch `Voidfront.exe` beside its .pck and DLL. The default offline mode uses a 64 x 48 battlefield (four times the former area), with your outpost in the northwest and the opponent in the southeast. It starts with three workers, a command anchor and a finite salvage deposit for each side. The opponent gathers salvage, constructs a Foundry, trains Striders and attacks through the same simulation commands. Destroy its command anchor while protecting yours. This is an early one-unit-type economy match; faction breadth, a second unit tier and balance remain unfinished.
 
+- A skirmish setup screen opens first: Tab toggles the Economic AI or a passive opponent, Left/Right change the match seed, Enter starts. R restarts with the chosen settings; M returns to setup (offline only).
 - Left click selects a worker, anchor, deposit or Foundry. Drag selects units. F1 selects your living workers; F2 selects your living Striders only, so army orders leave miners working.
 - Select workers and right click a salvage deposit. They mine, carry up to 10 salvage each, return it to your anchor, and repeat until the deposit is depleted.
 - Right click your anchor to return carried salvage immediately and stop.

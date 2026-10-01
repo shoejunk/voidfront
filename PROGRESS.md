@@ -1,5 +1,16 @@
 # Voidfront progress
 
+## 2026-10-01 15:40 - skirmish setup screen
+
+Baseline dev `837c135`; STOP/COMPLETE absent; exclusively acquired `.voidfront-agent/run.json`. Pre-existing uncommitted user edits (roadmap, last-run.json, 2026-09-26 PROGRESS note) preserved and left out of this commit.
+
+Landed: minimal skirmish setup overlay in the client (roadmap step 4). Bare interactive launches now open it first: Tab toggles Economic AI / passive opponent, Left/Right change the match seed (1..999999), Enter starts; R restarts with the chosen settings and M returns to setup (offline only). All fixtures/smokes, network and profile modes bypass it. No simulation, protocol or bridge change; the existing `reset_economy(seed, ai)` is used.
+
+Verification: screenshot of the setup screen inspected (`artifacts/setup-2026-10-01/setup00000039.png`). Packaged build rebuilt (Release); packaged `-Production -Ticks 2400` passes (1,796 ticks) and packaged `-Economy -Ticks 1600` completes ok. Note `-Ticks 1796` fails by design (fixture needs headroom); the unpackaged -Production run fails identically with and without this change, so it is not a regression of it. Not run: Debug/Release CTest (no C++ changes), victory/flux packaged regressions, interactive keypress test of the setup keys (only rendered, not driven), independent critic, human playtest.
+
+Gaps/next: economy networking and a networked setup, fog occlusion, second unit/building tier, final scale/art/audio/balance/shipping gates. No COMPLETE.md; automation stays active.
+
+
 ## 2026-10-01 - contested flux and Hardened Plating research
 
 Baseline dev `8dcc35d`; STOP/COMPLETE absent; exclusively acquired `.voidfront-agent/run.json`.

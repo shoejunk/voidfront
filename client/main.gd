@@ -117,6 +117,9 @@ var camera_dragging := false
 var minimap_dragging := false
 var exploration_smoke := false
 var exploration_fixture: RefCounted
+var setup_open := false
+var setup_ai := true
+var setup_seed := 1
 
 func _ready() -> void:
 	var ticks_specified := false
@@ -235,7 +238,7 @@ func _ready() -> void:
 		push_error("Required C++ simulation extension failed to load")
 		get_tree().quit(2)
 		return
-	if economy: bridge.reset_economy(1, not (economy_smoke or production_smoke))
+	if economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke))
 	if scale128:
 		if not option_error.is_empty() or not bridge.reset_scale(1, scale_count, not scale_smoke):
 			push_error(option_error if not option_error.is_empty() else "Scale setup rejected")
@@ -253,6 +256,8 @@ func _ready() -> void:
 	hud.game = self
 	canvas.add_child(hud)
 	_reset()
+	# Only bare interactive launches show the skirmish setup; every fixture starts directly.
+	setup_open = economy and not (economy_smoke or production_smoke or match_smoke or exploration_smoke or network)
 	if exploration_smoke:
 		exploration_fixture = preload("res://exploration_smoke.gd").new(self)
 		exploration_fixture.run.call_deferred()
@@ -517,7 +522,7 @@ func _reset() -> void:
 			push_error("Scale reset rejected")
 			get_tree().quit(2)
 			return
-	elif economy: bridge.reset_economy(1, not (economy_smoke or production_smoke))
+	elif economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke))
 	else: bridge.reset(1, not (movement_smoke or crowd_smoke))
 	if network and option_error.is_empty():
 		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick):
@@ -724,7 +729,7 @@ func _subdue_corpse(node: Node) -> void:
 	for child in node.get_children(): _subdue_corpse(child)
 
 func _process(delta: float) -> void:
-	if current.is_empty() or completed: return
+	if current.is_empty() or completed or setup_open: return
 	if not option_error.is_empty(): return
 	var profile_start := Time.get_ticks_usec() if presentation_profiler else 0
 	if presentation_profiler and presentation_profiler.is_controlled():
@@ -924,6 +929,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_reset()
 		return
 	if not option_error.is_empty(): return
+	if setup_open:
+		_setup_input(event)
+		return
+	if economy and not network and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_M:
+		setup_open = true
+		return
 	if _camera_input(event): return
 	if economy and current.winner != -1: return
 	if network and (not network_state.get("ready", false) or str(network_state.get("state", "")) not in ["running", "stalled"]): return
@@ -997,6 +1008,16 @@ func _unhandled_input(event: InputEvent) -> void:
 				hud.dragging = false
 				_select(drag_start, event.position, event.shift_pressed)
 	if event is InputEventMouseMotion and hud.dragging: hud.drag_to = event.position
+
+func _setup_input(event: InputEvent) -> void:
+	if not (event is InputEventKey and event.pressed and not event.echo): return
+	match event.physical_keycode:
+		KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
+			setup_open = false
+			_reset()
+		KEY_TAB, KEY_O: setup_ai = not setup_ai
+		KEY_RIGHT, KEY_EQUAL, KEY_KP_ADD: setup_seed = mini(setup_seed + 1, 999999)
+		KEY_LEFT, KEY_MINUS, KEY_KP_SUBTRACT: setup_seed = maxi(setup_seed - 1, 1)
 
 func _live_own_ids(ids: Array) -> Array[int]:
 	var result: Array[int] = []

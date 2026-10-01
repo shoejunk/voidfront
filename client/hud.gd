@@ -10,6 +10,7 @@ var selection: Label
 var tip: RichTextLabel
 var result: Label
 var connection: Label
+var setup: Label
 var minimap_obstacles: MultiMesh
 
 func _ready() -> void:
@@ -32,6 +33,9 @@ func _ready() -> void:
 	tip.add_theme_color_override("default_color", Color("a4b9b6"))
 	add_child(tip)
 	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
+	setup = _label(Vector2(0, 0), 20, Color("eaf1e9"))
+	setup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	setup.size = Vector2(760, 330)
 	result = _label(Vector2(590, 350), 34, Color("f0d19b"))
 	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# Static authoritative terrain is submitted once as a canvas batch. Unit dots
@@ -142,6 +146,11 @@ func _process(_delta: float) -> void:
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
+	setup.visible = game.setup_open
+	if game.setup_open:
+		setup.position = Vector2((view.x - setup.size.x) / 2, view.y / 2 - 150)
+		setup.text = "V O I D F R O N T   /   SKIRMISH\n\nMAP   THE GLASS REACH  64 x 48  (you: Cairn Compact, south-west)\nOPPONENT   %s      [Tab]\nMATCH SEED   %d      [Left / Right]\n\nEnter  start match\n\nDuring a match:  R  restart with these settings   /   M  return here" % ["ECONOMIC AI" if game.setup_ai else "PASSIVE (no opponent actions)", game.setup_seed]
+		result.text = ""
 	queue_redraw()
 	if game.presentation_profiler: game.presentation_profiler.record("hud_process", Time.get_ticks_usec() - profile_start)
 
@@ -156,6 +165,11 @@ func _draw() -> void:
 	draw_rect(Rect2(16, view.y - 131 - extra_help_height, 965, 114 + extra_help_height), Color(0.025, 0.047, 0.055, 0.96))
 	draw_line(Vector2(16, view.y - 131 - extra_help_height), Vector2(981, view.y - 131 - extra_help_height), Color("4b777b"), 1)
 	if not is_instance_valid(game) or game.current.is_empty():
+		return
+	if game.setup_open:
+		draw_rect(Rect2(Vector2.ZERO, view), Color(0.01, 0.02, 0.025, 0.72))
+		draw_rect(Rect2(Vector2((view.x - 800) / 2, view.y / 2 - 170), Vector2(800, 330)), Color(0.025, 0.047, 0.055, 0.97))
+		draw_rect(Rect2((view.x - 800) / 2, view.y / 2 - 170, 3, 330), Color("61c9c6"))
 		return
 	if not result.text.is_empty():
 		var result_width := 740 if network_panel else 530
