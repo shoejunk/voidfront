@@ -266,6 +266,8 @@ int main(int argc, char** argv) {
                 <<",\"content_id\":\""<<vf::kLockstepContentId<<"\",\"replay\":"<<(!replay_path.empty()?"true":"false")
                 <<",\"winner\":"<<sim.winner()<<",\"peak_resident_bytes\":"<<peak
                 <<",\"salvage\":["<<sim.salvage(0)<<','<<sim.salvage(1)
+                <<"],\"flux\":["<<sim.flux(0)<<','<<sim.flux(1)<<"],\"research_ticks\":["<<sim.research_ticks(0)<<','<<sim.research_ticks(1)
+                <<"],\"researched\":["<<sim.researched(0)<<','<<sim.researched(1)
                 <<"],\"population_used\":["<<sim.population_used(0)<<','<<sim.population_used(1)
                 <<"],\"population_reserved\":["<<sim.population_reserved(0)<<','<<sim.population_reserved(1)
                 <<"],\"population_cap\":"<<sim.population_cap(0)<<",\"structures\":[";
@@ -280,7 +282,7 @@ int main(int argc, char** argv) {
             metrics<<"],\"deposits\":["; economy_comma=false;
             for (const auto& d:sim.deposits()) {
                 if(economy_comma) metrics<<','; economy_comma=true;
-                metrics<<"{\"id\":"<<d.id<<",\"x\":"<<d.x<<",\"z\":"<<d.z<<",\"remaining\":"<<d.remaining<<'}';
+                metrics<<"{\"id\":"<<d.id<<",\"x\":"<<d.x<<",\"z\":"<<d.z<<",\"remaining\":"<<d.remaining<<",\"kind\":"<<static_cast<int>(d.kind)<<'}';
             }
             metrics<<"],\"terrain\":[";
             bool comma=false;

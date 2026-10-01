@@ -25,6 +25,16 @@ void Sim::apply_production(const Command& c) {
     auto& b=structures_[c.units.front()-1];
     if (b.player!=c.player || b.hp<=0 || b.kind!=StructureKind::Foundry) return;
     if (b.build_ticks<kBuildTicks) { result=CommandResult::NotReady; return; }
+    if (c.order==Order::Research) {
+        // One player-wide upgrade. Paid flux is committed even if the Foundry
+        // later falls; progress is player state and finishes independently.
+        if (researched_[c.player] || research_ticks_[c.player]) { result=CommandResult::AlreadyResearched; return; }
+        if (flux_[c.player]<kResearchFluxCost) { result=CommandResult::InsufficientFlux; return; }
+        flux_[c.player]-=kResearchFluxCost;
+        research_ticks_[c.player]=1;
+        result=CommandResult::Accepted;
+        return;
+    }
     if (c.order==Order::CancelProduction) {
         if (!b.production_queue) { result=CommandResult::EmptyQueue; return; }
         // Cancel the tail. The active front retains its elapsed work unless it
@@ -45,6 +55,11 @@ void Sim::apply_production(const Command& c) {
 
 void Sim::production_step() {
     if (map_!=Map::Economy) return;
+    for (uint8_t p=0;p<2;++p) {
+        if (!research_ticks_[p] || ++research_ticks_[p]<kResearchTicks) continue;
+        research_ticks_[p]=0; researched_[p]=true;
+        for (auto& u:units_) if (u.hp>0 && u.player==p && u.kind==UnitKind::Strider) u.hp+=kHardenedBonusHp;
+    }
     // Fixed perimeter exits, west first, then clockwise. Only these eight
     // explicitly clear points are exits; an obstructed factory waits in place.
     constexpr int exit_distance=kScale+64+32;
@@ -63,6 +78,7 @@ void Sim::production_step() {
             });
             if (occupied) continue;
             Unit u;
+            if (researched_[b.player]) u.hp+=kHardenedBonusHp;
             // Dead entries remain as tombstones: IDs are never reused, and the
             // admission cap reserves lifetime space for all paid queue items.
             u.id=static_cast<uint32_t>(units_.size())+1; u.player=b.player;

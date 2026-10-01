@@ -53,10 +53,10 @@ def audit(report):
         require(len(row['salvage']) == 2 and min(row['salvage']) >= 0, 'negative resources')
         require([u['id'] for u in row['units']] == list(range(1, 7)), 'unit roster changed')
         require([s['id'] for s in row['structures']] == list(range(1, len(row['structures'])+1)), 'structure ids invalid')
-        require([d['id'] for d in row['deposits']] == [1, 2], 'deposit roster changed')
+        require([d['id'] for d in row['deposits']] == [1, 2, 3, 4], 'deposit roster changed')
         require(all(0 <= d['remaining'] <= initial['deposits'][i]['remaining'] for i,d in enumerate(row['deposits'])), 'deposit bounds')
         foundries = [s for s in row['structures'] if s['kind'] == 1]
-        observed = sum(row['salvage']) + sum(d['remaining'] for d in row['deposits'])
+        observed = sum(row['salvage']) + sum(row.get('flux', [0, 0])) + 50*sum(bool(r) or bool(t) for r, t in zip(row.get('researched', [0, 0]), row.get('research_ticks', [0, 0]))) + sum(d['remaining'] for d in row['deposits'])
         observed += sum(u['cargo'] for u in row['units']) + 100 * len(foundries)
         require(observed == total, f'tick {tick}: salvage created or lost')
         max_deposited = max(max_deposited, row['salvage'][0])

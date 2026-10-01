@@ -60,6 +60,10 @@ add_executable(voidfront_production_tests production_tests.cpp)
 target_link_libraries(voidfront_production_tests PRIVATE voidfront_sim)
 add_test(NAME voidfront_production_tests COMMAND voidfront_production_tests)
 
+add_executable(voidfront_tech_tests tech_tests.cpp)
+target_link_libraries(voidfront_tech_tests PRIVATE voidfront_sim)
+add_test(NAME voidfront_tech_tests COMMAND voidfront_tech_tests)
+
 add_executable(voidfront_match_tests match_tests.cpp)
 target_link_libraries(voidfront_match_tests PRIVATE voidfront_sim)
 add_test(NAME voidfront_match_tests COMMAND voidfront_match_tests)

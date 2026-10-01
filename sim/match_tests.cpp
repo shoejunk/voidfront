@@ -113,7 +113,7 @@ void terminal_commands() {
 }
 void economic_match(bool duel) {
     Sim sim(42,3,Map::Economy),replay(42,3,Map::Economy);
-    std::array<uint32_t,2> sequences{}; std::array<int,9> command_counts{};
+    std::array<uint32_t,2> sequences{}; std::array<int,10> command_counts{};
     uint32_t finish=0;
     // The 64x48 field increases travel and duel attrition; observed finish is ~12k ticks.
     for (int tick=0;tick<16000;++tick) {

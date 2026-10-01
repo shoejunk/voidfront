@@ -239,7 +239,7 @@ public:
     }
     bool issue(int64_t order, PackedInt32Array ids, int64_t x, int64_t z) {
         if (network || (simulation.map() == vf::Map::Economy && simulation.winner() != -1)) return false;
-        if (order < 0 || order > 8 || ids.size() == 0 || ids.size() > 256 ||
+        if (order < 0 || order > 9 || ids.size() == 0 || ids.size() > 256 ||
             x < 0 || z < 0 || x >= simulation.width() * vf::kScale || z >= simulation.height() * vf::kScale) return false;
         if (human_sequence == UINT32_MAX) return false;
         vf::Command command{};
@@ -283,7 +283,7 @@ public:
             row["moving"] = unit.moving; row["target"] = unit.target_id;
             row["target_structure"] = unit.target_structure_id;
             row["cooldown"] = unit.cooldown; row["order"] = static_cast<int>(unit.order);
-            row["kind"] = static_cast<int>(unit.kind); row["cargo"] = unit.cargo;
+            row["kind"] = static_cast<int>(unit.kind); row["cargo"] = unit.cargo; row["cargo_kind"] = unit.cargo_kind;
             row["resource_id"] = unit.resource_id; row["work_ticks"] = unit.work_ticks;
             row["returning"] = unit.returning; row["build_id"] = unit.build_id;
             units.push_back(row);
@@ -298,7 +298,14 @@ public:
         }
         result["vision"] = vision;
         Array resources; resources.push_back(state.salvage(0)); resources.push_back(state.salvage(1));
-        result["salvage"] = resources; result["foundry_cost"] = vf::kFoundryCost;
+        result["salvage"] = resources;
+        Array flux; flux.push_back(state.flux(0)); flux.push_back(state.flux(1));
+        result["flux"] = flux;
+        Array research; research.push_back(state.research_ticks(0)); research.push_back(state.research_ticks(1));
+        result["research_ticks"] = research;
+        Array researched; researched.push_back(state.researched(0)); researched.push_back(state.researched(1));
+        result["researched"] = researched;
+        result["research_cost"] = vf::kResearchFluxCost; result["research_total_ticks"] = vf::kResearchTicks; result["foundry_cost"] = vf::kFoundryCost;
         result["build_duration"] = vf::kBuildTicks;
         result["strider_cost"] = vf::kStriderCost;
         result["train_ticks"] = vf::kProductionTicks;
@@ -333,7 +340,7 @@ public:
         Array deposits;
         for (const auto& deposit : state.deposits()) {
             Dictionary row; row["id"] = deposit.id; row["x"] = deposit.x;
-            row["z"] = deposit.z; row["remaining"] = deposit.remaining; deposits.push_back(row);
+            row["z"] = deposit.z; row["remaining"] = deposit.remaining; row["kind"] = deposit.kind; deposits.push_back(row);
         }
         result["deposits"] = deposits;
         return result;

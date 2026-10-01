@@ -98,6 +98,7 @@ var skirmish := false
 var economy_smoke := false
 var economy_fixture: RefCounted
 var production_smoke := false
+var flux_smoke := false
 var production_fixture: RefCounted
 var match_smoke := false
 var victory_smoke := false
@@ -141,6 +142,10 @@ func _ready() -> void:
 		elif argument == "--production-smoke":
 			economy = true
 			production_smoke = true
+		elif argument == "--flux-smoke":
+			economy = true
+			production_smoke = true
+			flux_smoke = true
 		elif argument == "--economy-smoke":
 			economy = true
 			economy_smoke = true
@@ -255,7 +260,7 @@ func _ready() -> void:
 		match_fixture = preload("res://victory_smoke.gd").new(self) if victory_smoke else preload("res://match_smoke.gd").new(self)
 		match_fixture.run.call_deferred()
 	if production_smoke:
-		production_fixture = preload("res://production_smoke.gd").new(self)
+		production_fixture = (preload("res://flux_smoke.gd") if flux_smoke else preload("res://production_smoke.gd")).new(self)
 		production_fixture.run.call_deferred()
 	if economy_smoke:
 		economy_fixture = preload("res://economy_smoke.gd").new(self)
@@ -624,6 +629,8 @@ func _present_economy() -> void:
 			9: economy_notice = "Population limit reached (%d including queued units)" % current.population_cap
 			10: economy_notice = "Unit roster limit reached"
 			11: economy_notice = "Production queue is empty; nothing to cancel"
+			12: economy_notice = "Not enough flux: Hardened Plating costs %d" % current.research_cost
+			13: economy_notice = "Hardened Plating is already researched or underway"
 	if not build_preview:
 		build_preview = _box(Vector3(2, 0.1, 2), Vector3.ZERO, _material(Color("4bbca5")))
 		build_preview.visible = false
@@ -636,7 +643,7 @@ func _present_economy() -> void:
 				var root := Node3D.new()
 				add_child(root)
 				root.position = Vector3(entity.x / SCALE, 0, entity.z / SCALE)
-				var color := Color("d6b869") if deposit else (Color("438d97") if entity.player == 0 else Color("ae684e"))
+				var color := (Color("5cc8ff") if int(entity.get("kind", 0)) == 1 else Color("d6b869")) if deposit else (Color("438d97") if entity.player == 0 else Color("ae684e"))
 				var mesh := BoxMesh.new()
 				mesh.size = Vector3(0.94, 0.65, 0.94) if deposit else Vector3(1.94, 1.4 if anchor else 0.9, 1.94)
 				var body := MeshInstance3D.new()
@@ -671,7 +678,7 @@ func _present_economy() -> void:
 				selected_entity = entity.duplicate()
 				selected_entity["category"] = "deposit" if deposit else "structure"
 			if deposit:
-				entry.label.text = "SALVAGE  %d" % entity.remaining
+				entry.label.text = "%s  %d" % ["FLUX" if int(entity.get("kind", 0)) == 1 else "SALVAGE", entity.remaining]
 				entry.body.scale.y = 0.15 if entity.remaining == 0 else 1.0
 			else:
 				var progress := int(entity.build_ticks)
@@ -844,7 +851,9 @@ func _present(alpha: float, delta: float) -> void:
 		entry.root.position = from.lerp(to, alpha)
 		entry.ring.visible = unit.id in selected and unit.hp > 0
 		if int(unit.get("kind", 0)) == 1:
-			entry.root.get_node("SalvageCargo").visible = int(unit.get("cargo", 0)) > 0
+			var cargo_node: MeshInstance3D = entry.root.get_node("SalvageCargo")
+			cargo_node.visible = int(unit.get("cargo", 0)) > 0
+			cargo_node.material_override = _material(Color("5cc8ff") if int(unit.get("cargo_kind", 0)) == 1 else Color("d6b869"), 0.25)
 		if unit.hp <= 0:
 			if not entry.dead:
 				_play(entry, "death")
@@ -948,6 +957,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				if economy: _issue(7, Vector3.ZERO)
 			KEY_X:
 				if economy: _issue(8, Vector3.ZERO)
+			KEY_G:
+				if economy: _issue(9, Vector3.ZERO)
 			KEY_S: _issue(0, Vector3(0, 0, 0))
 			KEY_H: _issue(3, Vector3(0, 0, 0))
 	if event is InputEventMouseButton:
@@ -1042,9 +1053,9 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 
 func _issue(order: int, at: Vector3) -> void:
 	var command_actors: Array[int] = selected.duplicate()
-	if order in [7, 8]:
+	if order in [7, 8, 9]:
 		if selected_entity.get("category", "") != "structure" or selected_entity.get("player", -1) != local_player:
-			economy_notice = "Select your Foundry to train or cancel a Strider"
+			economy_notice = "Select your Foundry to train, cancel or research"
 			return
 		command_actors = [int(selected_entity.id)]
 		at = Vector3.ZERO
@@ -1074,12 +1085,13 @@ func _issue(order: int, at: Vector3) -> void:
 		economy_notice = "Order submitted" if accepted else "Order rejected"
 		if accepted and order == 7: economy_notice = "Training order submitted: %d salvage" % current.strider_cost
 		elif accepted and order == 8: economy_notice = "Cancel last queued Strider; awaiting refund"
+		elif accepted and order == 9: economy_notice = "Hardened Plating research submitted: %d flux" % current.research_cost
 		if order == 6:
 			economy_notice = "Foundry order submitted: %d salvage" % current.foundry_cost if bridge.can_build(int(at.x * SCALE), int(at.z * SCALE)) else "Cannot place here: blocked, unaffordable, or occupied; no salvage spent"
 	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
 		var feedback_at := Vector3(at.x, 0.05, at.z)
-		if order in [7, 8]: feedback_at = Vector3(selected_entity.x / SCALE, 0.05, selected_entity.z / SCALE)
+		if order in [7, 8, 9]: feedback_at = Vector3(selected_entity.x / SCALE, 0.05, selected_entity.z / SCALE)
 		if order == 0 or order == 3:
 			var center := Vector3.ZERO
 			var count := 0

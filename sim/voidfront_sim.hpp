@@ -9,18 +9,19 @@ namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
 inline constexpr int kMaxMapSize = 128;
-inline constexpr uint32_t kProtocolVersion = 9;
+inline constexpr uint32_t kProtocolVersion = 10;
 enum class Map : uint32_t { Foundry = 0, Scale128 = 1, Economy = 2 };
 int map_width(Map map);
 int map_height(Map map);
 const std::vector<nav::Rect>& map_terrain(Map map);
-enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build, TrainStrider, CancelProduction };
+enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build, TrainStrider, CancelProduction, Research };
 enum class UnitKind : uint8_t { Strider, Worker };
 enum class StructureKind : uint8_t { Anchor, Foundry };
 enum class CommandResult : uint8_t { None, Accepted, InvalidTarget, InsufficientSalvage, InvalidPlacement, InvalidWorker,
-    InvalidStructure, NotReady, QueueFull, PopulationFull, RosterFull, EmptyQueue };
+    InvalidStructure, NotReady, QueueFull, PopulationFull, RosterFull, EmptyQueue, InsufficientFlux, AlreadyResearched };
 inline constexpr int kFoundryCost=100, kBuildTicks=100, kCargoCapacity=10, kGatherTicks=10;
-inline constexpr int kStriderCost=50;
+inline constexpr int kStriderCost=50, kResearchFluxCost=50, kHardenedBonusHp=50;
+inline constexpr uint32_t kResearchTicks=200;
 inline constexpr uint32_t kProductionTicks=100, kProductionQueueLimit=5, kPopulationCap=12, kLifetimeUnitLimit=4096;
 struct Structure {
     uint32_t id=0;
@@ -31,7 +32,8 @@ struct Structure {
     uint32_t production_queue=0,production_ticks=0;
     bool spawn_blocked=false;
 };
-struct Deposit { uint32_t id=0; int32_t x=0,z=0,remaining=2000; };
+// kind 0 is common salvage, kind 1 is contested flux.
+struct Deposit { uint32_t id=0; int32_t x=0,z=0,remaining=2000; uint8_t kind=0; };
 struct Command {
     uint32_t tick = 0, sequence = 0;
     uint8_t player = 0;
@@ -50,6 +52,7 @@ struct Unit {
     bool moving = false;
     UnitKind kind=UnitKind::Strider;
     int32_t cargo=0;
+    uint8_t cargo_kind=0;
     uint32_t resource_id=0,build_id=0,work_ticks=0;
     bool returning=false;
     // Goal, current waypoint and remaining route are authoritative, included in hashes.
@@ -70,6 +73,10 @@ public:
     const std::vector<Structure>& structures() const { return structures_; }
     const std::vector<Deposit>& deposits() const { return deposits_; }
     int32_t salvage(uint8_t player) const { return player<2?salvage_[player]:0; }
+    int32_t flux(uint8_t player) const { return player<2?flux_[player]:0; }
+    // 0 while idle; 1..kResearchTicks-1 while Hardened Plating is underway.
+    uint32_t research_ticks(uint8_t player) const { return player<2?research_ticks_[player]:0; }
+    bool researched(uint8_t player) const { return player<2 && researched_[player]; }
     uint32_t population_used(uint8_t player) const;
     uint32_t population_reserved(uint8_t player) const;
     uint32_t population_cap(uint8_t player) const { return player<2 && map_==Map::Economy?kPopulationCap:0; }
@@ -97,7 +104,9 @@ private:
     std::vector<Command> pending_;
     std::vector<Structure> structures_;
     std::vector<Deposit> deposits_;
-    std::array<int32_t,2> salvage_{};
+    std::array<int32_t,2> salvage_{}, flux_{};
+    std::array<uint32_t,2> research_ticks_{};
+    std::array<bool,2> researched_{};
     std::array<CommandResult,2> results_{};
     std::array<uint32_t,2> result_sequences_{};
     void apply(const Command& command);

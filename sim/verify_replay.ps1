@@ -18,7 +18,10 @@ $rejected = 0
 function Reject-Replay([string]$Name, [byte[]]$Bytes) {
     $invalidPath = Join-Path $OutputDirectory "$Name.vfr"
     [IO.File]::WriteAllBytes($invalidPath, $Bytes)
+    # Rejection writes to stderr by design; Windows PowerShell 5.1 would otherwise treat it as terminating.
+    $previous = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
     $diagnostic = & $Executable --replay $invalidPath 2>&1
+    $ErrorActionPreference = $previous
     if ($LASTEXITCODE -eq 0) { throw "Malformed replay accepted: $Name" }
     $script:rejected++
     Write-Output "$Name rejected: $diagnostic"

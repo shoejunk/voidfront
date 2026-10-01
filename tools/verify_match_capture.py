@@ -141,7 +141,7 @@ def audit(report, commands):
                     forfeited += 50*(old['production_queue']-births)
             if s['hp'] == 0:
                 require(s['production_queue'] == s['production_ticks'] == 0 and not s['spawn_blocked'], 'dead producer retains paid queue')
-        observed = sum(row['salvage']) + sum(d['remaining'] for d in row['deposits']) + sum(u['cargo'] for u in row['units'])
+        observed = sum(row['salvage']) + sum(row.get('flux', [0, 0])) + 50*sum(bool(r) or bool(t) for r, t in zip(row.get('researched', [0, 0]), row.get('research_ticks', [0, 0]))) + sum(d['remaining'] for d in row['deposits']) + sum(u['cargo'] for u in row['units'])
         observed += 100*sum(s['kind'] == 1 for s in row['structures'])
         observed += 50*(sum(u['kind'] == 0 for u in row['units']) + sum(s['production_queue'] for s in row['structures'])) + forfeited
         require(observed == total, f'tick {tick}: resource conservation with tombstones and lost queues')

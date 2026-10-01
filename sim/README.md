@@ -129,3 +129,10 @@ midway through an existing route is source-reviewed, not a dedicated regression.
 `tools/verify_economy_capture.py` audits packaged snapshot conservation and
 independent full-tick sweeps, binds actual InputEvents to VFR3 commands, and
 compares every hash with Debug playback and ten Release repeats.
+
+Flux and research: Economy deposits carry `kind` (0 salvage, 1 flux); two 1,000-flux deposits sit on the central
+crossing. Gathered cargo keeps its kind and is credited to the matching bank; ordering a worker with other-kind cargo to a
+deposit delivers that cargo first. `Research=9` takes exactly one owned completed Foundry ID and zero x/z, charges 50 flux and
+runs a 200-tick player-wide Hardened Plating timer (rejects: InsufficientFlux, AlreadyResearched). Striders gain +50 hp when it
+completes and spawn with it afterwards. Flux banks, research state, deposit kind and cargo kind are hashed (protocol 10).
+Combat-map lockstep rejects Research like other structure orders. The AI mines explored flux with one worker and researches.

@@ -7,7 +7,7 @@ namespace {
 void check(bool ok,const char* message) { if (!ok) throw std::runtime_error(message); }
 Command command(const Sim& s,uint32_t sequence,Order order,std::vector<uint32_t> units,int x=0,int z=0) { return {s.tick(),sequence,0,order,std::move(units),x,z}; }
 int total(const Sim& s) {
-    int result=s.salvage(0)+s.salvage(1);
+    int result=s.salvage(0)+s.salvage(1)+s.flux(0)+s.flux(1);
     for (const auto& d:s.deposits()) result+=d.remaining;
     for (const auto& u:s.units()) result+=u.cargo;
     for (const auto& b:s.structures()) if (b.kind==StructureKind::Foundry) result+=kFoundryCost;
@@ -21,7 +21,7 @@ void step(Sim& s,int count) { for (int i=0;i<count;++i) s.step(); }
 void funded(Sim& s) {
     gather(s); step(s,4000);
     check(s.salvage(0)>=kFoundryCost,"workers did not return enough salvage");
-    check(total(s)==4000,"mining failed conservation");
+    check(total(s)==6000,"mining failed conservation");
     check(s.submit(command(s,2,Order::Stop,{1,2,3})),"stop workers"); s.step();
 }
 nav::Point site(const Sim& s) {
@@ -30,7 +30,7 @@ nav::Point site(const Sim& s) {
 }
 void validation() {
     Sim s(42,6,Map::Economy);
-    check(s.units().size()==6 && s.structures().size()==2 && s.deposits().size()==2,"initial economy entities");
+    check(s.units().size()==6 && s.structures().size()==2 && s.deposits().size()==4,"initial economy entities");
     check(s.width()==64 && s.height()==48 && s.salvage(0)==0,"initial economy map/resources");
     auto c=command(s,1,Order::Gather,{4},s.deposits()[0].x,s.deposits()[0].z);
     check(!s.submit(c),"foreign gather accepted");
@@ -55,7 +55,7 @@ void interruption_and_depletion() {
     check(s.units()[0].cargo==cargo && s.salvage(0)==0,"stop discarded/deposited cargo");
     check(s.submit(command(s,3,Order::ReturnCargo,{1})),"explicit return submit"); step(s,500);
     check(s.units()[0].cargo==0 && s.salvage(0)==cargo && s.units()[0].order==Order::Stop,"explicit return did not terminate");
-    check(total(s)==4000,"interruption conservation");
+    check(total(s)==6000,"interruption conservation");
     // A small remaining reserve isolates competing final extraction without a long economic run.
     auto& deposits=const_cast<std::vector<Deposit>&>(s.deposits()); deposits[0].remaining=7;
     const int baseline=total(s); gather(s,4); step(s,1500);
@@ -72,7 +72,7 @@ void construction_and_routes() {
     check(s.structures().back().build_ticks==0,"unattended site constructed");
     check(s.submit(command(s,5,Order::Build,{1},p.x,p.z)),"resume build submit"); step(s,1500);
     check(s.structures().back().build_ticks==kBuildTicks && s.salvage(0)==balance-kFoundryCost,"resume failed or double charged");
-    check(total(s)==4000,"construction conservation");
+    check(total(s)==6000,"construction conservation");
     check(!s.can_build(0,p.x,p.z),"duplicate completed site accepted");
     // March another worker across the newly blocked site, retaining full swept clearance.
     auto& units=const_cast<std::vector<Unit>&>(s.units());
@@ -96,7 +96,7 @@ void occupied_service_goal() {
     step(s,800);
     check(s.salvage(0)>0,"occupied harvest slot permanently stalled worker");
     check(units[1].x==prior.x && units[1].z==prior.z,"service recovery displaced held blocker");
-    check(total(s)==4000,"service-slot recovery changed resource total");
+    check(total(s)==6000,"service-slot recovery changed resource total");
 }
 void competing_purchases() {
     Sim s(42,3,Map::Economy);

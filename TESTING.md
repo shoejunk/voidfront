@@ -1,5 +1,19 @@
 # Verification ledger
 
+## 2026-10-01 - contested flux and research verification
+
+Commands (all from the repository root; Windows PowerShell 5.1 needs `-ExecutionPolicy Bypass -File`):
+`tools/verify.ps1` (Debug + Release 12/12 CTest, malformed replays, 2,000 cross-build hashes, ten repeats; log
+`artifacts/flux-verify-2026-10-01.log`), `python tools/verify_network.py` (passes; `artifacts/flux-network-2026-10-01.log`),
+`tools/package.ps1`, `tools/capture.ps1 -Packaged -Flux -Ticks 3600 -Name flux-package-2026-10-01` then
+`python tools/verify_flux_capture.py artifacts/flux-package-2026-10-01.json --out artifacts/flux-replay-2026-10-01`
+(2,602 ticks, 70 flux mined, 4 corruptions rejected, Debug + ten Release replays match client hashes).
+Regressions: `-Production -Ticks 2400 -Name production-regression-2026-10-01` (1,796 ticks) and
+`-Victory -Ticks 12000 -Name victory-regression-2026-10-01` (4,488 ticks, winner 0) pass their audits.
+Headless AI duel (seed 5, 6,000 ticks) hashes identical in Debug and Release. Audit tools now expect four deposits and
+count flux banks and the 50-flux research cost in conservation. Limits: scripted software input, offline economy only, no
+human playtest, no independent critic, no performance or balance acceptance.
+
 ## 2026-09-30 - larger 1vAI map, exploration and fog
 
 User requested implementation on DESKTOP-JOE. Economy now uses a 64x48 map,

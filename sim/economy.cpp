@@ -62,7 +62,7 @@ bool Sim::can_build(uint8_t player,int32_t x,int32_t z) const {
 }
 
 void Sim::apply_economy(const Command& c) {
-    if (c.order==Order::TrainStrider || c.order==Order::CancelProduction) { apply_production(c); return; }
+    if (c.order==Order::TrainStrider || c.order==Order::CancelProduction || c.order==Order::Research) { apply_production(c); return; }
     result_sequences_[c.player]=c.sequence;
     results_[c.player]=CommandResult::InvalidWorker;
     if (map_!=Map::Economy) return;
@@ -107,7 +107,9 @@ void Sim::apply_economy(const Command& c) {
     for (auto id:workers) {
         auto& u=units_[id-1];
         u.order=c.order; u.resource_id=deposit; u.build_id=0; u.work_ticks=0;
-        u.returning=c.order==Order::ReturnCargo || u.cargo>=kCargoCapacity;
+        // Mixed cargo is delivered first; resource_id then resumes the new deposit.
+        const bool mixed=deposit && u.cargo>0 && deposits_[deposit-1].kind!=u.cargo_kind;
+        u.returning=c.order==Order::ReturnCargo || u.cargo>=kCargoCapacity || mixed;
         set_goal(u,{u.x,u.z});
     }
     results_[c.player]=CommandResult::Accepted;
@@ -160,12 +162,12 @@ void Sim::economy_step() {
         }
         if (u.x!=u.goal_x || u.z!=u.goal_z) continue;
         if (u.returning) {
-            salvage_[u.player]+=u.cargo; u.cargo=0; u.returning=false; u.work_ticks=0;
+            (u.cargo_kind?flux_:salvage_)[u.player]+=u.cargo; u.cargo=0; u.returning=false; u.work_ticks=0;
             if (u.order==Order::ReturnCargo || !d || d->remaining==0) u.order=Order::Stop;
             else set_goal(u,{u.x,u.z});
         } else if (++u.work_ticks>=kGatherTicks) {
             u.work_ticks=0;
-            if (d->remaining>0) { --d->remaining; ++u.cargo; }
+            if (d->remaining>0) { --d->remaining; ++u.cargo; u.cargo_kind=d->kind; }
             if (u.cargo>=kCargoCapacity || d->remaining==0) { u.returning=true; set_goal(u,{u.x,u.z}); }
         }
     }

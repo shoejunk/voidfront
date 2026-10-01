@@ -38,7 +38,7 @@ int64_t distance2(const Unit& a, const Unit& b) {
     return dx * dx + dz * dz;
 }
 bool canonical(const Command& c) {
-    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 8 &&
+    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 9 &&
         (static_cast<uint8_t>(c.order)<7 || (c.units.size()==1 && c.x==0 && c.z==0)) &&
         !c.units.empty() && c.units.size() <= 256 && c.x >= 0 && c.z >= 0 &&
         c.x < kMaxMapSize * kScale && c.z < kMaxMapSize * kScale &&
@@ -90,6 +90,10 @@ Sim::Sim(uint32_t seed, uint32_t count, Map map) : map_(map), rng_(seed ? seed :
                 units_.push_back(u);
             }
         }
+        // Contested flux sits on the central crossing, equidistant from both bases.
+        // Deposit IDs are 1-based indices into deposits_.
+        deposits_.push_back({3,29*kScale+128,24*kScale+128,1000,1});
+        deposits_.push_back({4,36*kScale+128,24*kScale+128,1000,1});
         rebuild_navigation();
         update_vision();
         return;
@@ -157,7 +161,7 @@ bool Sim::submit(Command command) {
     for (const auto& c : pending_)
         if (c.player == command.player && ((c.sequence < command.sequence && c.tick > command.tick) ||
             (c.sequence > command.sequence && c.tick < command.tick))) return false;
-    if (command.order==Order::TrainStrider || command.order==Order::CancelProduction) {
+    if (command.order==Order::TrainStrider || command.order==Order::CancelProduction || command.order==Order::Research) {
         const auto id=command.units.front();
         if (map_!=Map::Economy || id>structures_.size() || structures_[id-1].player!=command.player) return false;
     } else for (const auto id : command.units)
@@ -553,7 +557,7 @@ uint64_t Sim::state_hash() const {
     add(kProtocolVersion); add(static_cast<uint32_t>(map_)); add(width()); add(height());
     add(tick_); add(rng_); add(last_sequence_[0]); add(last_sequence_[1]); add(units_.size());
     for (const auto& u : units_) {
-        add(static_cast<uint8_t>(u.kind)); add(u.cargo); add(u.resource_id); add(u.build_id); add(u.work_ticks); add(u.returning);
+        add(static_cast<uint8_t>(u.kind)); add(u.cargo); add(u.cargo_kind); add(u.resource_id); add(u.build_id); add(u.work_ticks); add(u.returning);
         add(u.id); add(u.player); add(u.x); add(u.z); add(u.hp); add(static_cast<uint8_t>(u.order));
         add(u.target_id); add(u.target_structure_id); add(u.cooldown); add(u.moving); add(u.goal_x); add(u.goal_z); add(u.next_x); add(u.next_z);
         add(u.route_goal.x); add(u.route_goal.z); add(u.path.size());
@@ -561,12 +565,12 @@ uint64_t Sim::state_hash() const {
         add(u.blocked_ticks); add(u.detour.size());
         for (const auto& point : u.detour) { add(point.x); add(point.z); }
     }
-    for (int p=0;p<2;++p) { add(salvage_[p]); add(static_cast<uint8_t>(results_[p])); add(result_sequences_[p]); }
+    for (int p=0;p<2;++p) { add(salvage_[p]); add(flux_[p]); add(research_ticks_[p]); add(researched_[p]); add(static_cast<uint8_t>(results_[p])); add(result_sequences_[p]); }
     add(structures_.size());
     for (const auto& b:structures_) { add(b.id); add(b.player); add(static_cast<uint8_t>(b.kind)); add(b.x); add(b.z); add(b.hp); add(b.build_ticks);
         add(b.production_queue); add(b.production_ticks); add(b.spawn_blocked); }
     add(deposits_.size());
-    for (const auto& d:deposits_) { add(d.id); add(d.x); add(d.z); add(d.remaining); }
+    for (const auto& d:deposits_) { add(d.id); add(d.x); add(d.z); add(d.remaining); add(d.kind); }
     for (const auto& player : vision_) for (auto cell : player) add(cell);
     return h;
 }
@@ -618,11 +622,31 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
                 if (placed) break;
             }
         }
+        // Once the Foundry stands, dedicate exactly one worker to the nearest explored
+        // flux deposit. Fog applies: an unexplored crossing is simply unknown to the AI.
+        uint32_t flux_worker=0;
+        bool flux_mined=false;
+        const Deposit* flux_site=nullptr;
+        if (foundry && foundry->build_ticks>=kBuildTicks) {
+            for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker && u.order==Order::Gather &&
+                u.resource_id && sim.deposits()[u.resource_id-1].kind==1 && sim.deposits()[u.resource_id-1].remaining>0) flux_mined=true;
+            int64_t best=std::numeric_limits<int64_t>::max();
+            for (const auto& d:sim.deposits()) if (d.kind==1 && d.remaining>0 && sim.visibility(player,d.x/kScale,d.z/kScale)>0) {
+                const int64_t dx=int64_t(anchor->x)-d.x,dz=int64_t(anchor->z)-d.z;
+                if (dx*dx+dz*dz<best) { best=dx*dx+dz*dz; flux_site=&d; }
+            }
+            if (!flux_mined && flux_site) for (const auto& u:sim.units())
+                if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker && u.id!=assigned_builder && u.order!=Order::Build) {
+                    flux_worker=u.id; emit(Order::Gather,{u.id},flux_site->x,flux_site->z); break;
+                }
+            if (!sim.researched(player) && !sim.research_ticks(player) && sim.flux(player)>=kResearchFluxCost)
+                emit(Order::Research,{foundry->id});
+        }
         for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker &&
-            u.id!=assigned_builder && u.order!=Order::Build && u.order!=Order::Gather && u.order!=Order::ReturnCargo) {
+            u.id!=assigned_builder && u.id!=flux_worker && u.order!=Order::Build && u.order!=Order::Gather && u.order!=Order::ReturnCargo) {
             const Deposit* nearest=nullptr;
             int64_t distance=std::numeric_limits<int64_t>::max();
-            for (const auto& d:sim.deposits()) if (d.remaining>0 && sim.visibility(player,d.x/kScale,d.z/kScale)>0) {
+            for (const auto& d:sim.deposits()) if (d.kind==0 && d.remaining>0 && sim.visibility(player,d.x/kScale,d.z/kScale)>0) {
                 const int64_t dx=int64_t(u.x)-d.x,dz=int64_t(u.z)-d.z;
                 if (dx*dx+dz*dz<distance) { distance=dx*dx+dz*dz; nearest=&d; }
             }

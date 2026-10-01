@@ -1,5 +1,47 @@
 # Voidfront progress
 
+## 2026-10-01 - contested flux and Hardened Plating research
+
+Baseline dev `8dcc35d`; STOP/COMPLETE absent; exclusively acquired `.voidfront-agent/run.json`.
+Pre-existing uncommitted user edits (roadmap, last-run.json and the 2026-09-26 PROGRESS
+note) are preserved and deliberately left out of this commit. Goal: roadmap step 4,
+a second contested resource and a first technology choice, through canonical commands.
+
+Landed: two flux deposits (1,000 each) on the central crossing of the 64x48 map, in
+fog until scouted. Workers mine them with the ordinary Gather order; cargo carries
+its kind, mixed cargo is delivered to its own bank first, and the flux bank is
+separate from salvage. New canonical `Research` order (9, one Foundry ID, zero x/z)
+spends 50 flux for 200 ticks of player-wide Hardened Plating: Striders gain +50 hp
+(living ones on completion, later spawns at spawn). Duplicate or unfunded purchases
+reject with new result codes. Protocol 10; Research is rejected on combat-map
+lockstep. The economic AI dedicates one worker to an explored flux deposit and buys
+research (AI duel now finishes at tick 5,374 instead of ~11,958; AI vs passive 2,667).
+HUD shows flux, plating status and the G hotkey; flux deposits and cargo are cyan.
+
+Verification: Debug and Release 12/12 CTest suites (new `voidfront_tech_tests`:
+layout, flux conservation, mixed cargo, research rules/charges/hardening, hash
+coverage, late-arrival equivalence, AI research). `tools/verify.ps1` passes malformed
+replays, 2,000 cross-build hashes and ten repeats; AI duel 6,000-tick Debug/Release
+traces identical. 22-case headless network suite passes. Packaged flux fixture
+(`capture.ps1 -Packaged -Flux`) passes 27 checks / 2,602 ticks via InputEvents:
+salvage, Foundry, scouting through fog, flux mining, research, duplicate rejection,
+restart; `tools/verify_flux_capture.py` conserves flux, rejects 4 corruptions and
+matches Debug + ten Release replays. Packaged production (1,796 ticks) and victory
+(4,488 ticks) regressions pass their audits after widening them for the 4-deposit
+roster and flux. Evidence: `artifacts/flux-*-2026-10-01*`, `production-regression-*`,
+`victory-regression-*`. Screenshots inspected by the primary agent only.
+
+Tooling fixes: verify_replay.ps1 and capture.ps1 failed under Windows PowerShell 5.1
+(expected stderr treated as terminating; ExitCode null) and were repaired without
+changing any gate. Line endings of unrelated files were briefly converted by mistake
+and restored to CRLF before commit.
+
+Gaps: no independent critic this run (not spawned); no human playtest; flux/research
+not networked (economy still offline-only); Strider hp bars assume the largest seen
+hp; blockout art and label overlap remain. Next: minimal skirmish setup screen and
+economy networking, then Fog/occlusion, a second unit/building tier, and the final
+scale, art/audio, balance and shipping gates. No COMPLETE.md; automation stays active.
+
 ## 2026-09-30 - larger 1vAI map, exploration and fog
 
 User requested implementation on DESKTOP-JOE. Economy now uses a 64x48 map,
