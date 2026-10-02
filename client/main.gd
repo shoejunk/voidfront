@@ -205,7 +205,7 @@ func _ready() -> void:
 	if match_smoke and not ticks_specified: finish_tick = 12000
 	if match_smoke and (production_smoke or economy_smoke or finish_tick < 2000 or finish_tick > 12000): option_error = "Match smoke requires its own 2000..12000 tick fixture."
 	if production_smoke and not ticks_specified: finish_tick = 2400
-	if production_smoke and (economy_smoke or finish_tick < 300 or finish_tick > 3600): option_error = "Production smoke requires its own 300..3600 tick fixture."
+	if production_smoke and (economy_smoke or finish_tick < 300 or finish_tick > 6000): option_error = "Production smoke requires its own 300..6000 tick fixture."
 	if economy_smoke and not ticks_specified: finish_tick = 1600
 	if economy_smoke and (finish_tick < 300 or finish_tick > 2400): option_error = "Economy smoke requires 300..2400 ticks."
 	if economy and not option_error.is_empty():
@@ -568,6 +568,9 @@ func _spawn_actor(unit: Dictionary) -> void:
 		cargo.material_override = _material(Color("d6b869"), 0.25)
 		cargo.name = "SalvageCargo"
 		root.add_child(cargo)
+	if int(unit.get("kind", 0)) == 2:
+		# Temporary tall, narrow ranged rig; authored Lancer art remains a production gate.
+		model.scale = Vector3(0.8, 1.25, 0.8)
 	var color := Color("62d7d1") if unit.player == 0 else Color("ef9259")
 	_apply_team(model, color)
 	var ring := _ring(0.62, color)
@@ -636,6 +639,7 @@ func _present_economy() -> void:
 			11: economy_notice = "Production queue is empty; nothing to cancel"
 			12: economy_notice = "Not enough flux: Hardened Plating costs %d" % current.research_cost
 			13: economy_notice = "Hardened Plating is already researched or underway"
+			14: economy_notice = "Lancers require Hardened Plating research first (G)"
 	if not build_preview:
 		build_preview = _box(Vector3(2, 0.1, 2), Vector3.ZERO, _material(Color("4bbca5")))
 		build_preview.visible = false
@@ -949,7 +953,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				selected_entity.clear()
 				selected.clear()
 				for unit in current.units:
-					if unit.player == local_player and unit.hp > 0 and int(unit.get("kind", 0)) == (1 if event.physical_keycode == KEY_F1 else 0): selected.append(unit.id)
+					if unit.player == local_player and unit.hp > 0 and (int(unit.get("kind", 0)) == 1) == (event.physical_keycode == KEY_F1): selected.append(unit.id)
 				if network_smoke:
 					own_selection_passed = not selected.is_empty()
 					for unit in current.units:
@@ -970,6 +974,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				if economy: _issue(8, Vector3.ZERO)
 			KEY_G:
 				if economy: _issue(9, Vector3.ZERO)
+			KEY_L:
+				if economy: _issue(10, Vector3.ZERO)
 			KEY_S: _issue(0, Vector3(0, 0, 0))
 			KEY_H: _issue(3, Vector3(0, 0, 0))
 	if event is InputEventMouseButton:
@@ -1074,7 +1080,7 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 
 func _issue(order: int, at: Vector3) -> void:
 	var command_actors: Array[int] = selected.duplicate()
-	if order in [7, 8, 9]:
+	if order in [7, 8, 9, 10]:
 		if selected_entity.get("category", "") != "structure" or selected_entity.get("player", -1) != local_player:
 			economy_notice = "Select your Foundry to train, cancel or research"
 			return

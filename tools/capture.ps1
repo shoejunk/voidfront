@@ -7,7 +7,7 @@ if ($Victory -and $Match) { throw 'Choose Victory or Match.' }
 if ($Victory) { $Match = $true }
 if ($MatchRealtime -and -not $Match) { throw 'MatchRealtime requires Match.' }
 if ($Match -and ($Production -or $Economy -or $Movement -or $Crowd -or $Scale -or $Ticks -lt 1 -or $Ticks -gt 12000)) { throw 'Match capture requires its own 1..12000 tick fixture.' }
-if ($Flux -and ($Production -or $Economy -or $Match -or $Movement -or $Crowd -or $Scale -or $Ticks -lt 1 -or $Ticks -gt 3600)) { throw 'Flux capture requires its own 1..3600 tick fixture.' }
+if ($Flux -and ($Production -or $Economy -or $Match -or $Movement -or $Crowd -or $Scale -or $Ticks -lt 1 -or $Ticks -gt 6000)) { throw 'Flux capture requires its own 1..6000 tick fixture.' }
 if ($Production -and ($Economy -or $Movement -or $Crowd -or $Scale -or $Ticks -lt 1 -or $Ticks -gt 2400)) { throw 'Production capture requires its own 1..2400 tick fixture.' }
 if ($Economy -and ($Movement -or $Crowd -or $Scale -or $Ticks -lt 1 -or $Ticks -gt 2400)) { throw 'Economy capture requires its own 1..2400 tick fixture.' }
 if ($Movement -and ($Ticks -lt 1 -or $Ticks -gt 600)) { throw 'Movement capture requires 1..600 ticks.' }

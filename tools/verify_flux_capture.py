@@ -22,6 +22,9 @@ def audit(report):
         carried = sum(u['cargo'] for u in s['units'] if u['player'] == 0 and u.get('cargo_kind') == 1 and u['cargo'] > 0)
         mined = sum(1000 - d['remaining'] for d in flux_dep)
         spent = 50 if (s['research_ticks'][0] > 0 or s['researched'][0]) else 0
+        # Each Lancer costs 25 flux: queued slots plus spawned units (no cancels in this fixture).
+        spent += 25 * (sum(bin(b.get('queue_lancers', 0)).count('1') for b in s['structures'] if b['player'] == 0)
+                       + sum(1 for u in s['units'] if u['player'] == 0 and u.get('kind') == 2))
         require(mined == s['flux'][0] + spent + carried, f'flux not conserved at tick {s["tick"]}')
         require(mined >= mined_prev and s['flux'][1] == 0 and not s['researched'][1], 'flux ledger regressed or enemy gained flux')
         mined_prev = mined
@@ -33,6 +36,8 @@ def audit(report):
     require(done_seen and mined_prev >= 50, 'flux mining/research never completed')
     accepted = [i for i in report['inputs'] if i['accepted']]
     require(any(i['order'] == 9 for i in accepted), 'research order not recorded')
+    require(any(i['order'] == 10 for i in accepted), 'lancer order not recorded')
+    require(any(u['player'] == 0 and u.get('kind') == 2 and u['hp'] > 0 for u in snaps[-1]['units']), 'no Lancer in final snapshot')
     return dict(ticks=snaps[-1]['tick'], flux_mined=mined_prev, accepted_inputs=len(accepted))
 
 

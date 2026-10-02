@@ -117,7 +117,7 @@ func _process(_delta: float) -> void:
 		var flux: Array = game.current.get("flux", [0, 0])
 		var research_ticks: int = int(game.current.get("research_ticks", [0, 0])[game.local_player])
 		var plating := "PLATING DONE" if game.current.get("researched", [false, false])[game.local_player] else ("PLATING %d%%" % int(float(research_ticks) / game.current.research_total_ticks * 100) if research_ticks > 0 else "PLATING %d FLUX" % game.current.research_cost)
-		status.text = "SALVAGE %d   /   FLUX %d   /   %s   /   POPULATION %d + %d QUEUED / %d   /   FOUNDRY %d • STRIDER %d" % [resources[game.local_player], flux[game.local_player], plating, game.current.population_used[game.local_player], game.current.population_reserved[game.local_player], game.current.population_cap, cost, game.current.strider_cost]
+		status.text = "SALVAGE %d   /   FLUX %d   /   %s   /   POPULATION %d + %d QUEUED / %d   /   FOUNDRY %d • STRIDER %d / LANCER %d+%d FLUX [L]" % [resources[game.local_player], flux[game.local_player], plating, game.current.population_used[game.local_player], game.current.population_reserved[game.local_player], game.current.population_cap, cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost]
 		connection.text = "64 x 48 EXPLORATION / Scout the dark ground. Destroy the enemy anchor; protect yours. Gather, build and train."
 		if not game.current.get("enemy_ai", false): connection.text += " Passive economy fixture."
 		if game.current.winner == game.local_player: result.text = "VICTORY / ENEMY ANCHOR DESTROYED\nR  /  new match"
@@ -142,7 +142,7 @@ func _process(_delta: float) -> void:
 					if entity.production_queue > 0: selection.text += "   /   STRIDER %d%%" % int(float(entity.production_ticks) / game.current.train_ticks * 100)
 					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
 		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
-		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building\nB + click  Foundry (%d)    T  Strider (%d)    X  refund last    G  Hardened Plating (%d flux)    A + click  attack-move    S  stop    H  hold\nCtrl+0-9  save / 0-9  recall    Arrows  pan (Shift fast)    MMB / minimap  pan    Home  base    Wheel  zoom    R  restart\n" % [cost, game.current.strider_cost, game.current.research_cost] + game.economy_notice
+		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building\nB + click  Foundry (%d)    T  Strider (%d)    L  Lancer (%d+%d flux, needs plating)    X  refund last    G  Hardened Plating (%d flux)    A + click  attack-move    S  stop    H  hold\nCtrl+0-9  save / 0-9  recall    Arrows  pan (Shift fast)    MMB / minimap  pan    Home  base    Wheel  zoom    R  restart\n" % [cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost, game.current.research_cost] + game.economy_notice
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error

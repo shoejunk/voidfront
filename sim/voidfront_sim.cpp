@@ -38,7 +38,7 @@ int64_t distance2(const Unit& a, const Unit& b) {
     return dx * dx + dz * dz;
 }
 bool canonical(const Command& c) {
-    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 9 &&
+    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 10 &&
         (static_cast<uint8_t>(c.order)<7 || (c.units.size()==1 && c.x==0 && c.z==0)) &&
         !c.units.empty() && c.units.size() <= 256 && c.x >= 0 && c.z >= 0 &&
         c.x < kMaxMapSize * kScale && c.z < kMaxMapSize * kScale &&
@@ -161,7 +161,7 @@ bool Sim::submit(Command command) {
     for (const auto& c : pending_)
         if (c.player == command.player && ((c.sequence < command.sequence && c.tick > command.tick) ||
             (c.sequence > command.sequence && c.tick < command.tick))) return false;
-    if (command.order==Order::TrainStrider || command.order==Order::CancelProduction || command.order==Order::Research) {
+    if (command.order==Order::TrainStrider || command.order==Order::TrainLancer || command.order==Order::CancelProduction || command.order==Order::Research) {
         const auto id=command.units.front();
         if (map_!=Map::Economy || id>structures_.size() || structures_[id-1].player!=command.player) return false;
     } else for (const auto id : command.units)
@@ -250,9 +250,14 @@ void Sim::step() {
         if (u.hp <= 0) continue;
         if (u.cooldown > 0) --u.cooldown;
         const Unit* target = nullptr;
-        int64_t nearest = acquire_range2 + 1;
-        if (u.kind==UnitKind::Strider && u.order != Order::Move) {
-            constexpr int reach=6*kScale+movement_speed;
+        const bool lancer=u.kind==UnitKind::Lancer;
+        const int64_t unit_attack2=lancer?int64_t(kLancerRangeTiles*kScale)*(kLancerRangeTiles*kScale):attack_range2;
+        const int64_t unit_acquire2=lancer?int64_t(kLancerAcquireTiles*kScale)*(kLancerAcquireTiles*kScale):acquire_range2;
+        const int unit_damage=lancer?kLancerDamage:8;
+        const uint16_t unit_cooldown=lancer?kLancerCooldown:10;
+        int64_t nearest = unit_acquire2 + 1;
+        if (u.kind!=UnitKind::Worker && u.order != Order::Move) {
+            const int reach=(lancer?kLancerAcquireTiles:6)*kScale+movement_speed;
             spatial.query({u.x-reach,u.z-reach,u.x+reach,u.z+reach},nearby);
             for (const auto id : nearby) {
                 const auto& other=units_[id-1];
@@ -264,17 +269,17 @@ void Sim::step() {
         nav::Point goal{u.goal_x, u.goal_z};
         if (target) {
             u.target_id = target->id;
-            if (nearest <= attack_range2) {
-                if (u.cooldown == 0) { damage[target->id - 1] += 8; u.cooldown = 10; }
+            if (nearest <= unit_attack2) {
+                if (u.cooldown == 0) { damage[target->id - 1] += unit_damage; u.cooldown = unit_cooldown; }
                 goal = {u.x, u.z};
             } else if (u.order == Order::AttackMove) goal = {target->x, target->z};
         }
         // Units have priority; otherwise acquire the nearest enemy building by
         // squared distance to its footprint, resolving ties by stable ID.
         // Structures have a separate ID space, exposed separately in snapshots.
-        if (!target && u.kind==UnitKind::Strider && u.order!=Order::Move) {
+        if (!target && u.kind!=UnitKind::Worker && u.order!=Order::Move) {
             const Structure* building=nullptr;
-            int64_t distance=acquire_range2+1;
+            int64_t distance=unit_acquire2+1;
             for (const auto& b:structures_) if (b.hp>0 && b.player!=u.player) {
                 const int64_t dx=std::max(0,std::abs(u.x-b.x)-kScale);
                 const int64_t dz=std::max(0,std::abs(u.z-b.z)-kScale);
@@ -283,8 +288,8 @@ void Sim::step() {
             }
             if (building) {
                 u.target_structure_id=building->id;
-                if (distance<=attack_range2) {
-                    if (u.cooldown==0) { structure_damage[building->id-1]+=8; u.cooldown=10; }
+                if (distance<=unit_attack2) {
+                    if (u.cooldown==0) { structure_damage[building->id-1]+=unit_damage; u.cooldown=unit_cooldown; }
                     goal={u.x,u.z};
                 } else if (u.order==Order::AttackMove) {
                     const auto approach=service_point(u,building->x,building->z,kScale);
@@ -500,7 +505,7 @@ void Sim::step() {
         if (b.hp==0) {
             // Destruction forfeits every paid item, including blocked exits.
             // Tombstones retain stable IDs; no resource refund is generated.
-            b.production_queue=0; b.production_ticks=0; b.spawn_blocked=false;
+            b.production_queue=0; b.queue_lancers=0; b.production_ticks=0; b.spawn_blocked=false;
             destroyed=true;
         }
     }
@@ -568,7 +573,7 @@ uint64_t Sim::state_hash() const {
     for (int p=0;p<2;++p) { add(salvage_[p]); add(flux_[p]); add(research_ticks_[p]); add(researched_[p]); add(static_cast<uint8_t>(results_[p])); add(result_sequences_[p]); }
     add(structures_.size());
     for (const auto& b:structures_) { add(b.id); add(b.player); add(static_cast<uint8_t>(b.kind)); add(b.x); add(b.z); add(b.hp); add(b.build_ticks);
-        add(b.production_queue); add(b.production_ticks); add(b.spawn_blocked); }
+        add(b.production_queue); add(b.queue_lancers); add(b.production_ticks); add(b.spawn_blocked); }
     add(deposits_.size());
     for (const auto& d:deposits_) { add(d.id); add(d.x); add(d.z); add(d.remaining); add(d.kind); }
     for (const auto& player : vision_) for (auto cell : player) add(cell);
@@ -656,9 +661,17 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         if (foundry && foundry->build_ticks>=kBuildTicks && foundry->production_queue<kProductionQueueLimit &&
             sim.salvage(player)>=kStriderCost && sim.population_used(player)+sim.population_reserved(player)<kPopulationCap &&
             sim.units().size()+sim.population_reserved(0)+sim.population_reserved(1)<kLifetimeUnitLimit)
-            emit(Order::TrainStrider,{foundry->id});
+        {
+            // After Hardened Plating, keep roughly one Lancer behind every two Striders when flux allows.
+            int striders=0,lancers=0;
+            for (const auto& u:sim.units()) if (u.hp>0 && u.player==player) {
+                if (u.kind==UnitKind::Strider) ++striders; else if (u.kind==UnitKind::Lancer) ++lancers;
+            }
+            const bool want_lancer=sim.researched(player) && sim.flux(player)>=kLancerFluxCost && sim.salvage(player)>=kLancerCost && lancers*2<=striders;
+            emit(want_lancer?Order::TrainLancer:Order::TrainStrider,{foundry->id});
+        }
         std::vector<uint32_t> army;
-        for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Strider && u.order!=Order::AttackMove)
+        for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind!=UnitKind::Worker && u.order!=Order::AttackMove)
             army.push_back(u.id);
         if (!army.empty()) emit(Order::AttackMove,std::move(army),(player==0?59:4)*kScale+128,(player==0?36:12)*kScale+128);
         return commands;

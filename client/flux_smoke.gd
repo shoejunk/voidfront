@@ -37,7 +37,7 @@ func run() -> void:
 	var salvage_cargo := 0
 	for unit in game.current.units:
 		if unit.player == 0 and int(unit.get("cargo_kind", 0)) == 0: salvage_cargo += int(unit.cargo)
-	check(await until(func(): return int(game.current.flux[0]) >= game.current.research_cost, game.finish_tick - 400), "Workers deliver enough flux for research")
+	check(await until(func(): return int(game.current.flux[0]) >= game.current.research_cost + game.current.lancer_flux_cost, game.finish_tick - 800), "Workers deliver enough flux for research")
 	check(game.current.salvage[0] - salvage_before <= salvage_cargo, "Flux deliveries never enter the salvage bank (only pre-existing salvage cargo)")
 	var flux_total := 0
 	for deposit in flux_deposits(): flux_total += 1000 - int(deposit.remaining)
@@ -54,15 +54,34 @@ func run() -> void:
 	await key(KEY_G)
 	await advance_ticks(3)
 	check(game.current.command_results[0] == 1 and int(game.current.research_ticks[0]) > 0, "Research begins")
-	check(game.current.flux[0] <= flux_before_research - game.current.research_cost + 10, "Research charges displayed flux cost")
+	check(game.current.flux[0] <= flux_before_research - game.current.research_cost + 15, "Research charges displayed flux cost")
 	check(game.economy_notice.begins_with("Hardened Plating research submitted") or game.economy_notice == "Order accepted by simulation", "Research acknowledgement is visible in HUD")
 	label = "duplicate_research"
 	await key(KEY_G)
 	await advance_ticks(3)
 	check(game.current.command_results[0] == 13 and game.economy_notice.begins_with("Hardened Plating is already"), "Duplicate research rejects visibly")
 	await capture("researching")
+	label = "lancer_before_research"
+	await key(KEY_L)
+	await advance_ticks(3)
+	check(game.current.command_results[0] == 14 and game.economy_notice.begins_with("Lancers require"), "Lancer before research rejects visibly")
 	check(await until(func(): return game.current.researched[0], game.finish_tick - 5), "Hardened Plating completes")
 	await capture("researched")
+	# Workers return to salvage so the Lancer (salvage plus flux) becomes affordable.
+	await key(KEY_F1)
+	label = "gather_salvage_for_lancer"
+	await mouse(MOUSE_BUTTON_RIGHT, Vector3(salvage_site.x / 256.0, 0.5, salvage_site.z / 256.0))
+	check(await until(func(): return int(game.current.salvage[0]) >= game.current.lancer_cost and int(game.current.flux[0]) >= game.current.lancer_flux_cost, game.finish_tick - 150), "Resources for a Lancer accumulate")
+	await mouse(MOUSE_BUTTON_LEFT, site + Vector3(0, 0.5, 0))
+	var salvage_pre: int = game.current.salvage[0]
+	var flux_pre: int = game.current.flux[0]
+	label = "train_lancer"
+	await key(KEY_L)
+	await advance_ticks(3)
+	check(game.current.command_results[0] == 1 and own_foundries()[0].queue_lancers == 1, "Lancer queued behind research gate")
+	check(game.current.salvage[0] <= salvage_pre - game.current.lancer_cost + 20 and game.current.flux[0] <= flux_pre - game.current.lancer_flux_cost + 10, "Lancer charges salvage and flux")
+	check(await until(func(): return game.current.units.any(func(u): return u.player == 0 and int(u.get("kind", 0)) == 2 and u.hp == 70), game.finish_tick - 5), "Lancer spawns with its own hp")
+	await capture("lancer")
 	game.completed = true
 	var final_snapshot: Dictionary = game.current.duplicate(true)
 	var replay_path: String = game.report_path.get_basename() + ".vfr"

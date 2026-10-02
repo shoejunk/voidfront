@@ -9,18 +9,21 @@ namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
 inline constexpr int kMaxMapSize = 128;
-inline constexpr uint32_t kProtocolVersion = 10;
+inline constexpr uint32_t kProtocolVersion = 11;
 enum class Map : uint32_t { Foundry = 0, Scale128 = 1, Economy = 2 };
 int map_width(Map map);
 int map_height(Map map);
 const std::vector<nav::Rect>& map_terrain(Map map);
-enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build, TrainStrider, CancelProduction, Research };
-enum class UnitKind : uint8_t { Strider, Worker };
+enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build, TrainStrider, CancelProduction, Research, TrainLancer };
+enum class UnitKind : uint8_t { Strider, Worker, Lancer };
 enum class StructureKind : uint8_t { Anchor, Foundry };
 enum class CommandResult : uint8_t { None, Accepted, InvalidTarget, InsufficientSalvage, InvalidPlacement, InvalidWorker,
-    InvalidStructure, NotReady, QueueFull, PopulationFull, RosterFull, EmptyQueue, InsufficientFlux, AlreadyResearched };
+    InvalidStructure, NotReady, QueueFull, PopulationFull, RosterFull, EmptyQueue, InsufficientFlux, AlreadyResearched, NotResearched };
 inline constexpr int kFoundryCost=100, kBuildTicks=100, kCargoCapacity=10, kGatherTicks=10;
 inline constexpr int kStriderCost=50, kResearchFluxCost=50, kHardenedBonusHp=50;
+// Lancer: ranged tier-two unit, gated behind Hardened Plating. Fragile, longer reach.
+inline constexpr int kLancerCost=75, kLancerFluxCost=25, kLancerHp=70, kLancerDamage=6, kLancerCooldown=10;
+inline constexpr int kLancerRangeTiles=5, kLancerAcquireTiles=7;
 inline constexpr uint32_t kResearchTicks=200;
 inline constexpr uint32_t kProductionTicks=100, kProductionQueueLimit=5, kPopulationCap=12, kLifetimeUnitLimit=4096;
 struct Structure {
@@ -30,6 +33,8 @@ struct Structure {
     int32_t x=0,z=0,hp=1000;
     uint32_t build_ticks=kBuildTicks;
     uint32_t production_queue=0,production_ticks=0;
+    uint32_t queue_lancers=0; // bit i set: queue slot i (0 is the front) builds a Lancer
+
     bool spawn_blocked=false;
 };
 // kind 0 is common salvage, kind 1 is contested flux.

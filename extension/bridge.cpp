@@ -239,7 +239,7 @@ public:
     }
     bool issue(int64_t order, PackedInt32Array ids, int64_t x, int64_t z) {
         if (network || (simulation.map() == vf::Map::Economy && simulation.winner() != -1)) return false;
-        if (order < 0 || order > 9 || ids.size() == 0 || ids.size() > 256 ||
+        if (order < 0 || order > 10 || ids.size() == 0 || ids.size() > 256 ||
             x < 0 || z < 0 || x >= simulation.width() * vf::kScale || z >= simulation.height() * vf::kScale) return false;
         if (human_sequence == UINT32_MAX) return false;
         vf::Command command{};
@@ -307,7 +307,7 @@ public:
         result["researched"] = researched;
         result["research_cost"] = vf::kResearchFluxCost; result["research_total_ticks"] = vf::kResearchTicks; result["foundry_cost"] = vf::kFoundryCost;
         result["build_duration"] = vf::kBuildTicks;
-        result["strider_cost"] = vf::kStriderCost;
+        result["strider_cost"] = vf::kStriderCost; result["lancer_cost"] = vf::kLancerCost; result["lancer_flux_cost"] = vf::kLancerFluxCost;
         result["train_ticks"] = vf::kProductionTicks;
         result["production_queue_limit"] = vf::kProductionQueueLimit;
         result["population_cap"] = vf::kPopulationCap;
@@ -331,7 +331,7 @@ public:
             row["kind"] = static_cast<int>(structure.kind);
             row["x"] = structure.x; row["z"] = structure.z; row["hp"] = structure.hp;
             row["build_ticks"] = structure.build_ticks;
-            row["production_queue"] = structure.production_queue;
+            row["production_queue"] = structure.production_queue; row["queue_lancers"] = structure.queue_lancers;
             row["production_ticks"] = structure.production_ticks;
             row["spawn_blocked"] = structure.spawn_blocked;
             structures.push_back(row);

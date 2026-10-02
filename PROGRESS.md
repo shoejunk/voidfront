@@ -1,5 +1,15 @@
 # Voidfront progress
 
+## 2026-10-02 - Lancer ranged unit (second tier)
+
+Baseline dev `6d52cac`; STOP/COMPLETE absent; acquired `.voidfront-agent/run.json` exclusively. Pre-existing uncommitted user edits (roadmap, last-run.json, 2026-09-26 PROGRESS note) preserved and left out of this commit.
+
+Landed: a second combat unit, the **Lancer** (fragile ranged striker: 70 hp, 6 damage per 10 ticks, 5-tile range, 7-tile acquisition vs Strider 3/6). It is gated behind Hardened Plating research and costs 75 salvage + 25 flux, trained from the Foundry with canonical `TrainLancer` (order 10, protocol 11, new result code NotResearched). Queue slots carry their kind (`queue_lancers` bitmask, hashed); cancelling a queued Lancer refunds both resources; destroyed Foundries clear the mask. Economic AI trains roughly one Lancer per two Striders once researched and sends them with the army. Client: `L` trains, F2 selects all army kinds, tall narrow placeholder rig, HUD costs/help/rejection notice.
+
+Verification: `tools/verify.ps1` passes (Debug and Release 12/12 CTest, new `lancer_rules` in voidfront_tech_tests: research gate, charges, cancel refund, queue kind, unaffordable follow-up, outranging fire; malformed replays, 2,000 cross-build hashes, ten repeats). `tools/verify_network.py` 22-case suite passes with protocol 11. Packaged flux fixture extended and passes (3,868 ticks, via InputEvents: L before research rejects with visible notice; after research, Lancer queued, charged and spawned with 70 hp); `tools/verify_flux_capture.py` now accounts Lancer flux, requires an order-10 input and a live Lancer, rejects 4 corruptions and matches Debug + ten Release replays (`artifacts/lancer-final-*`). Packaged production (1,792 ticks) and victory (4,488 ticks, accelerated) regressions pass. Screenshot inspected by the primary agent only. Tooling: flux/production smoke tick ceiling raised 3,600 to 6,000 (needed for the longer fixture; no gate weakened).
+
+Not done: no independent critic, no human playtest, no balance evidence for Lancer vs Strider, not networked (economy still offline), placeholder art only, Lancer art/audio/VFX absent. Next: networked economy match, terrain-aware fog, structure/unit tier two content (defense, Vesper faction), balance evidence. No COMPLETE.md; automation stays active.
+
 ## 2026-10-01 15:40 - skirmish setup screen
 
 Baseline dev `837c135`; STOP/COMPLETE absent; exclusively acquired `.voidfront-agent/run.json`. Pre-existing uncommitted user edits (roadmap, last-run.json, 2026-09-26 PROGRESS note) preserved and left out of this commit.

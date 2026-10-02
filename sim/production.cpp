@@ -40,14 +40,21 @@ void Sim::apply_production(const Command& c) {
         // Cancel the tail. The active front retains its elapsed work unless it
         // was the only item, including when its completed exit is blocked.
         --b.production_queue;
-        salvage_[c.player]+=kStriderCost;
+        if (b.queue_lancers>>b.production_queue&1u) {
+            b.queue_lancers&=~(1u<<b.production_queue);
+            salvage_[c.player]+=kLancerCost; flux_[c.player]+=kLancerFluxCost;
+        } else salvage_[c.player]+=kStriderCost;
         if (!b.production_queue) { b.production_ticks=0; b.spawn_blocked=false; }
     } else {
         if (b.production_queue>=kProductionQueueLimit) { result=CommandResult::QueueFull; return; }
         if (population_used(c.player)+population_reserved(c.player)>=kPopulationCap) { result=CommandResult::PopulationFull; return; }
         if (units_.size()+population_reserved(0)+population_reserved(1)>=kLifetimeUnitLimit) { result=CommandResult::RosterFull; return; }
-        if (salvage_[c.player]<kStriderCost) { result=CommandResult::InsufficientSalvage; return; }
-        salvage_[c.player]-=kStriderCost;
+        const bool lancer=c.order==Order::TrainLancer;
+        if (lancer && !researched_[c.player]) { result=CommandResult::NotResearched; return; }
+        if (salvage_[c.player]<(lancer?kLancerCost:kStriderCost)) { result=CommandResult::InsufficientSalvage; return; }
+        if (lancer && flux_[c.player]<kLancerFluxCost) { result=CommandResult::InsufficientFlux; return; }
+        salvage_[c.player]-=lancer?kLancerCost:kStriderCost;
+        if (lancer) { flux_[c.player]-=kLancerFluxCost; b.queue_lancers|=1u<<b.production_queue; }
         ++b.production_queue;
     }
     result=CommandResult::Accepted;
@@ -78,13 +85,14 @@ void Sim::production_step() {
             });
             if (occupied) continue;
             Unit u;
-            if (researched_[b.player]) u.hp+=kHardenedBonusHp;
+            if (b.queue_lancers&1u) { u.kind=UnitKind::Lancer; u.hp=kLancerHp; }
+            else if (researched_[b.player]) u.hp+=kHardenedBonusHp;
             // Dead entries remain as tombstones: IDs are never reused, and the
             // admission cap reserves lifetime space for all paid queue items.
             u.id=static_cast<uint32_t>(units_.size())+1; u.player=b.player;
             u.x=u.goal_x=u.next_x=point.x; u.z=u.goal_z=u.next_z=point.z;
             units_.push_back(u);
-            --b.production_queue; b.production_ticks=0; b.spawn_blocked=false;
+            --b.production_queue; b.queue_lancers>>=1; b.production_ticks=0; b.spawn_blocked=false;
             break;
         }
     }

@@ -116,8 +116,42 @@ void ai_uses_flux() {
     check(ai_research>0 && (s.researched(0)||s.researched(1)),"AI never researched");
 }
 }
+void lancer_rules() {
+    auto s=foundry(1,100);
+    check(s.salvage(0)==100 && s.flux(0)==100,"lancer fixture");
+    issue(s,4,Order::TrainLancer,{3});
+    check(s.command_result(0)==CommandResult::NotResearched && s.salvage(0)==100 && s.flux(0)==100,"lancer before research charged");
+    issue(s,5,Order::Research,{3}); steps(s,kResearchTicks);
+    check(s.researched(0) && s.flux(0)==50,"research for lancer fixture");
+    issue(s,6,Order::TrainLancer,{3});
+    check(s.command_result(0)==CommandResult::Accepted && s.salvage(0)==100-kLancerCost && s.flux(0)==50-kLancerFluxCost,"lancer not charged");
+    check(s.structures()[2].queue_lancers==1,"queue slot not marked lancer");
+    issue(s,7,Order::CancelProduction,{3});
+    check(s.salvage(0)==100 && s.flux(0)==50 && s.structures()[2].queue_lancers==0 && s.structures()[2].production_queue==0,"lancer cancel refund");
+    issue(s,8,Order::TrainLancer,{3});
+    check(s.structures()[2].queue_lancers==1 && s.structures()[2].production_queue==1,"lancer queue");
+    issue(s,9,Order::TrainStrider,{3});
+    check(s.command_result(0)==CommandResult::InsufficientSalvage && s.structures()[2].production_queue==1,"strider unaffordable behind lancer");
+    steps(s,kProductionTicks+5);
+    const auto& l=s.units().back();
+    check(l.kind==UnitKind::Lancer && l.hp==kLancerHp && s.structures()[2].queue_lancers==0,"lancer did not spawn");
+    issue(s,10,Order::TrainLancer,{3});
+    check(s.command_result(0)==CommandResult::InsufficientSalvage,"insufficient salvage must reject");
+    // Lancers outrange Striders: at 4.5 tiles only the Lancer can hurt an enemy.
+    Sim c(42,3,Map::Economy);
+    auto& units=mutable_units(c);
+    size_t enemy=0; for (size_t i=0;i<units.size();++i) if (units[i].player==1) { enemy=i; break; }
+    Unit lancer=units[0]; lancer.id=static_cast<uint32_t>(units.size())+1; lancer.kind=UnitKind::Lancer; lancer.hp=kLancerHp;
+    lancer.order=Order::Stop;
+    const int32_t ex=units[enemy].x,ez=units[enemy].z;
+    lancer.x=lancer.goal_x=lancer.next_x=ex-4*kScale-128; lancer.z=lancer.goal_z=lancer.next_z=ez;
+    units.push_back(lancer);
+    const int before=units[enemy].hp;
+    c.step();
+    check(c.units()[enemy].hp==before-kLancerDamage,"lancer failed to fire at 4.5 tiles");
+}
 int main() {
-    try { map_layout(); flux_gathering(); mixed_cargo_delivers_first(); research(); research_rules(); hash_covers_tech(); ai_uses_flux();
+    try { map_layout(); flux_gathering(); mixed_cargo_delivers_first(); research(); research_rules(); hash_covers_tech(); ai_uses_flux(); lancer_rules();
         std::cout<<"tech tests passed\n"; }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }
