@@ -94,7 +94,7 @@ void Sim::apply_economy(const Command& c) {
         }
         const auto approach=service_point(worker,center.x,center.z,kScale);
         if (approach.x<0) { results_[c.player]=CommandResult::InvalidPlacement; return; }
-        worker.order=Order::Build; worker.build_id=building; worker.resource_id=0; worker.returning=false; worker.work_ticks=0;
+        worker.queue.clear(); worker.order=Order::Build; worker.build_id=building; worker.resource_id=0; worker.returning=false; worker.work_ticks=0;
         set_goal(worker,approach);
         results_[c.player]=CommandResult::Accepted;
         return;
@@ -106,7 +106,7 @@ void Sim::apply_economy(const Command& c) {
     }
     for (auto id:workers) {
         auto& u=units_[id-1];
-        u.order=c.order; u.resource_id=deposit; u.build_id=0; u.work_ticks=0;
+        u.queue.clear(); u.order=c.order; u.resource_id=deposit; u.build_id=0; u.work_ticks=0;
         // Mixed cargo is delivered first; resource_id then resumes the new deposit.
         const bool mixed=deposit && u.cargo>0 && deposits_[deposit-1].kind!=u.cargo_kind;
         u.returning=c.order==Order::ReturnCargo || u.cargo>=kCargoCapacity || mixed;

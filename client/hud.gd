@@ -142,7 +142,7 @@ func _process(_delta: float) -> void:
 					if entity.production_queue > 0: selection.text += "   /   STRIDER %d%%" % int(float(entity.production_ticks) / game.current.train_ticks * 100)
 					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
 		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
-		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building\nB + click  Foundry (%d)    T  Strider (%d)    L  Lancer (%d+%d flux, needs plating)    X  refund last    G  Hardened Plating (%d flux)    A + click  attack-move    S  stop    H  hold\nCtrl+0-9  save / 0-9  recall    Arrows  pan (Shift fast)    MMB / minimap  pan    Home  base    Wheel  zoom    R  restart\n" % [cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost, game.current.research_cost] + game.economy_notice
+		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building    Shift+RMB queue (4)\nB + click  Foundry (%d)    T  Strider (%d)    L  Lancer (%d+%d flux, needs plating)    X  refund last    G  Hardened Plating (%d flux)    A + click  attack-move    S  stop    H  hold\nCtrl+0-9  save / 0-9  recall    Arrows  pan (Shift fast)    MMB / minimap  pan    Home  base    Wheel  zoom    R  restart\n" % [cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost, game.current.research_cost] + game.economy_notice
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error

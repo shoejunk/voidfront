@@ -1,5 +1,15 @@
 # Voidfront progress
 
+## 2026-10-03 - queued (Shift) move and attack-move orders
+
+Baseline dev `babd28b`; STOP/COMPLETE absent; exclusively acquired `.voidfront-agent/run.json`. Pre-existing uncommitted user edits (roadmap, last-run.json, 2026-09-26 PROGRESS note) preserved and left out of this commit.
+
+Landed: the roadmap's missing "queued unit orders". New canonical orders `QueueMove` (11) and `QueueAttackMove` (12), protocol 12. A unit already on a Move/AttackMove appends a leg (bounded at 4, extras silently dropped); any other unit starts the leg immediately. Legs advance when the unit reaches its goal with no target (an AttackMove leg does not advance while fighting). Any plain order, Stop/Hold, Gather or Build clears the queue. Queue contents are hashed only when non-empty, so non-queue traces are unchanged apart from the protocol field. Group slot search was extracted into `formation_slots` with identical behavior. Client: Shift+RMB queues a move, Shift+A-click queues an attack-move; HUD help updated. Works over lockstep since it uses the ordinary command path.
+
+Verification: `tools/verify.ps1 -Network` passes (Debug and Release 12/12 CTest including the new `queued_orders` case in voidfront_tech_tests: immediate first leg, ordering through waypoints, Stop clears, bound of 4, serialization; malformed replays, 2,000 cross-build hashes, ten repeats; 22-case separate-process network suite at protocol 12). GDScript parses under Godot 4.7.2 (--check-only).
+
+Not done: no packaged-client run or screenshot this run (client change is two lines and not covered by an InputEvent fixture), no waypoint display for queued legs, AI does not use queues, no independent critic, no human playtest. Next: packaged fixture driving Shift+RMB, queued-leg path feedback, economy networking, terrain-aware fog, tier-two content, balance evidence. No COMPLETE.md; automation stays active.
+
 ## 2026-10-02 - Lancer ranged unit (second tier)
 
 Baseline dev `6d52cac`; STOP/COMPLETE absent; acquired `.voidfront-agent/run.json` exclusively. Pre-existing uncommitted user edits (roadmap, last-run.json, 2026-09-26 PROGRESS note) preserved and left out of this commit.

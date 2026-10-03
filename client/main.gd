@@ -994,6 +994,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					elif entity.player == local_player and entity.kind == 0: order = 5
 					elif entity.player == local_player and entity.build_ticks < current.build_duration: order = 6
 					if order != 1: destination = Vector3(entity.x / SCALE, 0, entity.z / SCALE)
+				if event.shift_pressed and order == 1: order = 11
 				_issue(order, destination)
 			attack_pending = false
 		if event.button_index == MOUSE_BUTTON_LEFT:
@@ -1002,7 +1003,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				build_pending = false
 				return
 			if attack_pending and event.pressed:
-				_issue(2, _world_at(event.position))
+				_issue(12 if event.shift_pressed else 2, _world_at(event.position))
 				attack_pending = false
 				return
 			if event.pressed:

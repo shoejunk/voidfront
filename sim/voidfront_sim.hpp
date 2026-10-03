@@ -9,12 +9,12 @@ namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
 inline constexpr int kMaxMapSize = 128;
-inline constexpr uint32_t kProtocolVersion = 11;
+inline constexpr uint32_t kProtocolVersion = 12;
 enum class Map : uint32_t { Foundry = 0, Scale128 = 1, Economy = 2 };
 int map_width(Map map);
 int map_height(Map map);
 const std::vector<nav::Rect>& map_terrain(Map map);
-enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build, TrainStrider, CancelProduction, Research, TrainLancer };
+enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build, TrainStrider, CancelProduction, Research, TrainLancer, QueueMove, QueueAttackMove };
 enum class UnitKind : uint8_t { Strider, Worker, Lancer };
 enum class StructureKind : uint8_t { Anchor, Foundry };
 enum class CommandResult : uint8_t { None, Accepted, InvalidTarget, InsufficientSalvage, InvalidPlacement, InvalidWorker,
@@ -25,6 +25,8 @@ inline constexpr int kStriderCost=50, kResearchFluxCost=50, kHardenedBonusHp=50;
 inline constexpr int kLancerCost=75, kLancerFluxCost=25, kLancerHp=70, kLancerDamage=6, kLancerCooldown=10;
 inline constexpr int kLancerRangeTiles=5, kLancerAcquireTiles=7;
 inline constexpr uint32_t kResearchTicks=200;
+// Shift-queued Move/AttackMove legs held per unit after its current order.
+inline constexpr size_t kOrderQueueLimit=4;
 inline constexpr uint32_t kProductionTicks=100, kProductionQueueLimit=5, kPopulationCap=12, kLifetimeUnitLimit=4096;
 struct Structure {
     uint32_t id=0;
@@ -46,6 +48,7 @@ struct Command {
     std::vector<uint32_t> units;
     int32_t x = 0, z = 0;
 };
+struct QueuedLeg { Order order=Order::Move; int32_t x=0, z=0; };
 struct Unit {
     uint32_t id = 0;
     uint8_t player = 0;
@@ -66,6 +69,7 @@ struct Unit {
     nav::Point route_goal{};
     std::vector<nav::Point> detour;
     uint16_t blocked_ticks = 0;
+    std::vector<QueuedLeg> queue;
 };
 class Sim {
 public:
@@ -116,6 +120,9 @@ private:
     std::array<uint32_t,2> result_sequences_{};
     void apply(const Command& command);
     void apply_economy(const Command& command);
+    void apply_queued(const Command& command);
+    std::vector<nav::Point> formation_slots(int32_t x,int32_t z,size_t count) const;
+    void advance_queue(Unit& unit);
     void economy_step();
     void apply_production(const Command& command);
     void production_step();

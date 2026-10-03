@@ -38,8 +38,8 @@ int64_t distance2(const Unit& a, const Unit& b) {
     return dx * dx + dz * dz;
 }
 bool canonical(const Command& c) {
-    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 10 &&
-        (static_cast<uint8_t>(c.order)<7 || (c.units.size()==1 && c.x==0 && c.z==0)) &&
+    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 12 &&
+        (static_cast<uint8_t>(c.order)<7 || static_cast<uint8_t>(c.order)>=11 || (c.units.size()==1 && c.x==0 && c.z==0)) &&
         !c.units.empty() && c.units.size() <= 256 && c.x >= 0 && c.z >= 0 &&
         c.x < kMaxMapSize * kScale && c.z < kMaxMapSize * kScale &&
         std::is_sorted(c.units.begin(), c.units.end()) &&
@@ -171,34 +171,77 @@ bool Sim::submit(Command command) {
     return true;
 }
 
+// Enumerate Manhattan rings once in row-major order. This preserves the
+// original exhaustive search's exact distance/row/column ties without
+// rescanning every map cell for each selected unit.
+std::vector<nav::Point> Sim::formation_slots(int32_t x0,int32_t z0,size_t count) const {
+    std::vector<nav::Point> slots;
+    const int rx=x0/kScale,rz=z0/kScale;
+    for (int radius=0;radius<width()+height() && slots.size()<count;++radius) {
+        for (int z=std::max(0,rz-radius);z<=std::min(height()-1,rz+radius) && slots.size()<count;++z) {
+            const int dx=radius-std::abs(z-rz);
+            for (const int x : {rx-dx,rx+dx}) {
+                if (!blocked(x,z)) slots.push_back({x*kScale+kScale/2,z*kScale+kScale/2});
+                if (dx==0 || slots.size()==count) break;
+            }
+        }
+    }
+    return slots;
+}
+
+void Sim::advance_queue(Unit& u) {
+    const auto leg=u.queue.front();
+    u.queue.erase(u.queue.begin());
+    u.order=leg.order; u.target_id=0; u.target_structure_id=0;
+    u.path.clear(); u.next_x=u.x; u.next_z=u.z;
+    u.detour.clear(); u.blocked_ticks=0; u.route_goal={-1,-1};
+    u.goal_x=leg.x; u.goal_z=leg.z;
+}
+
+// Shift-queued movement: a unit already moving appends a leg (bounded);
+// any other unit starts the leg immediately, exactly like the plain order.
+void Sim::apply_queued(const Command& c) {
+    const Order order=c.order==Order::QueueMove?Order::Move:Order::AttackMove;
+    const auto slots=formation_slots(c.x,c.z,c.units.size());
+    size_t next_slot=0;
+    for (const auto id : c.units) {
+        auto& u=units_[id-1];
+        if (u.hp<=0) continue;
+        nav::Point goal{-1,-1};
+        if (c.units.size()==1 && navigation_.valid({c.x,c.z})) goal={c.x,c.z};
+        else if (next_slot<slots.size()) goal=slots[next_slot++];
+        if (goal.x<0) continue;
+        const bool busy=u.order==Order::Move || u.order==Order::AttackMove;
+        if (busy) {
+            if (u.queue.size()<kOrderQueueLimit) u.queue.push_back({order,goal.x,goal.z});
+            continue;
+        }
+        u.resource_id=0; u.build_id=0; u.work_ticks=0; u.returning=false;
+        u.queue.clear();
+        u.queue.push_back({order,goal.x,goal.z});
+        advance_queue(u);
+    }
+}
+
 void Sim::apply(const Command& c) {
     last_sequence_[c.player] = c.sequence;
     // Already-buffered lockstep inputs still consume their sequence after the
     // result, but can no longer change the economy or battlefield.
     if (map_==Map::Economy && winner()!=-1) return;
+    if (c.order==Order::QueueMove || c.order==Order::QueueAttackMove) {
+        if (map_==Map::Economy) { results_[c.player]=CommandResult::Accepted; result_sequences_[c.player]=c.sequence; }
+        apply_queued(c); return;
+    }
     if (static_cast<uint8_t>(c.order)>=4) { apply_economy(c); return; }
     if (map_==Map::Economy) { results_[c.player]=CommandResult::Accepted; result_sequences_[c.player]=c.sequence; }
-    // Enumerate Manhattan rings once in row-major order. This preserves the
-    // original exhaustive search's exact distance/row/column ties without
-    // rescanning every map cell for each selected unit.
     std::vector<nav::Point> slots;
-    if (c.order==Order::Move || c.order==Order::AttackMove) {
-        const int rx=c.x/kScale,rz=c.z/kScale;
-        for (int radius=0;radius<width()+height() && slots.size()<c.units.size();++radius) {
-            for (int z=std::max(0,rz-radius);z<=std::min(height()-1,rz+radius) && slots.size()<c.units.size();++z) {
-                const int dx=radius-std::abs(z-rz);
-                for (const int x : {rx-dx,rx+dx}) {
-                    if (!blocked(x,z)) slots.push_back({x*kScale+kScale/2,z*kScale+kScale/2});
-                    if (dx==0 || slots.size()==c.units.size()) break;
-                }
-            }
-        }
-    }
+    if (c.order==Order::Move || c.order==Order::AttackMove) slots=formation_slots(c.x,c.z,c.units.size());
     size_t next_slot=0;
     for (const auto id : c.units) {
         auto& u = units_[id - 1];
         if (u.hp <= 0) continue;
         u.resource_id=0; u.build_id=0; u.work_ticks=0; u.returning=false;
+        u.queue.clear();
         u.order = c.order;
         u.target_id = 0;
         u.target_structure_id = 0;
@@ -297,6 +340,8 @@ void Sim::step() {
                 }
             }
         }
+        if (!u.queue.empty() && (u.order==Order::Move || u.order==Order::AttackMove) && !target && u.target_structure_id==0 &&
+            u.x==u.goal_x && u.z==u.goal_z) { advance_queue(u); goal={u.goal_x,u.goal_z}; }
         if (u.order == Order::Stop || u.order == Order::Hold) { continue; }
         const nav::Point here{u.x,u.z};
         if (goal == here) { u.path.clear(); u.detour.clear(); u.blocked_ticks=0; u.route_goal={-1,-1}; u.next_x=u.x; u.next_z=u.z; continue; }
@@ -397,7 +442,7 @@ void Sim::step() {
                 u.detour=std::move(best); u.blocked_ticks=0;
             }
         }
-        if (u.order == Order::Move && u.x == u.goal_x && u.z == u.goal_z) u.order = Order::Stop;
+        if (u.order == Order::Move && u.queue.empty() && u.x == u.goal_x && u.z == u.goal_z) u.order = Order::Stop;
     }
     // A stopped follower must not treat its leader's entire swept bounding box
     // as occupied at every instant. Resolve a bounded dependency transaction
@@ -488,7 +533,7 @@ void Sim::step() {
             // failed ordinary step. Discard only the replacement maneuver
             // searched afterward; retain any maneuver actually being followed.
             if (reconsidered_detour[member]) u.detour=std::move(attempted_detours[member]);
-            if (u.x==u.goal_x && u.z==u.goal_z) u.order=Order::Stop;
+            if (u.queue.empty() && u.x==u.goal_x && u.z==u.goal_z) u.order=Order::Stop;
         }
         for (const auto member:members) planned[member]=0;
         members.clear();
@@ -569,6 +614,7 @@ uint64_t Sim::state_hash() const {
         for (const auto& point : u.path) { add(point.x); add(point.z); }
         add(u.blocked_ticks); add(u.detour.size());
         for (const auto& point : u.detour) { add(point.x); add(point.z); }
+        if (!u.queue.empty()) { add(u.queue.size()); for (const auto& leg : u.queue) { add(static_cast<uint8_t>(leg.order)); add(leg.x); add(leg.z); } }
     }
     for (int p=0;p<2;++p) { add(salvage_[p]); add(flux_[p]); add(research_ticks_[p]); add(researched_[p]); add(static_cast<uint8_t>(results_[p])); add(result_sequences_[p]); }
     add(structures_.size());

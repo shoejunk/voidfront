@@ -150,8 +150,45 @@ void lancer_rules() {
     c.step();
     check(c.units()[enemy].hp==before-kLancerDamage,"lancer failed to fire at 4.5 tiles");
 }
+void queued_orders() {
+    Sim s(7,3,Map::Economy);
+    const int32_t ax=5*kScale+kScale/2,az=10*kScale+kScale/2,bx=5*kScale+kScale/2,bz=14*kScale+kScale/2,cx=9*kScale+kScale/2,cz=14*kScale+kScale/2;
+    auto& u=mutable_units(s)[0];
+    const auto start=nav::Point{u.x,u.z};
+    (void)start;
+    // Idle unit: the first queued leg starts at once, later ones wait.
+    check(s.submit({s.tick(),1,0,Order::QueueMove,{1},ax,az}),"queue a"); s.step();
+    check(s.units()[0].order==Order::Move && s.units()[0].queue.empty(),"first leg should start immediately");
+    check(s.submit({s.tick(),2,0,Order::QueueMove,{1},bx,bz}),"queue b");
+    check(s.submit({s.tick()+1,3,0,Order::QueueAttackMove,{1},cx,cz}),"queue c"); s.step(); s.step();
+    check(s.units()[0].queue.size()==2,"two legs should wait");
+    bool saw_b=false;
+    for (int i=0;i<3000 && !(s.units()[0].x==cx && s.units()[0].z==cz);++i) {
+        s.step();
+        if (s.units()[0].x==bx && s.units()[0].z==bz) saw_b=true;
+    }
+    check(saw_b,"unit skipped the middle leg");
+    check(s.units()[0].x==cx && s.units()[0].z==cz,"unit never reached final leg");
+    check(s.units()[0].queue.empty(),"queue not drained");
+    // Plain order discards queued legs.
+    Sim t(7,3,Map::Economy);
+    check(t.submit({t.tick(),1,0,Order::QueueMove,{1},ax,az}),"q1"); t.step();
+    check(t.submit({t.tick(),2,0,Order::QueueMove,{1},bx,bz}),"q2"); t.step();
+    check(t.units()[0].queue.size()==1,"queued leg expected");
+    const auto before=t.state_hash();
+    check(t.submit({t.tick(),3,0,Order::Stop,{1},0,0}),"stop"); t.step();
+    check(t.units()[0].queue.empty() && t.state_hash()!=before,"stop must clear queue");
+    // Bounded queue.
+    Sim q(7,3,Map::Economy);
+    check(q.submit({q.tick(),1,0,Order::QueueMove,{1},ax,az}),"b0"); q.step();
+    for (uint32_t n=0;n<8;++n) { check(q.submit({q.tick(),2+n,0,Order::QueueMove,{1},bx,bz}),"bn"); q.step(); }
+    check(q.units()[0].queue.size()==kOrderQueueLimit,"queue must be bounded");
+    // Wire format round trip.
+    Command cmd{5,9,0,Order::QueueAttackMove,{1,2},cx,cz};
+    Command back; check(deserialize_command(serialize_command(cmd),back) && back.order==Order::QueueAttackMove && back.units.size()==2,"serialization");
+}
 int main() {
-    try { map_layout(); flux_gathering(); mixed_cargo_delivers_first(); research(); research_rules(); hash_covers_tech(); ai_uses_flux(); lancer_rules();
+    try { map_layout(); flux_gathering(); mixed_cargo_delivers_first(); research(); research_rules(); hash_covers_tech(); ai_uses_flux(); lancer_rules(); queued_orders();
         std::cout<<"tech tests passed\n"; }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }
