@@ -4,7 +4,7 @@
 #include <optional>
 
 namespace vf {
-inline constexpr uint32_t kLockstepProtocolVersion = 2;
+inline constexpr uint32_t kLockstepProtocolVersion = 3;
 #ifdef VF_CONTENT_ID
 inline constexpr uint64_t kLockstepContentId = VF_CONTENT_ID;
 #else
@@ -27,7 +27,7 @@ enum class ReceiveResult { Accepted, Duplicate, Invalid, Conflict, TooFar, Stale
 enum class AdvanceResult { Waiting, Advanced, Invalid };
 class Lockstep {
 public:
-    explicit Lockstep(uint32_t seed = 42, uint32_t units_per_team = 6);
+    explicit Lockstep(uint32_t seed = 42, uint32_t units_per_team = 6, Map map = Map::Foundry);
     const Sim& sim() const { return sim_; }
     ReceiveResult receive(const TickFrame& frame);
     // Missing frames never advance. Invalid is terminal for this immutable turn.

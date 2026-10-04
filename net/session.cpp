@@ -32,7 +32,7 @@ uint64_t digest(std::span<const uint8_t> b) {
 std::vector<uint8_t> packet(const SessionOptions& o,Kind kind,std::span<const uint8_t> body={}) {
     std::vector<uint8_t> b; b.reserve(kHeaderBytes+body.size());
     put(b,kMagic,4); put(b,o.protocol,4); put(b,o.content,8); put(b,o.session,8);
-    put(b,o.player,4); put(b,o.seed,4); put(b,o.count,4); put(b,o.ticks,4); put(b,static_cast<uint32_t>(kind),4);
+    put(b,o.player,4); put(b,o.seed,4); put(b,o.count|(o.map<<16),4); put(b,o.ticks,4); put(b,static_cast<uint32_t>(kind),4);
     b.insert(b.end(),body.begin(),body.end());
     if(b.size()>kMaxDatagram) throw std::runtime_error("frame exceeds bounded datagram size");
     return b;
@@ -43,8 +43,8 @@ Kind header(const SessionOptions& o,std::span<const uint8_t> b) {
     if(get(b,8,8)!=o.content) throw std::runtime_error("incompatible content identity");
     if(get(b,16,8)!=o.session) throw std::runtime_error("incompatible session");
     if(get(b,24,4)!=1-o.player) throw std::runtime_error("incompatible player assignment");
-    if(get(b,28,4)!=o.seed || get(b,32,4)!=o.count || get(b,36,4)!=o.ticks)
-        throw std::runtime_error("incompatible match setup (seed/count/ticks)");
+    if(get(b,28,4)!=o.seed || get(b,32,4)!=(o.count|(o.map<<16)) || get(b,36,4)!=o.ticks)
+        throw std::runtime_error("incompatible match setup (seed/count/map/ticks)");
     const auto kind=get(b,40,4);
     if(kind<1 || kind>7) throw std::runtime_error("unknown packet kind");
     return static_cast<Kind>(kind);
@@ -95,7 +95,7 @@ double milliseconds(Clock::duration duration) { return std::chrono::duration<dou
 void validate_session_options(const SessionOptions& o) {
     if(o.player>1 || o.port<1024 || o.port>65535 || o.remote_port<1024 || o.remote_port>65535 || o.port==o.remote_port)
         throw std::invalid_argument("player must be 0/1; distinct ports must be 1024..65535");
-    if(o.session==0 || o.ticks<1 || o.ticks>kMaxSessionTicks || o.count<1 || o.count>250 || o.timeout<200 || o.timeout>60000)
+    if((o.map!=0 && o.map!=2) || o.session==0 || o.ticks<1 || o.ticks>kMaxSessionTicks || o.count<1 || o.count>250 || o.timeout<200 || o.timeout>60000)
         throw std::invalid_argument("session must be nonzero; ticks 1..100000, count 1..250, timeout-ms 200..60000");
     if((o.desync!=UINT32_MAX && (o.desync==0 || o.desync>o.ticks)) || (o.exit_tick!=UINT32_MAX && o.exit_tick>o.ticks))
         throw std::invalid_argument("fault injection tick outside match");
@@ -139,7 +139,7 @@ struct Session::Impl {
 
     Impl(SessionOptions options, CommandProvider input_provider)
         : o(options), provider(std::move(input_provider)), socket(std::make_unique<Socket>(o)),
-          lock(o.seed,o.count), local(o.ticks), remote(o.ticks), remote_digests(o.ticks),
+          lock(o.seed,o.count,static_cast<vf::Map>(o.map)), local(o.ticks), remote(o.ticks), remote_digests(o.ticks),
           peer_hashes(o.ticks+1), checksums(o.ticks+1) {
         stats.hash=lock.sim().state_hash();
     }
@@ -186,9 +186,10 @@ struct Session::Impl {
         }
         input.created=Clock::now(); input.source_tick=source;
         const auto body=vf::serialize_frame(frame);
-        if(body.empty()) throw std::runtime_error("local scheduled frame rejected");
+        if(body.empty()) throw std::runtime_error("local scheduled frame rejected (noncanonical commands)");
         input.digest=digest(body); input.wire=packet(o,Kind::Frame,body);
-        if(lock.receive(frame)!=vf::ReceiveResult::Accepted) throw std::runtime_error("local scheduled frame rejected");
+        if(const auto received=lock.receive(frame); received!=vf::ReceiveResult::Accepted)
+            throw std::runtime_error("local scheduled frame rejected (receive result "+std::to_string(static_cast<int>(received))+")");
         input.frame=std::move(frame); input.generated=true; input.last_send=origin-kRetry;
     }
 

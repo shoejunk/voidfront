@@ -34,6 +34,7 @@ class Case:
     loss: float
     fault: str | None = None
     input_delay: int = 2
+    economy: bool = False
 
 
 def allowed():
@@ -131,12 +132,12 @@ def verify_timing(report):
 def verify_command_coverage(report, recording, player):
     """Every applied local command must have one unfiltered timing event."""
     data = recording.read_bytes()
-    if len(data) < 32 or data[:4] != b"VFR\x02":
-        raise AssertionError("missing VFR2 command coverage evidence")
+    if len(data) < 32 or data[:4] not in (b"VFR\x02", b"VFR\x03"):
+        raise AssertionError("missing VFR2/3 command coverage evidence")
     u32 = lambda offset: int.from_bytes(data[offset:offset + 4], "little")
     if u32(16) != report["ticks"]:
         raise AssertionError("recorded prefix differs from timed execution")
-    expected, offset = [], 32
+    expected, offset = [], 36 if data[:4] == b"VFR\x03" else 32
     for _ in range(u32(20)):
         if offset + 4 > len(data):
             raise AssertionError("truncated recorded command size")
@@ -155,6 +156,30 @@ def verify_command_coverage(report, recording, player):
     actual = [(event["execution_tick"], event["sequence"]) for event in report["command_timings"]]
     if actual != expected:
         raise AssertionError(f"timing events omit, duplicate or reorder applied player {player} commands")
+
+
+def run_economy_suite(args, started, fingerprints):
+    """Economy-map lockstep over the impairment relay: the same canonical AI commands
+    (gather/build/train/attack) at every impairment, so traces must be identical."""
+    cases = [Case("economy-clean", ("Release", "Debug"), 0, 0, 0, economy=True),
+             Case("economy-80ms", ("Debug", "Release"), 80, 20, .01, economy=True),
+             Case("economy-160ms", ("Release", "Debug"), 160, 20, .01, economy=True)]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
+        futures = [pool.submit(run_case, c, args.build, args.out, args.ticks) for c in cases]
+        results = [future.result() for future in futures]
+    baseline = read_trace(args.out / "economy-clean/peer0.trace", args.ticks)
+    for case in cases:
+        for p in range(2):
+            compare(baseline, read_trace(args.out / case.name / f"peer{p}.trace", args.ticks), f"{case.name} peer{p} vs clean")
+    replay_exe = args.build / "sim/Release/voidfront_headless.exe"
+    for repeat in range(10):
+        target = args.out / f"economy-repeat-{repeat}.trace"
+        replay(replay_exe, args.out / "economy-clean/peer0.vfr", target)
+        compare(baseline, read_trace(target, args.ticks), f"economy repeat {repeat}")
+    summary = {"verified": True, "suite": "economy", "ticks": args.ticks, "binary_sha256": fingerprints, "cases": results,
+               "scope": "loopback UDP economy-map AI vs AI through the impairment relay; no human/client latency or soak"}
+    (args.out / "summary.json").write_text(json.dumps(summary, indent=2))
+    print(f"PASS economy network suite: {len(cases)} cases, traces equal across impairments, 10 replays agree", flush=True)
 
 
 def run_case(case, build, out, ticks):
@@ -203,7 +228,8 @@ def run_case(case, build, out, ticks):
             prefix = folder / f"peer{player}"
             args = [str(peers[player]), "--player", str(player), "--port", str(ports[player]),
                     "--remote-port", str(relays[player].getsockname()[1]), "--session", "64040903",
-                    "--ticks", str(ticks), "--seed", "42", "--units-per-team", "6",
+                    "--ticks", str(ticks), "--seed", "9" if case.economy else "42", "--units-per-team", "6",
+                    *(["--map", "2"] if case.economy else []),
                     "--input-delay-ticks", str(input_delay),
                     "--timeout-ms", "2000", "--trace", str(prefix.with_suffix(".trace")),
                     "--record", str(prefix.with_suffix(".vfr")), "--report", str(prefix.with_suffix(".json"))]
@@ -458,7 +484,7 @@ def main():
     parser.add_argument("--out", type=Path, help="new evidence directory (must not exist)")
     parser.add_argument("--ticks", type=int, default=1000)
     parser.add_argument("--jobs", type=int, choices=range(1, 4), default=1)
-    parser.add_argument("--suite", choices=("full", "delay-study"), default="full",
+    parser.add_argument("--suite", choices=("full", "delay-study", "economy"), default="full",
                         help="full fault regression or isolated matched input-delay profiles")
     args = parser.parse_args()
     if not 50 <= args.ticks <= 100000:
@@ -505,6 +531,9 @@ def main():
                    "delayed-checksum", input_delay=4),
               Case("detect-disconnect-delay4", ("Debug", "Release"), 0, 0, 0,
                    "disconnect", input_delay=4)]
+    if args.suite == "economy":
+        run_economy_suite(args, started, fingerprints)
+        return
     if args.suite == "delay-study":
         names = {"mixed-clean-delay2", "mixed-clean-delay4", "mixed-160ms-delay4",
                  "mixed-clean-80ms-control", "mixed-80ms", "mixed-160ms"}

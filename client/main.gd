@@ -73,6 +73,9 @@ var team_material_cache: Dictionary = {}
 var last_frame_usec := 0
 var network := false
 var network_smoke := false
+var network_economy := false
+var network_economy_smoke := false
+var net_economy_fixture
 var local_player := 0
 var local_port := 39000
 var remote_port := 39001
@@ -182,6 +185,14 @@ func _ready() -> void:
 			scale_smoke = true
 		elif argument.begins_with("--units-per-team="): scale_count = _integer_option(argument, 1, 250)
 		elif argument == "--network": network = true
+		elif argument == "--network-economy":
+			network = true
+			network_economy = true
+		elif argument == "--network-economy-smoke":
+			network = true
+			network_economy = true
+			network_economy_smoke = true
+		elif argument.begins_with("--seed="): setup_seed = _integer_option(argument, 1, 999999)
 		elif argument == "--network-smoke":
 			network = true
 			network_smoke = true
@@ -196,9 +207,12 @@ func _ready() -> void:
 		elif argument.begins_with("--session="): session_id = _integer_option(argument, 1, 2147483647)
 		elif argument.begins_with("--delay="): input_delay = _integer_option(argument, 1, 16)
 		else: option_error = "Unknown option: " + argument
-	var legacy_mode := skirmish or smoke or movement_smoke or crowd_smoke or controls_smoke or scale128 or profile_presentation or network
+	var legacy_mode := skirmish or smoke or movement_smoke or crowd_smoke or controls_smoke or scale128 or profile_presentation or (network and not network_economy)
+	if network_economy and (smoke or network_smoke or movement_smoke or crowd_smoke or controls_smoke or scale128 or profile_presentation or economy_smoke or production_smoke or match_smoke or exploration_smoke): option_error = "Network economy requires its own two-process match."
+	if network_economy_smoke and not ticks_specified: finish_tick = 3000
+	if network_economy_smoke and (finish_tick < 1000 or finish_tick > 12000): option_error = "Network economy smoke requires 1000..12000 ticks."
 	if economy and legacy_mode: option_error = "Economy requires its own offline match."
-	if not legacy_mode: economy = true
+	if not legacy_mode or network_economy: economy = true
 	if match_realtime and not match_smoke: option_error = "--match-realtime requires --match-smoke."
 	if exploration_smoke and not ticks_specified: finish_tick = 10000
 	if exploration_smoke and (match_smoke or economy_smoke or production_smoke): option_error = "Exploration fixture requires its own match."
@@ -238,7 +252,7 @@ func _ready() -> void:
 		push_error("Required C++ simulation extension failed to load")
 		get_tree().quit(2)
 		return
-	if economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke))
+	if economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke or network))
 	if scale128:
 		if not option_error.is_empty() or not bridge.reset_scale(1, scale_count, not scale_smoke):
 			push_error(option_error if not option_error.is_empty() else "Scale setup rejected")
@@ -267,6 +281,9 @@ func _ready() -> void:
 	if production_smoke:
 		production_fixture = (preload("res://flux_smoke.gd") if flux_smoke else preload("res://production_smoke.gd")).new(self)
 		production_fixture.run.call_deferred()
+	if network_economy_smoke and option_error.is_empty():
+		net_economy_fixture = preload("res://net_economy_smoke.gd").new(self)
+		net_economy_fixture.run.call_deferred()
 	if economy_smoke:
 		economy_fixture = preload("res://economy_smoke.gd").new(self)
 		economy_fixture.run.call_deferred()
@@ -283,7 +300,7 @@ func _ready() -> void:
 	print("VOIDFRONT_RUNTIME extension=ready renderer=", RenderingServer.get_video_adapter_name())
 	if not option_error.is_empty():
 		push_error(option_error)
-		if controls_smoke:
+		if controls_smoke or network_economy_smoke:
 			get_tree().quit(2)
 		elif crowd_smoke:
 			completed = true
@@ -522,10 +539,10 @@ func _reset() -> void:
 			push_error("Scale reset rejected")
 			get_tree().quit(2)
 			return
-	elif economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke))
+	elif economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke or network))
 	else: bridge.reset(1, not (movement_smoke or crowd_smoke))
 	if network and option_error.is_empty():
-		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick):
+		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick, network_economy, setup_seed):
 			network_notice = "Network session could not start."
 		_update_network_status()
 	current = bridge.snapshot()
@@ -821,9 +838,39 @@ func _process(delta: float) -> void:
 	if smoke and current.tick >= finish_tick and not completed:
 		completed = true
 		_finish_smoke.call_deferred()
+	if network_economy_smoke and str(network_state.get("state", "")) in ["complete", "error"] and not network_finish_requested:
+		network_finish_requested = true
+		_finish_network_economy_smoke.call_deferred()
 	if network_smoke and str(network_state.get("state", "")) in ["complete", "error"] and not network_finish_requested:
 		network_finish_requested = true
 		_finish_network_smoke.call_deferred()
+
+func _finish_network_economy_smoke() -> void:
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	completed = true
+	var report_data: Dictionary = bridge.network_report()
+	var replay: PackedByteArray = report_data.get("replay", PackedByteArray())
+	report_data.erase("replay")
+	var fixture_report: Dictionary = net_economy_fixture.report() if net_economy_fixture else {"errors": ["fixture missing"]}
+	var ok: bool = option_error.is_empty() and str(report_data.get("state", "")) == "complete" and fixture_report.get("errors", ["?"]).is_empty() and fixture_report.get("fixture_done", false) and not replay.is_empty() and report_data.get("evidence_complete", false)
+	var report := {"ok": ok, "player": local_player, "network": report_data, "fixture": fixture_report, "option_error": option_error, "winner": current.get("winner", -1), "final_tick": current.get("tick", 0), "renderer": RenderingServer.get_video_adapter_name(), "note": "Two packaged clients over loopback UDP lockstep driving own workers through InputEvents on the economy map. Not a complete match, human play, LAN/Internet or performance acceptance."}
+	if not report_path.is_empty() and not replay.is_empty():
+		var replay_path := report_path.get_basename() + ".vfr"
+		var replay_file := FileAccess.open(replay_path, FileAccess.WRITE)
+		if replay_file:
+			replay_file.store_buffer(replay)
+			replay_file.close()
+			report["replay_path"] = replay_path
+	if not capture_path.is_empty():
+		report["capture_error"] = get_viewport().get_texture().get_image().save_png(capture_path)
+	if not report_path.is_empty():
+		var report_file := FileAccess.open(report_path, FileAccess.WRITE)
+		if report_file:
+			report_file.store_string(JSON.stringify(report, "	"))
+			report_file.close()
+	print("VOIDFRONT_NETECON ok=", ok, " player=", local_player, " tick=", current.get("tick", 0), " errors=", fixture_report.get("errors", []))
+	get_tree().quit(0 if ok else 1)
 
 func _update_network_status() -> void:
 	network_state = bridge.network_status()
@@ -1109,6 +1156,7 @@ func _issue(order: int, at: Vector3) -> void:
 	if production_smoke and production_fixture: production_fixture.record_input(accepted, order, at, command_actors)
 	if match_smoke and match_fixture: match_fixture.record_input(accepted, order, at, command_actors)
 	if exploration_smoke and exploration_fixture: exploration_fixture.record_input(accepted, order, at, command_actors)
+	if network_economy_smoke and net_economy_fixture: net_economy_fixture.record_input(accepted, order, at, command_actors)
 	if economy:
 		economy_notice = "Order submitted" if accepted else "Order rejected"
 		if accepted and order == 7: economy_notice = "Training order submitted: %d salvage" % current.strider_cost

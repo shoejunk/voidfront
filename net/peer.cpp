@@ -62,6 +62,7 @@ Options parse(int argc,char** argv) {
         else if(key=="--ticks") o.ticks=u32(val);
         else if(key=="--seed") o.seed=u32(val);
         else if(key=="--units-per-team") o.count=u32(val);
+        else if(key=="--map") o.map=u32(val);
         else if(key=="--timeout-ms") o.timeout=u32(val);
         else if(key=="--input-delay-ticks") o.input_delay=u32(val);
         else if(key=="--content-id") o.content=number(val);
@@ -76,6 +77,7 @@ Options parse(int argc,char** argv) {
     vf::net::validate_session_options(o);
     if(aliases(o.trace,o.record) || aliases(o.trace,o.report) || aliases(o.record,o.report))
         throw std::invalid_argument("trace, record and report paths must differ");
+    if(o.map==2) o.count=3;
     return o;
 }
 // Windows' default coarse sleep quantum demonstrably produced ~16 Hz here.
@@ -167,9 +169,10 @@ void run(const Options& o,Stats& stats) {
     if(!o.trace.empty()) { trace.open(o.trace); if(!trace) throw std::runtime_error("trace open failed"); }
     if(!o.record.empty()) {
         record.open(o.record,std::ios::binary); if(!record) throw std::runtime_error("record open failed");
-        record.write("VFR\2",4); stream_u32(record,vf::kProtocolVersion); stream_u32(record,o.seed);
+        record.write(o.map==0?"VFR\2":"VFR\3",4); stream_u32(record,vf::kProtocolVersion); stream_u32(record,o.seed);
         stream_u32(record,o.count); stream_u32(record,o.ticks); stream_u32(record,0);
         stream_u32(record,static_cast<uint32_t>(vf::kLockstepContentId)); stream_u32(record,static_cast<uint32_t>(vf::kLockstepContentId>>32));
+        if(o.map!=0) { stream_u32(record,o.map); record_bytes=36; }
     }
     const auto finish_files=[&]() {
         if(record.is_open()) { record.seekp(16); stream_u32(record,session.sim().tick()); stream_u32(record,recorded); }

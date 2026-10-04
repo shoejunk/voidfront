@@ -1,5 +1,27 @@
 # Verification ledger
 
+## 2026-10-04 - networked economy match (loopback lockstep)
+
+Change: `Session`/`Lockstep` accept the Economy map (`SessionOptions::map`, folded into the high 16 bits of the handshake count
+field so the 44-byte header and relay offsets are unchanged; lockstep protocol 3). Economy receive-time validation only bounds
+IDs; ownership/existence is checked by `Sim::submit` on the execution copy (a frame referencing a foreign structure makes
+`advance()` return Invalid without changing state - unit test `economy_map_commands`). Peer CLI gains `--map 2` and writes VFR3.
+Bridge: `network_start(..., economy, seed)`, structure-ID orders 7..10, orders 0..12 on the economy map, VFR3 report replay.
+Also fixed: bridge `issue()` rejected orders 11/12 (Shift-queued Move/AttackMove) offline because of an `order > 10` bound.
+Client: `--network-economy`, `--network-economy-smoke`, `--seed=`; HUD keeps session state text above the economy briefing.
+
+Commands: `tools/verify.ps1 -Network` (Debug+Release 12/12 CTest incl. new economy lockstep case, 2,000 cross-build hashes, ten repeats,
+22-case combat network suite; log `artifacts/verify-net-econ-2026-10-04.log`);
+`python tools/verify_network.py --suite economy --ticks 2000 --jobs 1 --out artifacts/economy-network-2026-10-04` (separate
+Debug/Release processes through the relay: clean, 80 ms/20 ms jitter/1% loss, 160 ms; 255/273 and 397/406 packets dropped;
+all peer traces equal the clean trace, ten replays agree); direct CLI run `artifacts/econ-net-2026-10-04` (3,000 ticks mixed
+Debug/Release, replay equal); packaged: `tools/package.ps1`, `bash tools/run_net_economy.sh artifacts/netecon-final-2026-10-04 601 3000 7`,
+`python tools/verify_net_economy.py artifacts/netecon-final-2026-10-04` (two rendered clients drive gather -> build Foundry ->
+train Strider through InputEvents; hashes equal for 3,000 ticks; both recordings replay in Debug and Release to the same trace).
+Offline regressions on the rebuilt package: `-Economy -Ticks 1600` (1,045 ticks) and `-Production -Ticks 2400` (1,792 ticks) pass.
+Limits: scripted software input, loopback only, no complete networked match to victory, no human playtest, no latency
+measurement for the economy path, Shift-queue not exercised by a packaged fixture, no performance/balance acceptance.
+
 ## 2026-10-01 - contested flux and research verification
 
 Commands (all from the repository root; Windows PowerShell 5.1 needs `-ExecutionPolicy Bypass -File`):

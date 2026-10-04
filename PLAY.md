@@ -65,3 +65,19 @@ From source, run `./tools/build.ps1 -Configuration Debug`, then `./tools/run.ps1
 
 Movement verification from source: `./tools/capture.ps1 -Packaged -Movement -Ticks 400 -Name packaged-movement` exercises actual selection/orders, exact oblique arrival, a ridge detour, Stop and live retarget. Add `-Movie` for a recording. Rebuild the package first. Simulation compatibility changed for this movement increment; older recordings and old-build network peers are rejected rather than reinterpreted.
 - Two cyan flux deposits lie on the dark central crossing. Scout them (units reveal fog), then right click one with workers to mine flux; it is banked separately from salvage. Select your Foundry and press G to spend 50 flux on Hardened Plating (200 ticks): every Strider gains +50 hp.
+
+## Experimental two-window economy match (loopback)
+
+The same lockstep session now carries the 64x48 economy map: each player starts with
+an anchor and three workers, gathers salvage and flux, builds Foundries, trains Striders
+and Lancers, researches Hardened Plating and fights for the opposing anchor. There is no
+AI in this mode. Launch in two terminals (matching `--seed`, `--session`, `--delay`, `--ticks`):
+
+```powershell
+./Voidfront.exe -- --network-economy --player=0 --port=39000 --remote-port=39001 --session=12345 --seed=7 --ticks=36000
+./Voidfront.exe -- --network-economy --player=1 --port=39001 --remote-port=39000 --session=12345 --seed=7 --ticks=36000
+```
+
+Controls are the offline economy controls (B build, T/L train, G research, Shift-queued orders).
+Loopback only; when an anchor falls R returns to offline play. Different seeds/maps are
+rejected at the handshake. Not yet verified by human play, LAN/Internet or a 30-minute soak.

@@ -66,7 +66,7 @@ bool deserialize_frame(std::span<const uint8_t> bytes, TickFrame& out) {
     return true;
 }
 
-Lockstep::Lockstep(uint32_t seed, uint32_t units_per_team) : sim_(seed, units_per_team) {}
+Lockstep::Lockstep(uint32_t seed, uint32_t units_per_team, Map map) : sim_(seed, units_per_team, map) {}
 
 ReceiveResult Lockstep::receive(const TickFrame& frame) {
     if (!canonical(frame)) return ReceiveResult::Invalid;
@@ -74,9 +74,23 @@ ReceiveResult Lockstep::receive(const TickFrame& frame) {
     if (frame.tick - sim_.tick() > kMaxFutureTicks) return ReceiveResult::TooFar;
     for (const auto& c : frame.commands) {
         if (c.x>=sim_.width()*kScale || c.z>=sim_.height()*kScale) return ReceiveResult::Invalid;
-        // The currently supported network setup is the combat map. Economic
-        // structure commands cannot alias ordinary unit IDs on that setup.
-        if (c.order==Order::TrainStrider || c.order==Order::CancelProduction || c.order==Order::Research) return ReceiveResult::Invalid;
+        const bool production=c.order==Order::TrainStrider || c.order==Order::TrainLancer || c.order==Order::CancelProduction || c.order==Order::Research;
+        if (sim_.map()==Map::Economy) {
+            // IDs the receiver can already resolve must be owned by the sender. Larger
+            // IDs (spawned/built before execution) are bounded here and fully checked
+            // by Sim::submit when the frame executes.
+            const bool structure_order = production;
+            const auto known = structure_order ? sim_.structures().size() : sim_.units().size();
+            for (const auto id : c.units) {
+                if (id==0 || id>kLifetimeUnitLimit) return ReceiveResult::Invalid;
+                if (id>known) continue;
+                const auto owner = structure_order ? sim_.structures()[id-1].player : sim_.units()[id-1].player;
+                if (owner!=frame.player) return ReceiveResult::Invalid;
+            }
+            continue;
+        }
+        // Combat map: economic structure commands cannot alias unit IDs.
+        if (production) return ReceiveResult::Invalid;
         for (const auto id : c.units) {
             if (id > sim_.units().size() || sim_.units()[id - 1].player != frame.player)
                 return ReceiveResult::Invalid;

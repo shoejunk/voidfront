@@ -80,12 +80,22 @@ class VoidfrontBridge : public RefCounted {
     }
     static bool command_from_input(vf::Command& command, const vf::Sim& state, uint8_t player,
             int64_t order, const PackedInt32Array& ids, int64_t x, int64_t z) {
-        if (order < 0 || order > 3 || ids.size() == 0 || ids.size() > 256 ||
+        const bool economy = state.map() == vf::Map::Economy;
+        if (order < 0 || order > (economy ? 12 : 3) || ids.size() == 0 || ids.size() > 256 ||
             x < 0 || z < 0 || x >= state.width() * vf::kScale || z >= state.height() * vf::kScale) return false;
         command.player = player; command.order = static_cast<vf::Order>(order);
         command.x = static_cast<int32_t>(x); command.z = static_cast<int32_t>(z);
+        // Foundry commands (train/cancel/research) carry exactly one structure ID.
+        const bool structure_order = order >= 7 && order <= 10;
+        if (structure_order && (ids.size() != 1 || x != 0 || z != 0)) return false;
         for (int64_t i = 0; i < ids.size(); ++i) {
             const int32_t id = ids[i];
+            if (structure_order) {
+                if (id <= 0 || static_cast<size_t>(id) > state.structures().size() ||
+                        state.structures()[static_cast<size_t>(id) - 1].player != player) return false;
+                command.units.push_back(static_cast<uint32_t>(id));
+                continue;
+            }
             if (id <= 0 || static_cast<size_t>(id) > state.units().size() ||
                     state.units()[static_cast<size_t>(id) - 1].player != player) return false;
             command.units.push_back(static_cast<uint32_t>(id));
@@ -131,7 +141,7 @@ class VoidfrontBridge : public RefCounted {
             append_u32(turn, static_cast<uint32_t>(bytes.size()));
             turn.insert(turn.end(), bytes.begin(), bytes.end()); ++count;
         }
-        if (replay_count + count > max_recorded_commands || 32 + replay_commands.size() + turn.size() > max_replay_bytes)
+        if (replay_count + count > max_recorded_commands || (network_options.map == 0 ? 32 : 36) + replay_commands.size() + turn.size() > max_replay_bytes)
             throw std::runtime_error("applied replay evidence limit exceeded; retained prefix is incomplete");
         replay_commands.insert(replay_commands.end(), turn.begin(), turn.end());
         replay_count += count; recorded_ticks = network->sim().tick();
@@ -157,7 +167,7 @@ protected:
         ClassDB::bind_method(D_METHOD("snapshot"), &VoidfrontBridge::snapshot);
         ClassDB::bind_method(D_METHOD("issue", "order", "ids", "x", "z"), &VoidfrontBridge::issue);
         ClassDB::bind_method(D_METHOD("is_blocked", "x", "z"), &VoidfrontBridge::is_blocked);
-        ClassDB::bind_method(D_METHOD("network_start", "player", "local_port", "remote_port", "session_id", "input_delay", "ticks"), &VoidfrontBridge::network_start);
+        ClassDB::bind_method(D_METHOD("network_start", "player", "local_port", "remote_port", "session_id", "input_delay", "ticks", "economy", "seed"), &VoidfrontBridge::network_start, DEFVAL(false), DEFVAL(1));
         ClassDB::bind_method(D_METHOD("network_poll", "now_usec"), &VoidfrontBridge::network_poll);
         ClassDB::bind_method(D_METHOD("network_status"), &VoidfrontBridge::network_status);
         ClassDB::bind_method(D_METHOD("network_issue", "order", "ids", "x", "z", "input_usec"), &VoidfrontBridge::network_issue);
@@ -208,9 +218,9 @@ public:
         } catch (...) { return false; }
     }
     bool can_build(int64_t x, int64_t z) const {
-        if (network || x < 0 || z < 0 || x >= simulation.width() * vf::kScale ||
-                z >= simulation.height() * vf::kScale) return false;
-        return simulation.can_build(0, static_cast<int32_t>(x), static_cast<int32_t>(z));
+        const auto& state = current_sim();
+        if (x < 0 || z < 0 || x >= state.width() * vf::kScale || z >= state.height() * vf::kScale) return false;
+        return state.can_build(network ? static_cast<uint8_t>(network_options.player) : 0, static_cast<int32_t>(x), static_cast<int32_t>(z));
     }
     PackedByteArray replay_bytes() const {
         PackedByteArray result;
@@ -239,7 +249,7 @@ public:
     }
     bool issue(int64_t order, PackedInt32Array ids, int64_t x, int64_t z) {
         if (network || (simulation.map() == vf::Map::Economy && simulation.winner() != -1)) return false;
-        if (order < 0 || order > 10 || ids.size() == 0 || ids.size() > 256 ||
+        if (order < 0 || order > 12 || ids.size() == 0 || ids.size() > 256 ||
             x < 0 || z < 0 || x >= simulation.width() * vf::kScale || z >= simulation.height() * vf::kScale) return false;
         if (human_sequence == UINT32_MAX) return false;
         vf::Command command{};
@@ -346,14 +356,15 @@ public:
         return result;
     }
     bool network_start(int64_t player, int64_t local_port, int64_t remote_port,
-            int64_t session_id, int64_t input_delay, int64_t ticks) {
+            int64_t session_id, int64_t input_delay, int64_t ticks, bool economy = false, int64_t seed = 1) {
         if (network && network->status() != vf::net::SessionStatus::Complete && network->status() != vf::net::SessionStatus::Error)
             return false;
         try {
             clear_network();
             if (player < 0 || player > 1 || local_port < 1024 || local_port > 65535 ||
                     remote_port < 1024 || remote_port > 65535 || session_id <= 0 ||
-                    input_delay < 1 || input_delay > 16 || ticks < 1 || ticks > vf::net::kMaxSessionTicks)
+                    input_delay < 1 || input_delay > 16 || ticks < 1 || ticks > vf::net::kMaxSessionTicks ||
+                    seed < 0 || seed > UINT32_MAX)
                 throw std::invalid_argument("invalid network setup: player 0/1, distinct ports 1024..65535, positive session, delay 1..16, ticks 1..100000");
             network_options = {};
             network_options.player = static_cast<uint32_t>(player);
@@ -362,6 +373,10 @@ public:
             network_options.session = static_cast<uint64_t>(session_id);
             network_options.input_delay = static_cast<uint32_t>(input_delay);
             network_options.ticks = static_cast<uint32_t>(ticks);
+            if (economy) {
+                network_options.map = static_cast<uint32_t>(vf::Map::Economy);
+                network_options.count = 3; network_options.seed = static_cast<uint32_t>(seed);
+            }
             network = std::make_unique<vf::net::Session>(network_options,
                 [this](const vf::Sim& state, uint8_t owner, uint32_t& sequence) { return sample_inputs(state, owner, sequence); });
             return true;
@@ -436,11 +451,12 @@ public:
         Array rows;
         for (const auto& [tick, hash] : trace) { Dictionary row; row["tick"] = tick; row["hash"] = hash_string(hash); rows.push_back(row); }
         result["trace"] = rows;
-        std::vector<uint8_t> bytes{'V', 'F', 'R', 2};
+        std::vector<uint8_t> bytes{'V', 'F', 'R', static_cast<uint8_t>(network_options.map == 0 ? 2 : 3)};
         append_u32(bytes, vf::kProtocolVersion); append_u32(bytes, network_options.seed);
         append_u32(bytes, network_options.count); append_u32(bytes, recorded_ticks); append_u32(bytes, replay_count);
         append_u32(bytes, static_cast<uint32_t>(vf::kLockstepContentId));
         append_u32(bytes, static_cast<uint32_t>(vf::kLockstepContentId >> 32));
+        if (network_options.map != 0) append_u32(bytes, network_options.map);
         bytes.insert(bytes.end(), replay_commands.begin(), replay_commands.end());
         PackedByteArray replay; replay.resize(static_cast<int64_t>(bytes.size()));
         std::copy(bytes.begin(), bytes.end(), replay.ptrw()); result["replay"] = replay;

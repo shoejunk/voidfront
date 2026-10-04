@@ -15,6 +15,7 @@ struct SessionOptions {
     uint32_t protocol=vf::kLockstepProtocolVersion, desync=UINT32_MAX, exit_tick=UINT32_MAX;
     uint64_t session=0, content=vf::kLockstepContentId;
     uint32_t input_delay=2;
+    uint32_t map=0; // vf::Map; Economy runs the 64x48 economy match (count is forced to 3)
 };
 struct SessionStats {
     struct CommandTiming { uint32_t source_tick,execution_tick,sequence; double generated_ms,executed_ms; };

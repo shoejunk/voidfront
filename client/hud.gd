@@ -118,8 +118,10 @@ func _process(_delta: float) -> void:
 		var research_ticks: int = int(game.current.get("research_ticks", [0, 0])[game.local_player])
 		var plating := "PLATING DONE" if game.current.get("researched", [false, false])[game.local_player] else ("PLATING %d%%" % int(float(research_ticks) / game.current.research_total_ticks * 100) if research_ticks > 0 else "PLATING %d FLUX" % game.current.research_cost)
 		status.text = "SALVAGE %d   /   FLUX %d   /   %s   /   POPULATION %d + %d QUEUED / %d   /   FOUNDRY %d • STRIDER %d / LANCER %d+%d FLUX [L]" % [resources[game.local_player], flux[game.local_player], plating, game.current.population_used[game.local_player], game.current.population_reserved[game.local_player], game.current.population_cap, cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost]
-		connection.text = "64 x 48 EXPLORATION / Scout the dark ground. Destroy the enemy anchor; protect yours. Gather, build and train."
-		if not game.current.get("enemy_ai", false): connection.text += " Passive economy fixture."
+		var briefing := "64 x 48 EXPLORATION / Scout the dark ground. Destroy the enemy anchor; protect yours. Gather, build and train."
+		# Keep the session readiness/stall/error text above the briefing in shared matches.
+		connection.text = (connection.text + "\n" + briefing) if game.network else briefing
+		if not game.network and not game.current.get("enemy_ai", false): connection.text += " Passive economy fixture."
 		if game.current.winner == game.local_player: result.text = "VICTORY / ENEMY ANCHOR DESTROYED\nR  /  new match"
 		elif game.current.winner in [0, 1]: result.text = "DEFEAT / YOUR ANCHOR DESTROYED\nR  /  new match"
 		result.size.x = 920

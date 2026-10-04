@@ -177,10 +177,33 @@ std::vector<uint64_t> scheduled_ai(uint32_t delay, bool reversed) {
     }
     return hashes;
 }
+void economy_map_commands() {
+    Lockstep lock(7, 3, Map::Economy);
+    check(lock.sim().map() == Map::Economy && lock.sim().structures().size() == 2, "economy lockstep setup");
+    // Production orders carry a structure ID, may reference IDs the receiver has not
+    // created yet (validated at execution), and must not be accepted for foreign owners.
+    TickFrame train{0, 0, {{0, 1, 0, Order::TrainStrider, {1}, 0, 0}}};
+    TickFrame decoded;
+    check(deserialize_frame(serialize_frame(train), decoded), "economy production frame wire");
+    check(lock.receive(train) == ReceiveResult::Accepted, "economy production frame rejected");
+    TickFrame gather{0, 1, {{0, 1, 1, Order::Gather, {4, 5}, 40 * kScale, 30 * kScale}}};
+    check(lock.receive(gather) == ReceiveResult::Accepted, "economy gather frame rejected");
+    check(lock.advance() == AdvanceResult::Advanced, "economy turn did not advance");
+    TickFrame foreign{1, 0, {{1, 2, 0, Order::TrainStrider, {2}, 0, 0}}};
+    check(lock.receive(foreign) == ReceiveResult::Invalid, "foreign structure order accepted at receipt");
+    TickFrame future{1, 0, {{1, 2, 0, Order::TrainStrider, {50}, 0, 0}}};
+    TickFrame idle{1, 1, {}};
+    check(lock.receive(future) == ReceiveResult::Accepted && lock.receive(idle) == ReceiveResult::Accepted, "economy frames");
+    check(lock.advance() == AdvanceResult::Invalid, "nonexistent structure order executed");
+    check(lock.sim().tick() == 1, "invalid economy turn changed state");
+    // Combat setup keeps rejecting structure orders at receipt.
+    Lockstep combat(42, 6);
+    check(combat.receive(train) == ReceiveResult::Invalid, "combat setup accepted structure command");
+}
 }
 int main() {
     try {
-        wire_validation(); receipt_validation(); stall_and_hashes(); reorder_and_determinism(); rejection_atomicity();
+        wire_validation(); receipt_validation(); stall_and_hashes(); reorder_and_determinism(); rejection_atomicity(); economy_map_commands();
         for (const uint32_t delay : {1u, 2u, 16u})
             check(scheduled_ai(delay, false) == scheduled_ai(delay, true), "arrival order changed scheduled AI outcome");
         std::cout << "lockstep tests passed\n";
