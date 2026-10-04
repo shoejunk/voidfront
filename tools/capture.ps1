@@ -1,7 +1,9 @@
-param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[switch]$Crowd,[switch]$Scale,[switch]$Economy,[switch]$Production,[switch]$Flux,[switch]$Match,[switch]$Victory,[switch]$Exploration,[switch]$MatchRealtime,[ValidateRange(1,250)][int]$UnitsPerTeam=250,[int]$Ticks=400,[string]$Name='runtime')
+param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[switch]$Crowd,[switch]$Scale,[switch]$Economy,[switch]$Production,[switch]$Flux,[switch]$Match,[switch]$Victory,[switch]$Exploration,[switch]$Queue,[switch]$NetworkReturn,[switch]$MatchRealtime,[ValidateRange(1,250)][int]$UnitsPerTeam=250,[int]$Ticks=400,[string]$Name='runtime')
 . "$PSScriptRoot/common.ps1"
 Assert-RunningAllowed
 Assert-Godot
+if (($Queue -or $NetworkReturn) -and ($Movement -or $Crowd -or $Scale -or $Economy -or $Production -or $Flux -or $Match -or $Victory -or $Exploration -or $MatchRealtime -or ($Queue -and $NetworkReturn))) { throw 'Queue and NetworkReturn require separate fixtures.' }
+if ($Queue -and ($Ticks -lt 300 -or $Ticks -gt 2000)) { throw 'Queue capture requires 300..2000 ticks.' }
 if ($Exploration -and ($Victory -or $Match -or $Production -or $Economy -or $Movement -or $Crowd -or $Scale)) { throw 'Exploration requires its own fixture.' }
 if ($Victory -and $Match) { throw 'Choose Victory or Match.' }
 if ($Victory) { $Match = $true }
@@ -20,8 +22,19 @@ $executable = if ($Packaged) { "$Repo/artifacts/package/Voidfront.exe" } else { 
 $arguments = @('--log-file',"$out/$Name-engine.log",'--resolution','1920x1080')
 if (-not $Packaged) { $arguments += @('--path',"$Repo/client") }
 if ($Movie) { $arguments += @('--write-movie',"$out/$Name.avi",'--fixed-fps','60') }
-$smokeOption = if ($Exploration) { '--exploration-smoke' } elseif ($Victory) { '--victory-smoke' } elseif ($Match) { '--match-smoke' } elseif ($Flux) { '--flux-smoke' } elseif ($Production) { '--production-smoke' } elseif ($Economy) { '--economy-smoke' } elseif ($Scale) { '--scale-smoke' } elseif ($Movement) { '--movement-smoke' } elseif ($Crowd) { '--crowd-smoke' } else { '--smoke' }
+$smokeOption = if ($Queue) { '--queue-smoke' } elseif ($NetworkReturn) { '--network-return-smoke' } elseif ($Exploration) { '--exploration-smoke' } elseif ($Victory) { '--victory-smoke' } elseif ($Match) { '--match-smoke' } elseif ($Flux) { '--flux-smoke' } elseif ($Production) { '--production-smoke' } elseif ($Economy) { '--economy-smoke' } elseif ($Scale) { '--scale-smoke' } elseif ($Movement) { '--movement-smoke' } elseif ($Crowd) { '--crowd-smoke' } else { '--smoke' }
 $arguments += @('--',$smokeOption,"--ticks=$Ticks","--capture=$out/$Name.png","--report=$out/$Name.json")
+if ($NetworkReturn) {
+    $reservations = @()
+    try {
+        for ($i = 0; $i -lt 2; $i++) {
+            $socket = New-Object System.Net.Sockets.UdpClient
+            $socket.Client.Bind((New-Object System.Net.IPEndPoint([System.Net.IPAddress]::Loopback, 0)))
+            $reservations += $socket
+        }
+        $arguments += @('--player=1', "--port=$($reservations[0].Client.LocalEndPoint.Port)", "--remote-port=$($reservations[1].Client.LocalEndPoint.Port)")
+    } finally { foreach ($socket in $reservations) { $socket.Close() } }
+}
 if ($Scale) { $arguments += "--units-per-team=$UnitsPerTeam" }
 if ($MatchRealtime) { $arguments += "--match-realtime" }
 $originalAppData = $env:APPDATA

@@ -1,5 +1,23 @@
 # Verification ledger
 
+## 2026-10-04 - authoritative queued-destination feedback and terminal network HUD
+
+The packaged client now displays selected live-owned units' accepted queued destinations: active 0, pending 1-4, cyan Move / amber AttackMove and a full-capacity label. Snapshot copies include goals/queued legs; connectors join destinations rather than navigation paths. Stop/Hold/replacement/deselection/restart remove the overlays as appropriate. Canonical rules, protocol12 and content are unchanged.
+
+Final frozen package: `artifacts/package/Voidfront.exe`. Identity is recorded in `.voidfront-agent/queue-results-2026-10-04.json` (PCK `bcabd8c6c601c7e2d55fcc7dd9931523c66a26706d4953003ff25f8ffd300d59`; bridge DLL `42172b8fa9d090d23b650f70fe789fd381a8b996ba96524dc360bed634abc023`). Prior package/preimages: `artifacts/queue-prior-package-2026-10-04` and `queue-baseline-2026-10-04`.
+
+Commands: `tools/verify.ps1` for pinned MSVC integrated Debug/Release builds, 12/12 CTest each, 15 malformed replay cases and 7 output aliases/config, 2,000 identical cross-build hashes and ten repeated traces. Initial approved pass: `artifacts/queue-build-elevated-2026-10-04.log`; final rerun after headless diagnostic parity repair: `artifacts/queue-final-verification-2026-10-04.log`. `tools/package.ps1` and pinned import/export passed; final export log `queue-final-export-approved-2026-10-04.log`. Sandbox-only failures are retained: MSVC C1902, local UDP session handshake timeout, Godot safe-save permissions. Scoped approved runs passed without changing gates.
+
+`tools/capture.ps1 -Packaged -Queue -Ticks 1000 -Name queue-final-2026-10-04`: 169 normal20Hz ticks,17 ordinary software InputEvents, five exact FIFO destinations plus plain retarget, four promotions, ignored fifth pending leg, Stop/Hold/replacement clearing, reselection and restart. `python tools/verify_queue_capture.py artifacts/queue-final-2026-10-04.json --out artifacts/queue-final-replay-diagnostic-2026-10-04` independently binds all canonical commands, audits170 snapshots/1020 unit rows/static and relative sweeps,15 presentation phases, five stationary positions after Stop/Hold,16 rejected report/replay corruptions and Debug+ten Release tick hashes. Earlier source/final audit directories retain their historical binary fingerprints.
+
+`tools/capture.ps1 -Packaged -NetworkReturn -Name network-return-final-2026-10-04`:16 checks, one actual missing-peer handshake timeout, early R rejection at tick0, R detaches native session and switches player1 to offline player0, ticking resumes and one accepted group Move displaces workers by tick7. Baseline reset already returned offline; this run verifies it. Fixed economy HUD overwrite of terminal status/help/outcome and stale active-session notice; expanded panel encloses error/briefing. Actual filled/drained/stopped and timeout/offline PNGs inspected by root and critic. No new movie or SC2 comparison.
+
+`python tools/verify_client_network.py --case clean --out artifacts/queue-client-network-2026-10-04`: two distinct rendered package processes,240 ticks,3 inputs/peer, equal traces, cross-build replays and ten repeats. Clean0ms combat skirmish only; no economic queue11/12 exercise. Six sparse software timings are retained without response-budget acceptance; other captures overlapped, so no isolated performance claim. The suite's CLI fingerprints precede the diagnostic-only JSON repair; package fingerprints remain unchanged.
+
+`tools/capture.ps1 -Packaged -Production -Ticks 2400 -Name queue-production-regression-2026-10-04`:27 checks/1794 ticks; `python tools/verify_production_capture.py artifacts/queue-production-regression-2026-10-04.json --out artifacts/queue-production-replay-final-2026-10-04`. The first audit retained a structures-field mismatch: headless JSON omitted `queue_lancers`, introduced earlier for Lancers, although tick hashes matched. Added that authoritative diagnostic field; no validation field was ignored or rule changed. Final audit retains full structure equality and Debug+ten Release replays.
+
+Independent bounded review: `.voidfront-agent/review-queues-2026-10-04.md`. QueueAttackMove here uses a worker; firing/acquisition suspension, multi-unit formations/clutter, economy-network research/Lancer/queue/combat/victory, successful-pair rematch and human latency remain unverified. Dense crowd/performance failures, full factions/maps/content, production art/animation/audio/VFX, balance, human play and all final SPEC/shipping gates remain open. No COMPLETE.md.
+
 ## 2026-10-04 - networked economy match (loopback lockstep)
 
 Change: `Session`/`Lockstep` accept the Economy map (`SessionOptions::map`, folded into the high 16 bits of the handshake count

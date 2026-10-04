@@ -1,0 +1,45 @@
+{
+  "task_id": "01a1084a-c24b-7820-b8ee-cc5ae21e49f2",
+  "captured_utc": "2026-10-04T19:14:58.251374+00:00",
+  "baseline": "96eb195",
+  "files": {
+    "C:\\dev\\voidfront\\artifacts\\package\\voidfront_bridge.dll": "42172b8fa9d090d23b650f70fe789fd381a8b996ba96524dc360bed634abc023",
+    "C:\\dev\\voidfront\\artifacts\\package\\Voidfront.exe": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+    "C:\\dev\\voidfront\\artifacts\\package\\Voidfront.pck": "bcabd8c6c601c7e2d55fcc7dd9931523c66a26706d4953003ff25f8ffd300d59"
+  },
+  "owned_paths": [
+    "extension/bridge.cpp",
+    "client/main.gd",
+    "client/hud.gd",
+    "client/queue_smoke.gd",
+    "client/network_return_smoke.gd",
+    "tools/verify_queue_capture.py",
+    "tools/capture.ps1",
+    "PLAY.md",
+    "TESTING.md",
+    "PROGRESS.md",
+    ".voidfront-agent/roadmap.md",
+    "sim/headless.cpp"
+  ],
+  "preserved_paths": [
+    ".voidfront-agent/last-run.json",
+    ".voidfront-agent/roadmap.md",
+    "PROGRESS.md"
+  ],
+  "note": "Final frozen package identity before runtime checks. No simulation rules, protocol or content changes.",
+  "verified_utc": "2026-10-04T19:20:06.390145+00:00",
+  "final_headless_binaries": {
+    "Debug": "86d5860ba22de67e4150c2682ea9c3de87291e29f142a1c97eae73b6c458ecb1",
+    "Release": "e4294eacaa9d826518164466380ca96e90f576731fce1011e0c9781771916cc7"
+  },
+  "evidence": {
+    "queue": "artifacts/queue-final-2026-10-04.json",
+    "queue_audit": "artifacts/queue-final-replay-diagnostic-2026-10-04/summary.json",
+    "network_return": "artifacts/network-return-final-2026-10-04.json",
+    "clean_network": "artifacts/queue-client-network-2026-10-04/summary.json",
+    "production": "artifacts/queue-production-regression-2026-10-04.json",
+    "production_audit": "artifacts/queue-production-replay-final-2026-10-04/summary.json",
+    "final_build": "artifacts/queue-final-verification-2026-10-04.log",
+    "review": ".voidfront-agent/review-queues-2026-10-04.md"
+  }
+}

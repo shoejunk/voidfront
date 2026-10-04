@@ -76,6 +76,10 @@ var network_smoke := false
 var network_economy := false
 var network_economy_smoke := false
 var net_economy_fixture
+var queue_smoke := false
+var queue_fixture: RefCounted
+var network_return_smoke := false
+var network_return_fixture: RefCounted
 var local_player := 0
 var local_port := 39000
 var remote_port := 39001
@@ -134,6 +138,13 @@ func _ready() -> void:
 		if argument == "--smoke": smoke = true
 		elif argument == "--skirmish": skirmish = true
 		elif argument == "--economy": economy = true
+		elif argument == "--queue-smoke":
+			economy = true
+			queue_smoke = true
+		elif argument == "--network-return-smoke":
+			network = true
+			network_economy = true
+			network_return_smoke = true
 		elif argument == "--exploration-smoke":
 			economy = true
 			exploration_smoke = true
@@ -213,6 +224,9 @@ func _ready() -> void:
 	if network_economy_smoke and (finish_tick < 1000 or finish_tick > 12000): option_error = "Network economy smoke requires 1000..12000 ticks."
 	if economy and legacy_mode: option_error = "Economy requires its own offline match."
 	if not legacy_mode or network_economy: economy = true
+	if queue_smoke and not ticks_specified: finish_tick = 1000
+	if queue_smoke and (legacy_mode or network or economy_smoke or production_smoke or match_smoke or exploration_smoke or finish_tick > 2000): option_error = "Queue smoke requires its own offline fixture of at most 2000 ticks."
+	if network_return_smoke and (network_economy_smoke or network_smoke or queue_smoke): option_error = "Network return smoke requires its own missing-peer session."
 	if match_realtime and not match_smoke: option_error = "--match-realtime requires --match-smoke."
 	if exploration_smoke and not ticks_specified: finish_tick = 10000
 	if exploration_smoke and (match_smoke or economy_smoke or production_smoke): option_error = "Exploration fixture requires its own match."
@@ -252,7 +266,7 @@ func _ready() -> void:
 		push_error("Required C++ simulation extension failed to load")
 		get_tree().quit(2)
 		return
-	if economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke or network))
+	if economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke or queue_smoke or network))
 	if scale128:
 		if not option_error.is_empty() or not bridge.reset_scale(1, scale_count, not scale_smoke):
 			push_error(option_error if not option_error.is_empty() else "Scale setup rejected")
@@ -271,7 +285,13 @@ func _ready() -> void:
 	canvas.add_child(hud)
 	_reset()
 	# Only bare interactive launches show the skirmish setup; every fixture starts directly.
-	setup_open = economy and not (economy_smoke or production_smoke or match_smoke or exploration_smoke or network)
+	setup_open = economy and not (economy_smoke or production_smoke or match_smoke or exploration_smoke or queue_smoke or network)
+	if queue_smoke:
+		queue_fixture = preload("res://queue_smoke.gd").new(self)
+		queue_fixture.run.call_deferred()
+	if network_return_smoke:
+		network_return_fixture = preload("res://network_return_smoke.gd").new(self)
+		network_return_fixture.run.call_deferred()
 	if exploration_smoke:
 		exploration_fixture = preload("res://exploration_smoke.gd").new(self)
 		exploration_fixture.run.call_deferred()
@@ -539,7 +559,7 @@ func _reset() -> void:
 			push_error("Scale reset rejected")
 			get_tree().quit(2)
 			return
-	elif economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke or network))
+	elif economy: bridge.reset_economy(setup_seed, setup_ai and not (economy_smoke or production_smoke or queue_smoke or network))
 	else: bridge.reset(1, not (movement_smoke or crowd_smoke))
 	if network and option_error.is_empty():
 		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick, network_economy, setup_seed):
@@ -779,7 +799,7 @@ func _process(delta: float) -> void:
 		# It is reachability/replay evidence, never real-time responsiveness evidence.
 		accumulator += STEP * 8 if (match_smoke and not match_realtime) or exploration_smoke else delta
 		var ticks := 0
-		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke or scale_smoke or economy_smoke or production_smoke or match_smoke or exploration_smoke) or current.tick < finish_tick):
+		while accumulator >= STEP and ticks < 8 and (not (movement_smoke or crowd_smoke or scale_smoke or economy_smoke or production_smoke or match_smoke or exploration_smoke or queue_smoke) or current.tick < finish_tick):
 			previous = current
 			var start := Time.get_ticks_usec()
 			bridge.advance()
@@ -798,6 +818,7 @@ func _process(delta: float) -> void:
 			if production_smoke and production_fixture: production_fixture.tick()
 			if match_smoke and match_fixture: match_fixture.tick()
 			if exploration_smoke and exploration_fixture: exploration_fixture.tick()
+			if queue_smoke and queue_fixture: queue_fixture.tick()
 	var present_start := Time.get_ticks_usec() if presentation_profiler else 0
 	if economy: _update_fog()
 	_present(clampf(accumulator / STEP, 0, 1), delta)
@@ -875,6 +896,7 @@ func _finish_network_economy_smoke() -> void:
 func _update_network_status() -> void:
 	network_state = bridge.network_status()
 	var state := str(network_state.get("state", "error"))
+	if state in ["complete", "error"]: network_notice = ""
 	if status_history.is_empty() or status_history[-1].state != state:
 		status_history.append({"state": state, "tick": network_state.get("tick", 0), "usec": Time.get_ticks_usec(), "ready": network_state.get("ready", false), "error": network_state.get("error", "")})
 		if not network_smoke and status_history.size() > 64: status_history.pop_front()
@@ -1157,6 +1179,8 @@ func _issue(order: int, at: Vector3) -> void:
 	if match_smoke and match_fixture: match_fixture.record_input(accepted, order, at, command_actors)
 	if exploration_smoke and exploration_fixture: exploration_fixture.record_input(accepted, order, at, command_actors)
 	if network_economy_smoke and net_economy_fixture: net_economy_fixture.record_input(accepted, order, at, command_actors)
+	if queue_smoke and queue_fixture: queue_fixture.record_input(accepted, order, at, command_actors)
+	if network_return_smoke and network_return_fixture: network_return_fixture.record_input(accepted, order, at, command_actors)
 	if economy:
 		economy_notice = "Order submitted" if accepted else "Order rejected"
 		if accepted and order == 7: economy_notice = "Training order submitted: %d salvage" % current.strider_cost
@@ -1183,6 +1207,19 @@ func _issue(order: int, at: Vector3) -> void:
 			network_notice = ""
 			if network_smoke: _record_feedback.call_deferred(sequence, event_usec)
 		if smoke: print("VOIDFRONT_INPUT order=", order, " count=", selected.size(), " tick=", current.tick)
+
+func _order_paths() -> Array[Dictionary]:
+	# Display the goals accepted by the simulation, including per-unit formation
+	# slots. Lines join destinations; they do not describe navigation around terrain.
+	var paths: Array[Dictionary] = []
+	for unit in current.get("units", []):
+		if unit.id not in selected or unit.player != local_player or unit.hp <= 0: continue
+		var pending: Array = unit.get("order_queue", [])
+		if pending.is_empty(): continue
+		var points: Array[Dictionary] = [{"order": unit.order, "x": unit.goal_x, "z": unit.goal_z}]
+		for leg in pending: points.append(leg.duplicate())
+		paths.append({"id": unit.id, "points": points})
+	return paths
 
 func _record_feedback(sequence: int, input_usec: int) -> void:
 	await RenderingServer.frame_post_draw

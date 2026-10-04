@@ -296,9 +296,19 @@ public:
             row["kind"] = static_cast<int>(unit.kind); row["cargo"] = unit.cargo; row["cargo_kind"] = unit.cargo_kind;
             row["resource_id"] = unit.resource_id; row["work_ticks"] = unit.work_ticks;
             row["returning"] = unit.returning; row["build_id"] = unit.build_id;
+            row["goal_x"] = unit.goal_x; row["goal_z"] = unit.goal_z;
+            Array order_queue;
+            for (const auto& leg : unit.queue) {
+                Dictionary waypoint;
+                waypoint["order"] = static_cast<int>(leg.order);
+                waypoint["x"] = leg.x; waypoint["z"] = leg.z;
+                order_queue.push_back(waypoint);
+            }
+            row["order_queue"] = order_queue;
             units.push_back(row);
         }
         result["units"] = units;
+        result["order_queue_limit"] = static_cast<int64_t>(vf::kOrderQueueLimit);
         Array vision;
         if (state.map()==vf::Map::Economy) for (uint8_t player=0;player<2;++player) {
             PackedByteArray cells; const auto& source=state.vision(player);

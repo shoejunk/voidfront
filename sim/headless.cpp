@@ -277,6 +277,7 @@ int main(int argc, char** argv) {
                 metrics<<"{\"id\":"<<s.id<<",\"player\":"<<static_cast<int>(s.player)<<",\"kind\":"<<static_cast<int>(s.kind)
                     <<",\"x\":"<<s.x<<",\"z\":"<<s.z<<",\"hp\":"<<s.hp<<",\"build_ticks\":"<<s.build_ticks
                     <<",\"production_queue\":"<<s.production_queue<<",\"production_ticks\":"<<s.production_ticks
+                    <<",\"queue_lancers\":"<<s.queue_lancers
                     <<",\"spawn_blocked\":"<<(s.spawn_blocked?"true":"false")<<'}';
             }
             metrics<<"],\"deposits\":["; economy_comma=false;

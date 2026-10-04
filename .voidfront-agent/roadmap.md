@@ -1,5 +1,11 @@
 # Continuing roadmap
 
+## 2026-10-04 current checkpoint - queued feedback and verified error return
+
+Latest PROGRESS/TESTING supersede older flux/setup/economy-network-next notes: those systems now exist. Selected units display authoritative queued destinations and full capacity. Ordinary packaged inputs verify one worker's FIFO/overflow/clearing/reselection/restart, with Debug+ten Release replays. Terminal network HUD instructions survive economy refresh; real missing-peer R returns to ticking offline play. No completion or human-play claim.
+
+Exact next: extend the packaged two-client economy fixture through cancel/refund, research/Lancer, queued combat orders and victory; retain canonical recordings and cross-build traces. Add a combat-unit queue test that suspends pending legs during acquisition/firing plus multi-unit formation/overlay evidence. Then coordinated setup/rematch and direct full-match playtesting. Preserve all previously failed crowd/response/frame and production-content/AAA/shipping gates. See review-queues-2026-10-04.md for concrete limitations.
+
 ## 2026-09-30 user-requested larger map and fog checkpoint
 
 64x48 economy map, camera/minimap navigation and deterministic shared team fog

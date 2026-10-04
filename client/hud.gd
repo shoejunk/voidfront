@@ -122,8 +122,9 @@ func _process(_delta: float) -> void:
 		# Keep the session readiness/stall/error text above the briefing in shared matches.
 		connection.text = (connection.text + "\n" + briefing) if game.network else briefing
 		if not game.network and not game.current.get("enemy_ai", false): connection.text += " Passive economy fixture."
-		if game.current.winner == game.local_player: result.text = "VICTORY / ENEMY ANCHOR DESTROYED\nR  /  new match"
-		elif game.current.winner in [0, 1]: result.text = "DEFEAT / YOUR ANCHOR DESTROYED\nR  /  new match"
+		if game.current.winner in [0, 1]:
+			var outcome := "VICTORY / ENEMY ANCHOR DESTROYED" if game.current.winner == game.local_player else "DEFEAT / YOUR ANCHOR DESTROYED"
+			result.text = outcome + ("\nAwaiting session confirmation" if game.network else "\nR  /  new match")
 		result.size.x = 920
 		result.position.x = (view.x - result.size.x) / 2
 		var workers: int = game._selected_workers()
@@ -145,6 +146,19 @@ func _process(_delta: float) -> void:
 					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
 		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
 		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building    Shift+RMB queue (4)\nB + click  Foundry (%d)    T  Strider (%d)    L  Lancer (%d+%d flux, needs plating)    X  refund last    G  Hardened Plating (%d flux)    A + click  attack-move    S  stop    H  hold\nCtrl+0-9  save / 0-9  recall    Arrows  pan (Shift fast)    MMB / minimap  pan    Home  base    Wheel  zoom    R  restart\n" % [cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost, game.current.research_cost] + game.economy_notice
+	var paths: Array[Dictionary] = game._order_paths()
+	if not paths.is_empty():
+		var pending := 0
+		for path in paths: pending = maxi(pending, path.points.size() - 1)
+		selection.text += "   /   UP TO %d/%d WAYPOINTS%s" % [pending, game.current.order_queue_limit, " (FULL)" if pending == game.current.order_queue_limit else ""]
+	if game.network:
+		var state := str(game.network_state.get("state", ""))
+		if state == "complete":
+			result.text = result.text.get_slice("\n", 0) + "\nR  /  return to offline skirmish"
+			tip.text = "Final state confirmed by both peers.\nR returns this client to offline play; launch both clients again for a new network session."
+		elif state == "error":
+			result.text = "NETWORK SESSION ENDED\nR  /  return to offline skirmish"
+			tip.text = "R returns this client to offline play.\nLaunch both clients again for a new network session."
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
@@ -161,6 +175,8 @@ func _draw() -> void:
 	var view := get_viewport_rect().size
 	var network_panel: bool = is_instance_valid(game) and (game.network or game.economy or not game.option_error.is_empty())
 	var panel_size := Vector2(920, 128) if network_panel else Vector2(548, 80)
+	if is_instance_valid(game) and game.network:
+		panel_size.y += maxi(0, connection.get_line_count() - 2) * 18
 	draw_rect(Rect2(Vector2(16, 12), panel_size), Color(0.025, 0.047, 0.055, 0.94))
 	draw_rect(Rect2(16, 12, 3, panel_size.y), Color("61c9c6"))
 	var extra_help_height := 32 if is_instance_valid(game) and game.economy else 0
@@ -176,6 +192,7 @@ func _draw() -> void:
 	if not result.text.is_empty():
 		var result_width := 740 if network_panel else 530
 		draw_rect(Rect2((view.x - result_width) / 2, view.y / 2 - 48, result_width, 128), Color(0.025, 0.047, 0.055, 0.94))
+	_draw_order_paths()
 	var map_rect := minimap_rect()
 	var map_scale := map_rect.size / Vector2(game.map_size)
 	draw_rect(map_rect.grow(6), Color("12252c"))
@@ -219,6 +236,27 @@ func _draw() -> void:
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color(0.3, 0.85, 0.83, 0.1))
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color("64d8d0"), false, 1)
 	if game.presentation_profiler: game.presentation_profiler.record("hud_draw", Time.get_ticks_usec() - profile_start)
+
+func _draw_order_paths() -> void:
+	var font := ThemeDB.fallback_font
+	for path in game._order_paths():
+		if not game.actors.has(path.id): continue
+		var origin: Vector3 = game.actors[path.id].root.position
+		var previous_screen: Vector2 = game.camera.unproject_position(origin)
+		var previous_visible: bool = not game.camera.is_position_behind(origin)
+		for index in path.points.size():
+			var point: Dictionary = path.points[index]
+			var world := Vector3(point.x / 256.0, 0.1, point.z / 256.0)
+			var screen: Vector2 = game.camera.unproject_position(world)
+			var visible: bool = not game.camera.is_position_behind(world)
+			var color := Color("f2b86d") if point.order == 2 else Color("64e5df")
+			if previous_visible and visible: draw_dashed_line(previous_screen, screen, color, 1.5, 8.0, true)
+			if visible:
+				draw_circle(screen, 9.0, Color("12252c"))
+				draw_arc(screen, 9.0, 0, TAU, 24, color, 1.5, true)
+				draw_string(font, screen + Vector2(-4, 4), str(index), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, color)
+			previous_screen = screen
+			previous_visible = visible
 
 func minimap_rect() -> Rect2:
 	var view := get_viewport_rect().size

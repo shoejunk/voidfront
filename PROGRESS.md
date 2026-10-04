@@ -1,5 +1,19 @@
 # Voidfront progress
 
+## 2026-10-04 12:01 America/Los_Angeles - queued waypoint feedback and network return verification
+
+Baseline dev `96eb195`; STOP/COMPLETE/previous marker absent; exclusively acquired task `01a1084a-c24b-7820-b8ee-cc5ae21e49f2`. Preserved existing user edits in PROGRESS, roadmap and last-run; preimages and patch in `artifacts/queue-baseline-2026-10-04`. Current source supersedes older automation memory.
+
+Goals: expose authoritative queued destinations in presentation snapshots, display selected-unit numbered waypoint chains, and verify Shift+RMB/Shift+A via packaged InputEvents with every-tick canonical replay evidence. Verify real missing-peer timeout/R return to offline and correct economy network outcome/help text. Do not change simulation rules or weaken final gates.
+
+Implementation: snapshots now expose active goals and bounded queued legs. Selected live-owned units display numbered destinations (0 active, 1-4 pending), cyan Move / amber AttackMove, with a full-capacity label; these lines join destinations, not navigation routes. Added ordinary InputEvent FIFO/cap/Stop/Hold/replacement/reselection/restart evidence and a real absent-peer timeout/R/offline movement fixture. Corrected economy HUD overwrites of network outcome/action/help, and cleared stale active-session notices at terminal status. Baseline R already returned offline; this run verifies it rather than claiming a runtime repair.
+
+Verified final package: queue169 ticks/17 InputEvents/170 snapshots/1020 unit rows, five FIFO arrivals plus retarget/four promotions, overflow and clears,15 presentation phases,16 corruptions rejected, all hashes match Debug+ten Release. Real missing-peer return16 checks passes; clean paired rendered combat240ticks/3 commands each plus replays/repeats passes. Production1794ticks/27 checks,6000 audited resource units conserved (4000 salvage plus 2000 untouched flux deposits),3 purchases/1 refund/2 spawns and7 corruption checks passes Debug+ten Release. Found and fixed existing headless diagnostic omission of queue_lancers after preserving failed structures-parity audit; full exact equality retained. Final integrated Debug/Release12/12 each, malformed/aliases,2000 cross-build hashes and ten repeats pass. Package fingerprints, exact commands, prior failed logs and limitations are in TESTING/queue-results.
+
+Root and critic inspected final queue filled/drained/stopped and timeout/offline PNGs; independent bounded review accepts only this increment (critic authored missing-peer fixture, disclosed). No movie/human play/new SC2 comparison, isolated latency/performance, economic network victory, combat queue suspension or group formation/clutter proof. All previously failed crowd/frame/response and production-content/shipping gates remain open. Snapshot/diagnostic changes do not alter protocol12/content/rules. Prior unrelated user edits remain unstaged; last-run intentionally untouched.
+
+Exact next: packaged two-client economy cancel/refund -> research/Lancer -> queued combat -> victory with full canonical/replay evidence, then coordinated setup/rematch; add combat suspension and multi-unit queue/overlay cases. No COMPLETE.md; automation remains active.
+
 ## 2026-10-04 - networked economy matches (lockstep) + Shift-queue bridge fix
 
 Baseline dev `9c21a80`; STOP/COMPLETE absent; acquired `.voidfront-agent/run.json`. Pre-existing uncommitted user edits (roadmap, last-run.json, 2026-09-26 PROGRESS note) preserved and left out of this commit.
