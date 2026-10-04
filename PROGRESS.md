@@ -1,5 +1,15 @@
 # Voidfront progress
 
+## 2026-10-04 - networked economy matches (lockstep) + Shift-queue bridge fix
+
+Baseline dev `9c21a80`; STOP/COMPLETE absent; acquired `.voidfront-agent/run.json`. Pre-existing uncommitted user edits (roadmap, last-run.json, 2026-09-26 PROGRESS note) preserved and left out of this commit.
+
+Landed: the lockstep Session now carries the 64x48 economy map, so two clients can gather, build, train (and research/Lancer/queue) against each other (`--network-economy`, PLAY.md). Handshake carries the map (high bits of the count field, lockstep protocol 3); economy receive-time validation checks ownership of IDs already known to the receiver and defers unknown IDs to `Sim::submit` at execution; peer CLI `--map 2`, VFR3 recordings; bridge `network_start(..., economy, seed)`, structure-ID orders, HUD keeps session state visible. Bug fixed: the bridge rejected orders 11/12, so last run's Shift-queued orders never worked from the client (offline or networked).
+
+Verification (TESTING.md has commands/limits): `tools/verify.ps1 -Network` passes (Debug+Release 12/12 CTest with new economy lockstep case, 22-case network suite); new `verify_network.py --suite economy` (separate Debug/Release processes, clean/80ms/160ms with jitter+loss: all traces equal, ten replays agree); two packaged rendered clients drive gather -> build Foundry -> train Strider via InputEvents for 3,000 ticks, hashes equal, both recordings replay in Debug and Release (`tools/run_net_economy.sh`, `tools/verify_net_economy.py`, `artifacts/netecon-final-2026-10-04`); offline economy/production package regressions pass. Independent critic findings acted on: removed unilateral restart-after-winner, tightened receive ownership check, reject nonzero x/z structure orders locally, VFR3 header size, map validation. Open from critic: Cancel/Research/Lancer/Shift-queue/combat/victory not exercised over the network; after a session error R re-enters network instead of offline (HUD text wrong); no network seed UI; forged same-session frames can still end a match on unknown IDs (no authentication).
+
+Not done: human playtest, networked match to victory, economy-path latency measurement, LAN/Internet, balance, art/audio, scale gates. Next: networked fixture covering research/Lancer/Shift-queue/combat to victory, consensual rematch, fix R-after-error behavior, networked setup screen, terrain-aware fog. No COMPLETE.md; automation stays active.
+
 ## 2026-10-03 - queued (Shift) move and attack-move orders
 
 Baseline dev `babd28b`; STOP/COMPLETE absent; exclusively acquired `.voidfront-agent/run.json`. Pre-existing uncommitted user edits (roadmap, last-run.json, 2026-09-26 PROGRESS note) preserved and left out of this commit.
