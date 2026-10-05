@@ -1,5 +1,9 @@
 # Voidfront progress
 
+## 2026-10-05 - queued orders yield to combat (sim test)
+
+Added `queued_orders_yield_to_combat` in sim/tech_tests.cpp: a Strider on an AttackMove leg with one pending Move leg stays suspended (queue size 1) for as long as an acquired hostile lives, then completes the pending leg after the kill. Debug and Release sim builds pass 12/12 CTest (SimOnly; no packaged client, cross-build replay or network rerun this run). Closes the "suspends pending legs during acquisition/firing" sim gap from review-queues-2026-10-04; multi-unit formation/overlay evidence, the packaged two-client economy extension (cancel/refund, research/Lancer, queued combat, victory), setup/rematch and human playtest remain open. No gate weakened; no COMPLETE.md.
+
 ## 2026-10-04 12:01 America/Los_Angeles - queued waypoint feedback and network return verification
 
 Baseline dev `96eb195`; STOP/COMPLETE/previous marker absent; exclusively acquired task `01a1084a-c24b-7820-b8ee-cc5ae21e49f2`. Preserved existing user edits in PROGRESS, roadmap and last-run; preimages and patch in `artifacts/queue-baseline-2026-10-04`. Current source supersedes older automation memory.
@@ -322,6 +326,24 @@ Next implement resource-funded unit production, queues and population limits,
 then economic AI/anchor victory. Full small matches, flux/tech/fog, production
 art/audio, dense crowd progress, reference budgets and shipping remain open.
 No COMPLETE.md. Preserve the earlier user-owned roadmap/last-run/progress edits.
+
+## 2026-09-26 - user-directed gameplay priority change
+
+The active roadmap now prioritizes a complete small RTS match. Its current
+priority section supersedes the movement-first next steps in older checkpoints,
+reviews and handoffs. Next deliver packaged worker harvesting, resource
+accounting and construction of a production structure, then production,
+economic AI, anchor victory/restart, flux, technology, fog and match setup.
+Every implementation checkpoint should add a playable capability and record
+actual package evidence. Fix movement defects that block that small match;
+defer unrelated dense-stream solver work and large-scale optimization until
+the gameplay loop works. Preserve all final SPEC scope, budgets and gates.
+
+Documentation change only: no simulation, assets or package changed, and no
+new build, gameplay or test acceptance is claimed. Previous failed crowd and
+performance evidence remains valid. The weekly development chat was idle and
+no run marker or STOP existed before this edit on dev. The roadmap and this
+handoff are the current sequencing authority for the next development run.
 
 ## 2026-09-26 08:42 America/Los_Angeles - cooperative movement pass
 
