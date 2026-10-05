@@ -187,8 +187,35 @@ void queued_orders() {
     Command cmd{5,9,0,Order::QueueAttackMove,{1,2},cx,cz};
     Command back; check(deserialize_command(serialize_command(cmd),back) && back.order==Order::QueueAttackMove && back.units.size()==2,"serialization");
 }
+void queued_orders_yield_to_combat() {
+    // A pending leg must stay suspended while a hostile is acquired at the end of the active leg.
+    Sim s(7,3,Map::Economy);
+    auto& units=mutable_units(s);
+    const int32_t ax=5*kScale+kScale/2,az=10*kScale+kScale/2,bx=9*kScale+kScale/2,bz=14*kScale+kScale/2;
+    Unit enemy=units[0]; enemy.id=static_cast<uint32_t>(units.size())+1; enemy.player=1; enemy.kind=UnitKind::Strider;
+    enemy.order=Order::Stop; enemy.hp=kLancerHp*4; enemy.cooldown=0;
+    enemy.x=enemy.goal_x=enemy.next_x=ax+kScale; enemy.z=enemy.goal_z=enemy.next_z=az;
+    const uint32_t enemy_id=enemy.id;
+    units.push_back(enemy);
+    units[0].hp=100000; units[0].kind=UnitKind::Strider;
+    check(s.submit({s.tick(),1,0,Order::QueueAttackMove,{1},ax,az}),"leg a"); s.step();
+    check(s.submit({s.tick(),2,0,Order::QueueMove,{1},bx,bz}),"leg b"); s.step();
+    check(s.units()[0].queue.size()==1,"second leg should wait");
+    bool fought=false;
+    auto alive=[&]{ for (const auto& e:s.units()) if (e.id==enemy_id) return e.hp>0; return false; };
+    for (int i=0;i<2000 && alive();++i) {
+        s.step();
+        if (alive()) {
+            check(s.units()[0].queue.size()==1,"queue advanced while a hostile lived"); fought=true;
+        }
+    }
+    check(fought,"no combat observed");
+    check(!alive(),"hostile survived");
+    for (int i=0;i<3000 && !(s.units()[0].x==bx && s.units()[0].z==bz);++i) s.step();
+    check(s.units()[0].x==bx && s.units()[0].z==bz && s.units()[0].queue.empty(),"leg b not completed after combat");
+}
 int main() {
-    try { map_layout(); flux_gathering(); mixed_cargo_delivers_first(); research(); research_rules(); hash_covers_tech(); ai_uses_flux(); lancer_rules(); queued_orders();
+    try { map_layout(); flux_gathering(); mixed_cargo_delivers_first(); research(); research_rules(); hash_covers_tech(); ai_uses_flux(); lancer_rules(); queued_orders(); queued_orders_yield_to_combat();
         std::cout<<"tech tests passed\n"; }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }
