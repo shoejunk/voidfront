@@ -220,7 +220,7 @@ func _ready() -> void:
 		else: option_error = "Unknown option: " + argument
 	var legacy_mode := skirmish or smoke or movement_smoke or crowd_smoke or controls_smoke or scale128 or profile_presentation or (network and not network_economy)
 	if network_economy and (smoke or network_smoke or movement_smoke or crowd_smoke or controls_smoke or scale128 or profile_presentation or economy_smoke or production_smoke or match_smoke or exploration_smoke): option_error = "Network economy requires its own two-process match."
-	if network_economy_smoke and not ticks_specified: finish_tick = 3000
+	if network_economy_smoke and not ticks_specified: finish_tick = 12000
 	if network_economy_smoke and (finish_tick < 1000 or finish_tick > 12000): option_error = "Network economy smoke requires 1000..12000 ticks."
 	if economy and legacy_mode: option_error = "Economy requires its own offline match."
 	if not legacy_mode or network_economy: economy = true
@@ -875,7 +875,7 @@ func _finish_network_economy_smoke() -> void:
 	report_data.erase("replay")
 	var fixture_report: Dictionary = net_economy_fixture.report() if net_economy_fixture else {"errors": ["fixture missing"]}
 	var ok: bool = option_error.is_empty() and str(report_data.get("state", "")) == "complete" and fixture_report.get("errors", ["?"]).is_empty() and fixture_report.get("fixture_done", false) and not replay.is_empty() and report_data.get("evidence_complete", false)
-	var report := {"ok": ok, "player": local_player, "network": report_data, "fixture": fixture_report, "option_error": option_error, "winner": current.get("winner", -1), "final_tick": current.get("tick", 0), "renderer": RenderingServer.get_video_adapter_name(), "note": "Two packaged clients over loopback UDP lockstep driving own workers through InputEvents on the economy map. Not a complete match, human play, LAN/Internet or performance acceptance."}
+	var report := {"ok": ok, "player": local_player, "network": report_data, "fixture": fixture_report, "option_error": option_error, "winner": current.get("winner", -1), "final_tick": current.get("tick", 0), "renderer": RenderingServer.get_video_adapter_name(), "note": "Two packaged rendered clients over loopback UDP lockstep using software InputEvents. See fixture phases and independent audit for demonstrated economy/combat scope. No human play, balance, LAN/Internet, performance or shipping acceptance."}
 	if not report_path.is_empty() and not replay.is_empty():
 		var replay_path := report_path.get_basename() + ".vfr"
 		var replay_file := FileAccess.open(replay_path, FileAccess.WRITE)
@@ -1184,14 +1184,15 @@ func _issue(order: int, at: Vector3) -> void:
 	if economy:
 		economy_notice = "Order submitted" if accepted else "Order rejected"
 		if accepted and order == 7: economy_notice = "Training order submitted: %d salvage" % current.strider_cost
-		elif accepted and order == 8: economy_notice = "Cancel last queued Strider; awaiting refund"
+		elif accepted and order == 8: economy_notice = "Cancel last queued unit; awaiting refund"
+		elif accepted and order == 10: economy_notice = "Lancer training submitted: %d salvage + %d flux" % [current.lancer_cost, current.lancer_flux_cost]
 		elif accepted and order == 9: economy_notice = "Hardened Plating research submitted: %d flux" % current.research_cost
 		if order == 6:
 			economy_notice = "Foundry order submitted: %d salvage" % current.foundry_cost if bridge.can_build(int(at.x * SCALE), int(at.z * SCALE)) else "Cannot place here: blocked, unaffordable, or occupied; no salvage spent"
 	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
 		var feedback_at := Vector3(at.x, 0.05, at.z)
-		if order in [7, 8, 9]: feedback_at = Vector3(selected_entity.x / SCALE, 0.05, selected_entity.z / SCALE)
+		if order in [7, 8, 9, 10]: feedback_at = Vector3(selected_entity.x / SCALE, 0.05, selected_entity.z / SCALE)
 		if order == 0 or order == 3:
 			var center := Vector3.ZERO
 			var count := 0

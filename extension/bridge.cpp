@@ -290,6 +290,8 @@ public:
             Dictionary row;
             row["id"] = unit.id; row["player"] = unit.player;
             row["x"] = unit.x; row["z"] = unit.z; row["hp"] = unit.hp;
+            row["max_hp"] = unit.kind == vf::UnitKind::Lancer ? vf::kLancerHp :
+                vf::Unit{}.hp + (unit.kind == vf::UnitKind::Strider && state.researched(unit.player) ? vf::kHardenedBonusHp : 0);
             row["moving"] = unit.moving; row["target"] = unit.target_id;
             row["target_structure"] = unit.target_structure_id;
             row["cooldown"] = unit.cooldown; row["order"] = static_cast<int>(unit.order);

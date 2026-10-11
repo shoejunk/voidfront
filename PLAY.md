@@ -81,5 +81,15 @@ AI in this mode. Launch in two terminals (matching `--seed`, `--session`, `--del
 ```
 
 Controls are the offline economy controls (B build, T/L train, G research, Shift-queued orders).
-Loopback only; when an anchor falls R returns to offline play. Different seeds/maps are
+Loopback only. An anchor outcome freezes gameplay, but the current session closes
+at its configured tick limit; R returns to offline play after that confirmation.
+An early winner can therefore wait until the remaining limit expires. Outcome-driven
+session closure and paired rematch remain unfinished. Different seeds/maps are
 rejected at the handshake. Not yet verified by human play, LAN/Internet or a 30-minute soak.
+
+From source, `./tools/run_net_match.ps1 -Out artifacts/my-network-match` runs the
+packaged scripted economy route in two rendered processes using separate local ports.
+It covers paid production/refund, flux/research/Lancer, group queues and an attacker
+against a holding defender. `python tools/verify_net_match.py artifacts/my-network-match
+--out artifacts/my-network-match-audit` checks the retained canonical recordings.
+Use fresh output directories; this fixture does not establish competitive balance.

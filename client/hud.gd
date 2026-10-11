@@ -93,7 +93,7 @@ func _process(_delta: float) -> void:
 		if game.current.winner != -1:
 			result.text = result.text.get_slice("\n", 0) + "\nAwaiting session confirmation"
 		status.text = "EXPERIMENTAL LOOPBACK 1v1   /   PLAYER %d   /   DELAY %d TICKS (%d ms)" % [game.local_player + 1, game.input_delay, game.input_delay * 50]
-		connection.text = "%s   •   tick %d   /   confirmed %d   •   UDP %d → %d" % [state.to_upper(), game.current.tick, game.network_state.get("confirmed_ticks", 0), game.local_port, game.remote_port]
+		connection.text = "PLAYER %d / DELAY %d TICKS   •   %s   •   tick %d / confirmed %d   •   UDP %d → %d" % [game.local_player + 1, game.input_delay, state.to_upper(), game.current.tick, game.network_state.get("confirmed_ticks", 0), game.local_port, game.remote_port]
 		tip.text = "LMB / drag  select own units    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    shared match — restart after session ends"
 		if state in ["handshake", "readiness"]:
 			result.text = "CONNECTING TO PEER" if state == "handshake" else "PREPARING INPUT BUFFER"
@@ -128,7 +128,10 @@ func _process(_delta: float) -> void:
 		result.size.x = 920
 		result.position.x = (view.x - result.size.x) / 2
 		var workers: int = game._selected_workers()
-		selection.text = "%02d WORKERS / %02d STRIDERS" % [workers, game.selected.size() - workers]
+		var lancers := 0
+		for unit in game.current.units:
+			if unit.id in game.selected and int(unit.get("kind", 0)) == 2: lancers += 1
+		selection.text = "%02d WORKERS / %02d STRIDERS / %02d LANCERS" % [workers, game.selected.size() - workers - lancers, lancers]
 		if workers > 0:
 			var cargo := 0
 			for unit in game.current.units:
@@ -142,7 +145,7 @@ func _process(_delta: float) -> void:
 				selection.text = "FOUNDRY   /   %s" % ("READY" if entity.build_ticks >= game.current.build_duration else "CONSTRUCTING %d%%" % int(float(entity.build_ticks) / game.current.build_duration * 100))
 				if entity.build_ticks >= game.current.build_duration:
 					selection.text += "   /   QUEUE %d/%d" % [entity.production_queue, game.current.production_queue_limit]
-					if entity.production_queue > 0: selection.text += "   /   STRIDER %d%%" % int(float(entity.production_ticks) / game.current.train_ticks * 100)
+					if entity.production_queue > 0: selection.text += "   /   %s %d%%" % ["LANCER" if int(entity.get("queue_lancers", 0)) & 1 else "STRIDER", int(float(entity.production_ticks) / game.current.train_ticks * 100)]
 					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
 		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
 		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building    Shift+RMB queue (4)\nB + click  Foundry (%d)    T  Strider (%d)    L  Lancer (%d+%d flux, needs plating)    X  refund last    G  Hardened Plating (%d flux)    A + click  attack-move    S  stop    H  hold\nCtrl+0-9  save / 0-9  recall    Arrows  pan (Shift fast)    MMB / minimap  pan    Home  base    Wheel  zoom    R  restart\n" % [cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost, game.current.research_cost] + game.economy_notice
@@ -224,7 +227,7 @@ func _draw() -> void:
 			if not game.camera.is_position_behind(actor.position):
 				var bar_width: float = clampf(24.0 * 27.0 / game.camera.size, 3, 24) if game.scale128 else 36.0
 				draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width, 4)), Color("102128"))
-				draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width * clampf(float(u.hp) / game.max_hp, 0, 1), 3)), color)
+				draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width * clampf(float(u.hp) / float(u.max_hp), 0, 1), 3)), color)
 	if game.economy:
 		var corners := PackedVector2Array()
 		for screen in [Vector2.ZERO, Vector2(view.x, 0), view, Vector2(0, view.y), Vector2.ZERO]:

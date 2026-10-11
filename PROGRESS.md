@@ -1,5 +1,59 @@
 # Voidfront progress
 
+## 2026-10-11 12:06 America/Los_Angeles - network economy match verification
+
+Baseline dev `6c635f5`, ahead/behind 0/0; STOP/COMPLETE/prior marker absent.
+Exclusively acquired task `01a12c56-c6f2-7f00-89a6-e71584ce21e9`.
+Existing roadmap and last-run edits preserved in `artifacts/weekly-baseline-2026-10-11`.
+Goals: extend actual paired packaged economy inputs through cancellation/refund,
+flux/research/Lancer production, group queued combat and anchor victory. Retain
+cross-build replay evidence and independent deterministic/playability criticism;
+repair demonstrated player-facing feedback defects. Preserve all failed SPEC
+gates, existing gameplay and the newer queued-combat simulation regression.
+
+Player feedback repaired: selection counts distinguish Striders/Lancers, the
+Foundry names the actual front queue kind, cancellation names a queued unit,
+Lancer purchases mark the Foundry instead of world origin, network economy keeps
+player/delay identity, and health bars use snapshot maxima (100 worker/base
+Strider, 150 plated Strider, 70 Lancer). Rules/content/protocol12 are unchanged.
+
+Final paired rendered package: 12000 confirmed ticks, matching winner0/hash
+`e359f92446957c54`, 75/63 fixture checks, 22/18 canonical inputs, 39/31 phases,
+14 screenshots/player. Both gather/build, refund a tail Strider, scout/mine flux,
+research, produce Lancers and fill/drain four queued formation legs. Anchor damage
+starts6772; outcome6988. Existing network commands gained retained integration
+evidence; this is a scripted attacker versus holding opponent. Defender combat
+units survive undamaged, so opposing-army combat/competitive1v1 is not proved.
+
+First failed route is retained: attacker required475 salvage by2000 ticks, had
+insufficient income, and aborted; defender consequently never saw an attacker.
+Its10000-tick paired recordings match Debug/Release. Final fixture allows4000
+harvesting ticks and12000 shared ticks; costs, army,20Hz and SPEC budgets stay
+unchanged. Integrated Debug/Release12/12, malformed/alias and baseline repeat
+checks pass; final Debug diagnostics rebuilt and Release package12/12 rerun.
+Offline queue168ticks/17inputs/1014rows passes audit+16 corruption checks+11replays.
+Full paired replay/prefix audit and independent reviews are recorded in TESTING.
+Final independent audit passes22 complete replays,106 unique Debug prefixes,
+70 phases+28 capture snapshots and19 adversarial corruptions rejected. Both
+VFR3 recordings are byte-identical; all12000 state hashes agree across builds.
+
+Root and independent playability critic inspected actual final group, Lancer,
+anchor-damage and outcome captures. Six-unit waypoint labels overlap and some
+origins sit behind HUD; blockout buildings/terrain, reused bright rigs and label
+overlap remain. The player0 `combat` PNG is an empty dark field, so it does not
+prove visible fighting. No movie, human play, SC2 comparison, LAN/Internet,
+impaired-economy rerun, balance or performance acceptance. Concurrent captures
+and paired runs make host608.144s/272330752+267759616B process observations only.
+
+Exact next: fix outcome-driven shared terminal confirmation. At6988 both peers
+already confirm6988, but restart stays blocked until12000:5012ticks/250.6s waiting.
+The documented36000 cap can leave24m10.6s after that outcome. Preserve checksum,
+disconnect/desync and replay-prefix protection; then coordinated setup/rematch,
+contested opposing-army and pending-combat queue fixtures, direct playtests.
+All dense-crowd/frame/response, production content and SPEC shipping gates stay
+open. No COMPLETE.md; automation continues. Existing roadmap/last-run edits stay
+unstaged and byte-preserved; current results supersede stale last-run metadata.
+
 ## 2026-10-05 - queued orders yield to combat (sim test)
 
 Added `queued_orders_yield_to_combat` in sim/tech_tests.cpp: a Strider on an AttackMove leg with one pending Move leg stays suspended (queue size 1) for as long as an acquired hostile lives, then completes the pending leg after the kill. Debug and Release sim builds pass 12/12 CTest (SimOnly; no packaged client, cross-build replay or network rerun this run). Closes the "suspends pending legs during acquisition/firing" sim gap from review-queues-2026-10-04; multi-unit formation/overlay evidence, the packaged two-client economy extension (cancel/refund, research/Lancer, queued combat, victory), setup/rematch and human playtest remain open. No gate weakened; no COMPLETE.md.

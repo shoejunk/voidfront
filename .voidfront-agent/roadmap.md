@@ -1,5 +1,26 @@
 # Continuing roadmap
 
+## 2026-10-11 checkpoint - network route and unit feedback
+
+Paired rendered economy clients now retain canonical evidence through exact
+production/refund, flux/research/Lancer, four queued formation legs and anchor
+victory. Both confirm 12000 hashes; 22 complete replays, 106 prefix checks and 19
+corrupted cases pass rejection. Unit roles/front production, Lancer feedback,
+per-kind health bars and network player/delay text are corrected. This is a
+scripted attacker versus a holding opponent whose combat units survive undamaged;
+it does not establish contested 1v1, human play, balance or the small-match gate.
+See current PROGRESS/TESTING and independent reviews dated 2026-10-11.
+
+Exact next: end the shared session when both peers confirm the authoritative
+outcome, preserving terminal checksum, disconnect/desync and replay-prefix
+protection. Winner tick 6988 currently waits until cap 12000 (250.6 seconds),
+while input/restart are blocked. Then coordinated setup/rematch and contested
+opposing-army/pending-combat queue fixtures, followed by direct full-match play.
+The Oct5 simulation firing-suspension test remains separate from package evidence;
+this run's group queues drain before combat. Six-unit overlay clutter/HUD occlusion
+and blockout art remain. Preserve every failed crowd/frame/response, production
+content, human-play and SPEC shipping gate. No COMPLETE.md.
+
 ## 2026-10-04 current checkpoint - queued feedback and verified error return
 
 Latest PROGRESS/TESTING supersede older flux/setup/economy-network-next notes: those systems now exist. Selected units display authoritative queued destinations and full capacity. Ordinary packaged inputs verify one worker's FIFO/overflow/clearing/reselection/restart, with Debug+ten Release replays. Terminal network HUD instructions survive economy refresh; real missing-peer R returns to ticking offline play. No completion or human-play claim.

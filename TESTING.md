@@ -1,5 +1,70 @@
 # Verification ledger
 
+## 2026-10-11 - paired economy route and accurate unit feedback
+
+Pinned `tools/verify.ps1`: MSVC Debug/Release12/12 CTest each,15 malformed replays
+and7 output aliases/config,2000 cross-build hashes and ten repeated traces pass.
+Log `artifacts/weekly-build-approved-2026-10-11.log`; initial sandbox helper stalls
+are retained in `weekly-build-2026-10-11.log` and `weekly-build-attempt2-2026-10-11.log`.
+Full snapshot diagnostics add target/moving/cooldown/work/cargo/queue/vision/results
+to headless metrics without changing simulation rules/content. Final diagnostic
+Debug target rebuilt (`weekly-diagnostic-debug-2026-10-11.log`), final Release
+package built/tested12/12 (`weekly-package-2026-10-11.log`).
+
+Final source import/export with common.ps1 `Assert-Godot`/`Invoke-ProjectGodot`
+to `artifacts/net-match-package-2026-10-11/Voidfront.exe`: logs
+`weekly-final-{import,export}-2026-10-11.log`. EXE SHA256
+`d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562`,
+PCK `ca457e6e5f0813851256dd734ad91ec68ae7930075367669846909b8b5326391`,
+DLL `4bbf602b1faccfc36a39339b9ad5f4224ecad4ae74228f19004df0c17ede7400`.
+The identical verified EXE/PCK/DLL are copied to `artifacts/package` after audit.
+
+`tools/run_net_match.ps1 -Out artifacts/net-match-final-2026-10-11 -PackagePath
+artifacts/net-match-package-2026-10-11/Voidfront.exe -Ticks 12000`: two real rendered
+processes51428/16808, ports57754/57755, seed7,delay2, session179648752. Both complete
+and confirm12000 ticks, winner0/hash`e359f92446957c54`;75/63checks,22/18inputs,
+39/31full phases and14PNG each. Exact stopped-worker debits/refund, flux visibility,
+research/Lancer, mixed-unit four-leg formation queues, damage6772/outcome6988.
+The defender army remains undamaged in Hold; this is scripted anchor reachability,
+not contested competitive1v1. Hostwall608.1437505s and peak resident
+272330752/267759616B are nonisolated process observations, not performance gates.
+
+Audit: `python tools/verify_net_match.py artifacts/net-match-final-2026-10-11 --out
+artifacts/net-match-final-audit-2026-10-11`. Full paired traces/canonical inputs,
+Debug+ten Release replays/player, command/phase/capture prefix snapshots, economic
+rules, exact queued goals and deliberate corruptions are checked; see its summary
+and independent `.voidfront-agent/review-net-match-2026-10-11.md` for executed counts.
+Final audit PASS: byte-identical VFR3 inputs and12000 state hashes,22 complete
+replays,106 unique Debug prefixes,70 phases+28 capture snapshots,19 deliberate
+corruptions rejected. Final hash `e359f92446957c54`. Prefix comparison includes
+all exported unit/economy/vision fields and exact command tick/result binding.
+The verifier was authored by the deterministic critic; playability critic also
+reviewed its source. Source fields/phase prefixes are compared rather than treating
+fixture booleans or screenshot names as independent semantic proof.
+
+Retained failure: `net-match-first-2026-10-11`/`net-match-first-package-preserved-2026-10-11`.
+Attacker475-salvage wait2000 failed; defender later fails combat after that abort.
+Both10000-tick recordings replay Debug/Release and traces agree; `failed-route-audit.json`
+and critic `failed-audit.json` retain rejection. Only fixture wait/cap changed;
+no costs, roster, fixed clock, route goals or SPEC budgets were weakened.
+
+Offline regression: `tools/capture.ps1 -Packaged -Queue -Ticks 1000 -Name
+weekly-queue-regression-2026-10-11`; `python tools/verify_queue_capture.py
+artifacts/weekly-queue-regression-2026-10-11.json --out artifacts/weekly-queue-audit-2026-10-11`.
+168ticks/17inputs/1014rows,15presentation phases,16 corruptions and Debug+ten
+Release replays pass. This capture used the first package; final export changes
+only the network fixture deadline/exact arrival predicate/defaultcap/report note.
+
+Actual screenshots reviewed by root and independent playability critic; report
+`.voidfront-agent/review-playability-2026-10-11.md`. Six-unit ordinal clutter and
+HUD occlusion remain; Lancer/health/role labels are improved. Acquisition PNGp0
+is empty dark ground; anchor-damage/outcome images supply distinct visible evidence.
+Winner confirmed6988 still waits for cap12000(250.6s) before local offline return;
+outcome-driven shared completion/rematch is next. Queues drained before fighting,
+so packaged pending-leg firing suspension is still open (Oct5 sim test is separate).
+No human play, movie/motion/audio/newSC2 comparison, LAN/Internet/soak, impaired
+economy rerun, frame/latency/representative hardware, balance or shipping acceptance.
+
 ## 2026-10-04 - authoritative queued-destination feedback and terminal network HUD
 
 The packaged client now displays selected live-owned units' accepted queued destinations: active 0, pending 1-4, cyan Move / amber AttackMove and a full-capacity label. Snapshot copies include goals/queued legs; connectors join destinations rather than navigation paths. Stop/Hold/replacement/deselection/restart remove the overlays as appropriate. Canonical rules, protocol12 and content are unchanged.

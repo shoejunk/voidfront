@@ -1,0 +1,807 @@
+{
+  "schema": 1,
+  "automation_id": "voidfront-nightly-development",
+  "task_id": "01a12c56-c6f2-7f00-89a6-e71584ce21e9",
+  "completed_utc": "2026-10-11T19:31:20.708688+00:00",
+  "baseline_commit": "6c635f5",
+  "branch": "dev",
+  "protocol": 12,
+  "authoritative_rules_changed": false,
+  "runtime_host": {
+    "peak_resident_bytes": [
+      272330752,
+      267759616
+    ],
+    "note": "Two real rendered processes, loopback only. Process observations do not establish performance or human-play acceptance.",
+    "package_sha256": "D34D36F3BE1A6C49C56525AE86469B92E4F417DDF0B43CF00DD80C385C4B0562",
+    "bridge_sha256": "4BBF602B1FACCFC36A39339B9AD5F4224ECAD4AE74228F19004DF0C17EDE7400",
+    "pck_sha256": "CA457E6E5F0813851256DD734AD91EC68AE7930075367669846909B8B5326391",
+    "utc": "2026-10-11T19:23:35.5372506Z",
+    "delay": 2,
+    "ports": [
+      57754,
+      57755
+    ],
+    "pids": [
+      51428,
+      16808
+    ],
+    "package_path": "C:\\dev\\voidfront\\artifacts\\net-match-package-2026-10-11\\Voidfront.exe",
+    "seed": 7,
+    "wall_seconds": 608.1437505,
+    "ticks": 12000,
+    "session": 179648752
+  },
+  "audit": {
+    "started_utc": "2026-10-11T19:23:56.603387+00:00",
+    "report_sha256": [
+      "69bd8f159427234432340ee98adfcea6de3cd81c10e3d9f3e68f40e6cddc192b",
+      "83ff08c5e302e5cccff5100bd9d57aab42c5b8630032ff38d428a9d172b378de"
+    ],
+    "verifier_sha256": "db0a1192d9a835ea8aa3d64fbe14bdc22be5333754acd3c77da87aa7a6838c1a",
+    "replay_sha256": [
+      "de0ea7b1448adf1ae3b6f68d6d8ef01fcb1d15fc7591229af409d7f339811ba3",
+      "de0ea7b1448adf1ae3b6f68d6d8ef01fcb1d15fc7591229af409d7f339811ba3"
+    ],
+    "host_sha256": "69957b6632b97d2bb0b83c961fd2ce1304e8ecf089024b54150387d50dd7acc9",
+    "client_processes": [
+      51428,
+      16808
+    ],
+    "udp_ports": [
+      57754,
+      57755
+    ],
+    "package": {
+      "package_sha256": "D34D36F3BE1A6C49C56525AE86469B92E4F417DDF0B43CF00DD80C385C4B0562",
+      "pck_sha256": "CA457E6E5F0813851256DD734AD91EC68AE7930075367669846909B8B5326391",
+      "bridge_sha256": "4BBF602B1FACCFC36A39339B9AD5F4224ECAD4AE74228F19004DF0C17EDE7400"
+    },
+    "terminal_capture_sha256": [
+      "e358b049d4cc6ba3b0eeb20fa4e2b1343e1f3d67dc294666250d511270a55065",
+      "003a008caeb1e73ce13de81c4beba54d668c3fba13449e49af6701c8e5a32735"
+    ],
+    "binaries": {
+      "Debug": "da35861b1d1a1a7d84fa379f1893d094c5eefd87c37f3f224d4aea36ee13b14f",
+      "Release": "6ac8a58dd9f1915a9800211bbad5b1ebf23c7c34e1d9d9234487bb2db4b5d0f4"
+    },
+    "runs": [
+      "Debug-p0-0",
+      "Debug-p1-0",
+      "Release-p0-0",
+      "Release-p0-1",
+      "Release-p0-2",
+      "Release-p0-3",
+      "Release-p0-4",
+      "Release-p0-5",
+      "Release-p0-6",
+      "Release-p0-7",
+      "Release-p0-8",
+      "Release-p0-9",
+      "Release-p1-0",
+      "Release-p1-1",
+      "Release-p1-2",
+      "Release-p1-3",
+      "Release-p1-4",
+      "Release-p1-5",
+      "Release-p1-6",
+      "Release-p1-7",
+      "Release-p1-8",
+      "Release-p1-9"
+    ],
+    "prefix_runs": [
+      "prefix-1",
+      "prefix-3",
+      "prefix-4",
+      "prefix-1962",
+      "prefix-1963",
+      "prefix-1965",
+      "prefix-1966",
+      "prefix-1968",
+      "prefix-1969",
+      "prefix-2105",
+      "prefix-2106",
+      "prefix-2108",
+      "prefix-2109",
+      "prefix-2111",
+      "prefix-2112",
+      "prefix-2114",
+      "prefix-2115",
+      "prefix-2207",
+      "prefix-2208",
+      "prefix-2210",
+      "prefix-2211",
+      "prefix-2321",
+      "prefix-2323",
+      "prefix-2324",
+      "prefix-3284",
+      "prefix-3285",
+      "prefix-3287",
+      "prefix-3288",
+      "prefix-3290",
+      "prefix-3291",
+      "prefix-3414",
+      "prefix-3415",
+      "prefix-3417",
+      "prefix-3418",
+      "prefix-3420",
+      "prefix-3421",
+      "prefix-3423",
+      "prefix-3424",
+      "prefix-3516",
+      "prefix-3517",
+      "prefix-3519",
+      "prefix-3520",
+      "prefix-3683",
+      "prefix-3685",
+      "prefix-3686",
+      "prefix-3833",
+      "prefix-3834",
+      "prefix-3836",
+      "prefix-3837",
+      "prefix-3839",
+      "prefix-3840",
+      "prefix-4037",
+      "prefix-4038",
+      "prefix-4040",
+      "prefix-4041",
+      "prefix-4139",
+      "prefix-4140",
+      "prefix-4141",
+      "prefix-4142",
+      "prefix-4143",
+      "prefix-4144",
+      "prefix-4145",
+      "prefix-4146",
+      "prefix-4391",
+      "prefix-4393",
+      "prefix-4394",
+      "prefix-5284",
+      "prefix-5285",
+      "prefix-5287",
+      "prefix-5288",
+      "prefix-5290",
+      "prefix-5291",
+      "prefix-5488",
+      "prefix-5489",
+      "prefix-5491",
+      "prefix-5492",
+      "prefix-5494",
+      "prefix-5495",
+      "prefix-5497",
+      "prefix-5498",
+      "prefix-5500",
+      "prefix-5501",
+      "prefix-5503",
+      "prefix-5504",
+      "prefix-5590",
+      "prefix-5591",
+      "prefix-5593",
+      "prefix-5594",
+      "prefix-5596",
+      "prefix-5597",
+      "prefix-5599",
+      "prefix-5600",
+      "prefix-5602",
+      "prefix-5603",
+      "prefix-5991",
+      "prefix-5992",
+      "prefix-5993",
+      "prefix-5994",
+      "prefix-5995",
+      "prefix-6255",
+      "prefix-6256",
+      "prefix-6258",
+      "prefix-6259",
+      "prefix-6425",
+      "prefix-6772",
+      "prefix-6988"
+    ],
+    "commands": [
+      {
+        "tick": 3,
+        "sequence": 1,
+        "player": 0,
+        "order": 4,
+        "x": 1920,
+        "z": 1920,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 3,
+        "sequence": 1,
+        "player": 1,
+        "order": 4,
+        "x": 14464,
+        "z": 8064,
+        "units": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "tick": 1965,
+        "sequence": 2,
+        "player": 1,
+        "order": 0,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "tick": 1968,
+        "sequence": 3,
+        "player": 1,
+        "order": 6,
+        "x": 14592,
+        "z": 9984,
+        "units": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "tick": 2108,
+        "sequence": 4,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 2111,
+        "sequence": 5,
+        "player": 1,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 2114,
+        "sequence": 6,
+        "player": 1,
+        "order": 8,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 2210,
+        "sequence": 7,
+        "player": 1,
+        "order": 1,
+        "x": 15232,
+        "z": 7956,
+        "units": [
+          7
+        ]
+      },
+      {
+        "tick": 2210,
+        "sequence": 8,
+        "player": 1,
+        "order": 1,
+        "x": 10112,
+        "z": 6164,
+        "units": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "tick": 2323,
+        "sequence": 9,
+        "player": 1,
+        "order": 4,
+        "x": 9344,
+        "z": 6272,
+        "units": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "tick": 3287,
+        "sequence": 2,
+        "player": 0,
+        "order": 0,
+        "x": 0,
+        "z": 0,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 3290,
+        "sequence": 3,
+        "player": 0,
+        "order": 6,
+        "x": 2048,
+        "z": 2560,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 3417,
+        "sequence": 4,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 3420,
+        "sequence": 5,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 3423,
+        "sequence": 6,
+        "player": 0,
+        "order": 8,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 3519,
+        "sequence": 7,
+        "player": 0,
+        "order": 1,
+        "x": 1152,
+        "z": 4372,
+        "units": [
+          8
+        ]
+      },
+      {
+        "tick": 3519,
+        "sequence": 8,
+        "player": 0,
+        "order": 1,
+        "x": 6783,
+        "z": 6164,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 3685,
+        "sequence": 9,
+        "player": 0,
+        "order": 4,
+        "x": 7552,
+        "z": 6272,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 3836,
+        "sequence": 10,
+        "player": 1,
+        "order": 0,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "tick": 3839,
+        "sequence": 11,
+        "player": 1,
+        "order": 9,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 4040,
+        "sequence": 12,
+        "player": 1,
+        "order": 10,
+        "x": 0,
+        "z": 0,
+        "units": [
+          3
+        ]
+      },
+      {
+        "tick": 4143,
+        "sequence": 13,
+        "player": 1,
+        "order": 1,
+        "x": 13440,
+        "z": 6676,
+        "units": [
+          7,
+          9
+        ]
+      },
+      {
+        "tick": 4144,
+        "sequence": 14,
+        "player": 1,
+        "order": 11,
+        "x": 13440,
+        "z": 5652,
+        "units": [
+          7,
+          9
+        ]
+      },
+      {
+        "tick": 4144,
+        "sequence": 15,
+        "player": 1,
+        "order": 12,
+        "x": 12416,
+        "z": 5652,
+        "units": [
+          7,
+          9
+        ]
+      },
+      {
+        "tick": 4144,
+        "sequence": 16,
+        "player": 1,
+        "order": 11,
+        "x": 12416,
+        "z": 4628,
+        "units": [
+          7,
+          9
+        ]
+      },
+      {
+        "tick": 4145,
+        "sequence": 17,
+        "player": 1,
+        "order": 12,
+        "x": 13440,
+        "z": 4628,
+        "units": [
+          7,
+          9
+        ]
+      },
+      {
+        "tick": 4393,
+        "sequence": 18,
+        "player": 1,
+        "order": 3,
+        "x": 0,
+        "z": 0,
+        "units": [
+          7,
+          9
+        ]
+      },
+      {
+        "tick": 5287,
+        "sequence": 10,
+        "player": 0,
+        "order": 0,
+        "x": 0,
+        "z": 0,
+        "units": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tick": 5290,
+        "sequence": 11,
+        "player": 0,
+        "order": 9,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 5491,
+        "sequence": 12,
+        "player": 0,
+        "order": 10,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 5494,
+        "sequence": 13,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 5497,
+        "sequence": 14,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 5500,
+        "sequence": 15,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 5503,
+        "sequence": 16,
+        "player": 0,
+        "order": 7,
+        "x": 0,
+        "z": 0,
+        "units": [
+          4
+        ]
+      },
+      {
+        "tick": 5993,
+        "sequence": 17,
+        "player": 0,
+        "order": 1,
+        "x": 2943,
+        "z": 5652,
+        "units": [
+          8,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "tick": 5993,
+        "sequence": 18,
+        "player": 0,
+        "order": 11,
+        "x": 2943,
+        "z": 6676,
+        "units": [
+          8,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "tick": 5994,
+        "sequence": 19,
+        "player": 0,
+        "order": 12,
+        "x": 3968,
+        "z": 6676,
+        "units": [
+          8,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "tick": 5994,
+        "sequence": 20,
+        "player": 0,
+        "order": 11,
+        "x": 3968,
+        "z": 7700,
+        "units": [
+          8,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "tick": 5994,
+        "sequence": 21,
+        "player": 0,
+        "order": 12,
+        "x": 2943,
+        "z": 7700,
+        "units": [
+          8,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      {
+        "tick": 6258,
+        "sequence": 22,
+        "player": 0,
+        "order": 2,
+        "x": 15232,
+        "z": 9236,
+        "units": [
+          8,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      }
+    ],
+    "capture_sha256": [
+      {
+        "harvesting": "6f4491ce32c59a035849bf65b2ce8671dc163529e6f33684ee6c09a4fa0caa5c",
+        "completed": "1ef1c2984e7f41aff6a2a8baa9dff25185e193769a9288bf0c6201c7a5f0c920",
+        "production-queued": "0722360a022a26efe6a124e7b790b0efcb672eb74af7e83d554b31b149e58448",
+        "refunded": "f1a2c3e166958ec6edbb2062872a39cae3cea729aa22dcd0e34394a9e15460a1",
+        "flux-revealed": "1c31284b8e289b798c24f1dd5d56cece9fc299ca1f0b3307d49bf216dab1f112",
+        "flux-mined": "4971912dda427b174d38729106e2eff5f4dff01a8f562fc21b1507bb6ce8fbe4",
+        "researching": "de72815e1dc48b35d64754ab4aeb1c0d0d205cdf357a27fac87eafb8bafc4be7",
+        "lancer-queued": "43f40dc8286ac35f4477a99d763fe62438ba54cc346effb75373413ad046517c",
+        "lancer": "13f894cdbe873f09ac5433a41310d3a5ab476fcb69f2c5d0119ce820deffc165",
+        "group-queued": "a7489531616fc034ab20b156c82ee9f19e29203c2aa2d60817ef6e40223683e7",
+        "group-arrived": "730e876d00dd3ac306a5a55dae583c9fd425c93534f01dcf7541cbbd7bcf7208",
+        "combat": "0a567e5710124d8f019d29fabfcce2241acdac168159403535859d049c011418",
+        "anchor-damaged": "d9fb6b04a9334a42425a3b3e3ace92b416ac2f4a87b42e7c5395c356de2fc10d",
+        "outcome": "20009b72ec00183995899a8475b3164e18575068ed50dc7492a10911bf71451f"
+      },
+      {
+        "harvesting": "3d05ffc4a31b463a066f615971054136e56a7461f533949b18c5ec20566aaf4f",
+        "completed": "a54ccdeafd8b22518d756069dbc7ec6c71173ca3b9930590f8766361a12432d0",
+        "production-queued": "db666f190ec655778a788115d3ba7081729567689090e8702400c0b28ef503b2",
+        "refunded": "28513805b4fac5d2a41386995ecefd0265c5e953138cbfd10ad9e54a0ef512e0",
+        "flux-revealed": "f204cf7960381c7a282487af924a1342b6bab58d8a387ad4f59720ee9ae167c8",
+        "flux-mined": "255442dd89d6974040e78cb69cd98778ffb487f33a04124deb02fc31efbe4506",
+        "researching": "22308bd757361cc49c6685de4aa8877e95a997788fe1d8617dbc94075c0c717d",
+        "lancer-queued": "af11e875104aa74ccdd9837349abe92a70d419d393895e7774efb23e99631c56",
+        "lancer": "6e1c92ed5ac23510cd1561df4fdb059641da7281567c5f25ae1f2d7d8b355084",
+        "group-queued": "52a453f2cb5b0867f9e4b5c080183d6c25727a1875270fd69d33b223e894f19d",
+        "group-arrived": "a0feefd076d02060905e231ca1150057fad2f6dda8f3d3a58a917db558eeb40e",
+        "combat": "7f7d40aef0cdfeeb4e1bccee56453567ca8940e99cf320f512c465ada7cbb7d8",
+        "anchor-damaged": "72e8d6764ce784bae87bd383d43d12ea558826ab622094c243272f921d678b2a",
+        "outcome": "d0fd2d67da0cd608db3163c015c812cb6b3d572aee4a63bee7fd81c1ac739adb"
+      }
+    ],
+    "purchases": [
+      {
+        "build": 1,
+        "strider": 6,
+        "lancer": 1,
+        "cancel": 1,
+        "research": 1
+      },
+      {
+        "build": 1,
+        "strider": 2,
+        "lancer": 1,
+        "cancel": 1,
+        "research": 1
+      }
+    ],
+    "full_phases_audited": 70,
+    "initial_resources": [
+      4000,
+      2000
+    ],
+    "ok": true,
+    "ticks": 12000,
+    "final_hash": "e359f92446957c54",
+    "winner": 0,
+    "rejected_corruptions": [
+      "trace-gap",
+      "trace-extra",
+      "trace-endpoint",
+      "shared-false-hash",
+      "unexecuted-input",
+      "input-sequence",
+      "input-order",
+      "input-delay",
+      "missing-phase",
+      "phase-hash",
+      "phase-resource",
+      "phase-queue",
+      "phase-target",
+      "phase-winner",
+      "replay-truncated",
+      "replay-trailing",
+      "replay-count",
+      "replay-trace-short",
+      "replay-trace-long"
+    ],
+    "completed_utc": "2026-10-11T19:27:29.133724+00:00",
+    "limitations": "Scripted two-process loopback economy match only; no human play, LAN/Internet, latency, performance, balance, production quality or shipping acceptance."
+  },
+  "package": "artifacts/package/Voidfront.exe",
+  "frozen_package": "artifacts/net-match-package-2026-10-11/Voidfront.exe",
+  "failed_run": "artifacts/net-match-first-2026-10-11",
+  "offline_queue_audit": "artifacts/weekly-queue-audit-2026-10-11",
+  "logs": [
+    "artifacts/weekly-build-approved-2026-10-11.log",
+    "artifacts/weekly-diagnostic-debug-2026-10-11.log",
+    "artifacts/weekly-package-2026-10-11.log",
+    "artifacts/weekly-final-import-2026-10-11.log",
+    "artifacts/weekly-final-export-2026-10-11.log"
+  ],
+  "reviews": [
+    ".voidfront-agent/review-net-match-2026-10-11.md",
+    ".voidfront-agent/review-playability-2026-10-11.md"
+  ],
+  "next": "Outcome-driven coordinated terminal confirmation, then shared setup/rematch and contested army plus pending-combat queue fixtures.",
+  "unrelated_changes_preserved": [
+    ".voidfront-agent/roadmap.md",
+    ".voidfront-agent/last-run.json"
+  ],
+  "completion": false,
+  "limitations": "Scripted two-process loopback economy match only; no human play, LAN/Internet, latency, performance, balance, production quality or shipping acceptance."
+}

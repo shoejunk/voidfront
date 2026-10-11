@@ -270,6 +270,8 @@ int main(int argc, char** argv) {
                 <<"],\"researched\":["<<sim.researched(0)<<','<<sim.researched(1)
                 <<"],\"population_used\":["<<sim.population_used(0)<<','<<sim.population_used(1)
                 <<"],\"population_reserved\":["<<sim.population_reserved(0)<<','<<sim.population_reserved(1)
+                <<"],\"command_results\":["<<static_cast<int>(sim.command_result(0))<<','<<static_cast<int>(sim.command_result(1))
+                <<"],\"result_sequences\":["<<sim.result_sequence(0)<<','<<sim.result_sequence(1)
                 <<"],\"population_cap\":"<<sim.population_cap(0)<<",\"structures\":[";
             bool economy_comma=false;
             for (const auto& s:sim.structures()) {
@@ -285,6 +287,14 @@ int main(int argc, char** argv) {
                 if(economy_comma) metrics<<','; economy_comma=true;
                 metrics<<"{\"id\":"<<d.id<<",\"x\":"<<d.x<<",\"z\":"<<d.z<<",\"remaining\":"<<d.remaining<<",\"kind\":"<<static_cast<int>(d.kind)<<'}';
             }
+            metrics<<"],\"vision\":[";
+            for(uint8_t player=0;player<2;++player) {
+                if(player) metrics<<',';
+                metrics<<'[';
+                const auto& cells=sim.vision(player);
+                for(size_t cell=0;cell<cells.size();++cell) { if(cell) metrics<<','; metrics<<static_cast<int>(cells[cell]); }
+                metrics<<']';
+            }
             metrics<<"],\"terrain\":[";
             bool comma=false;
             for (const auto& r:vf::map_terrain(map)) { if(comma) metrics<<','; comma=true;
@@ -294,6 +304,18 @@ int main(int argc, char** argv) {
                 metrics<<"{\"id\":"<<u.id<<",\"player\":"<<static_cast<int>(u.player)<<",\"start\":["<<initial[i].x<<','<<initial[i].z
                     <<"],\"end\":["<<u.x<<','<<u.z<<"],\"goal\":["<<u.goal_x<<','<<u.goal_z<<"],\"hp\":"<<u.hp
                     <<",\"order\":"<<static_cast<int>(u.order)<<",\"kind\":"<<static_cast<int>(u.kind)<<",\"cargo\":"<<u.cargo
+                    <<",\"max_hp\":"<<(u.kind==vf::UnitKind::Lancer?vf::kLancerHp:vf::Unit{}.hp+(u.kind==vf::UnitKind::Strider && sim.researched(u.player)?vf::kHardenedBonusHp:0))
+                    <<",\"target\":"<<u.target_id<<",\"target_structure\":"<<u.target_structure_id
+                    <<",\"moving\":"<<(u.moving?"true":"false")<<",\"cooldown\":"<<u.cooldown
+                    <<",\"cargo_kind\":"<<static_cast<int>(u.cargo_kind)<<",\"resource_id\":"<<u.resource_id
+                    <<",\"work_ticks\":"<<u.work_ticks<<",\"returning\":"<<(u.returning?"true":"false")<<",\"build_id\":"<<u.build_id
+                    <<",\"order_queue\":[";
+                for(size_t q=0;q<u.queue.size();++q) {
+                    if(q) metrics<<',';
+                    const auto& leg=u.queue[q];
+                    metrics<<"{\"order\":"<<static_cast<int>(leg.order)<<",\"x\":"<<leg.x<<",\"z\":"<<leg.z<<'}';
+                }
+                metrics<<']'
                     <<",\"first_motion_tick\":"<<first_motion[i]<<",\"last_motion_tick\":"<<last_motion[i]
                     <<",\"pending_idle_tail\":"<<idle[i]<<",\"max_pending_idle\":"<<max_idle[i]
                     <<",\"routing\":{\"next\":["<<u.next_x<<','<<u.next_z
