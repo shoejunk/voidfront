@@ -1,5 +1,40 @@
 # Voidfront progress
 
+## 2026-10-16 America/Los_Angeles - network session ends at authoritative outcome
+
+Baseline dev `1faaf72`; STOP/COMPLETE/run marker absent. Pre-existing uncommitted
+`.voidfront-agent/last-run.json` and `roadmap.md` edits left untouched.
+Goal: the Oct 11 exact next step - end the shared session when both peers confirm the
+winner instead of waiting for the tick cap (previously winner tick 6988 waited to 12000).
+
+Change (`net/session.cpp`, `net/session.hpp`): economy-map sessions (map 2) now set a
+mutable `end_tick` at the first tick the simulation reports a winner; `ticks` is only a
+safety cap. Finish/FinishAck/checksum confirmation, the timeout linger and Finishing/
+Complete state use `end_tick`. A peer's terminal tick that disagrees with the local
+outcome (or arrives for a tick we passed without a winner) is a session error. Added
+test-only `SessionOptions::tick_ms` (default 50 = 20 Hz, validated 1..50). Protocol and
+content ids unchanged; non-economy maps still run to the exact tick count.
+
+Verification: new `early_outcome_completion` session test (AI vs passive, cap 16000,
+1 ms pacing) completes with matching winner/hash and tick < cap. Debug and Release
+12/12 CTest. Separate-process peers (`artifacts/early-end-2026-10-16`, AI vs AI, seed 7,
+cap 16000, 50 ms pacing) both completed at tick 4662 with equal hash
+`1850656996833692764`, identical recordings and traces, and a Release headless replay
+(`--hash-mode state`) trace byte-identical to the network trace.
+
+Not done / gaps: the full `build/windows` Debug build of `voidfront_bridge` fails to link
+(godot-cpp template_debug /MTd vs bridge /MT, `_ITERATOR_DEBUG_LEVEL`); not investigated,
+appears independent of this change; the packaged Godot client and Oct 11 paired-client
+fixture were NOT rerun, so packaged early-exit/HUD behavior is unverified. No independent
+critic was run this session (recorded gap). Desync/disconnect-at-terminal cases for the
+new path rely on the existing suite; no new fault injection near the winner tick.
+
+**Exact next step:** rebuild the package and rerun the paired rendered economy fixture
+(`tools/run_net_match.ps1`) to confirm the clients leave the Finishing state at the winner
+tick and unlock input/restart; fix the Debug bridge link config; then coordinated
+setup/rematch and contested opposing-army queue fixtures, then direct full-match play.
+All SPEC gates remain open. No COMPLETE.md.
+
 ## 2026-10-11 12:06 America/Los_Angeles - network economy match verification
 
 Baseline dev `6c635f5`, ahead/behind 0/0; STOP/COMPLETE/prior marker absent.

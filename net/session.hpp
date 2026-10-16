@@ -15,6 +15,7 @@ struct SessionOptions {
     uint32_t protocol=vf::kLockstepProtocolVersion, desync=UINT32_MAX, exit_tick=UINT32_MAX;
     uint64_t session=0, content=vf::kLockstepContentId;
     uint32_t input_delay=2;
+    uint32_t tick_ms=50; // Local pacing period; 50 is the 20 Hz product rate. Smaller values are for tests only.
     uint32_t map=0; // vf::Map; Economy runs the 64x48 economy match (count is forced to 3)
 };
 struct SessionStats {

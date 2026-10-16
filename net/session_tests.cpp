@@ -275,6 +275,25 @@ void post_advance_failure_retains_frames() {
 }
 }
 
+// Economy matches end at the first authoritative winner tick instead of the cap.
+void early_outcome_completion() {
+    Ports ports;
+    auto o = options(ports, 16000);
+    for (auto& side : o) { side.map = 2; side.count = 3; side.tick_ms = 1; side.timeout = 1500; }
+    Session first(o[0], empty), second(o[1], make_ai_commands);
+    const auto deadline = Clock::now() + std::chrono::seconds(60);
+    while (first.status() != SessionStatus::Complete || second.status() != SessionStatus::Complete) {
+        check(Clock::now() < deadline, "early outcome watchdog: tick " + std::to_string(first.sim().tick()) +
+            " winner " + std::to_string(first.sim().winner()));
+        first.poll(); second.poll(); healthy(first); healthy(second);
+        std::this_thread::yield();
+    }
+    check(first.sim().winner() == 1 && second.sim().winner() == 1, "early session did not reach the authoritative winner");
+    check(first.stats().tick == second.stats().tick && first.stats().tick < 16000, "session ran to the cap after the outcome");
+    check(first.stats().hash == second.stats().hash && first.stats().confirmed_ticks == first.stats().tick,
+        "early terminal state not confirmed identically");
+}
+
 int main() {
     try {
         lifetime_and_cancel();
@@ -282,6 +301,7 @@ int main() {
         successful_pair(true);
         for (int mode = 0; mode < 3; ++mode) rejected_provider(mode);
         post_advance_failure_retains_frames();
+        early_outcome_completion();
         std::cout << "Session API: lifetime/cancel, empty/custom providers, canonical replay, overdue polling, provider errors and failed applied prefix passed\n";
         return 0;
     } catch (const std::exception& error) {

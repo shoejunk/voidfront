@@ -17,7 +17,6 @@ constexpr uint32_t kMagic = 0x32504656;
 enum class Kind : uint32_t { Hello=1, Frame=2, Ack=3, Finish=4, FinishAck=5, Checksum=6, ChecksumAck=7 };
 constexpr size_t kHeaderBytes=44, kMaxDatagram=60000;
 constexpr auto kRetry = std::chrono::milliseconds(40);
-constexpr auto kTickPeriod = std::chrono::milliseconds(50);
 void put(std::vector<uint8_t>& b,uint64_t n,size_t width) {
     for(size_t i=0;i<width;++i) b.push_back(static_cast<uint8_t>(n>>(8*i)));
 }
@@ -95,7 +94,7 @@ double milliseconds(Clock::duration duration) { return std::chrono::duration<dou
 void validate_session_options(const SessionOptions& o) {
     if(o.player>1 || o.port<1024 || o.port>65535 || o.remote_port<1024 || o.remote_port>65535 || o.port==o.remote_port)
         throw std::invalid_argument("player must be 0/1; distinct ports must be 1024..65535");
-    if((o.map!=0 && o.map!=2) || o.session==0 || o.ticks<1 || o.ticks>kMaxSessionTicks || o.count<1 || o.count>250 || o.timeout<200 || o.timeout>60000)
+    if((o.map!=0 && o.map!=2) || o.session==0 || o.ticks<1 || o.ticks>kMaxSessionTicks || o.count<1 || o.count>250 || o.timeout<200 || o.tick_ms<1 || o.tick_ms>50 || o.timeout>60000)
         throw std::invalid_argument("session must be nonzero; ticks 1..100000, count 1..250, timeout-ms 200..60000");
     if((o.desync!=UINT32_MAX && (o.desync==0 || o.desync>o.ticks)) || (o.exit_tick!=UINT32_MAX && o.exit_tick>o.ticks))
         throw std::invalid_argument("fault injection tick outside match");
@@ -134,6 +133,9 @@ struct Session::Impl {
     bool joined=false,initialized=false,peer_ready=false,peer_finished=false,finish_acked=false;
     bool hello_sent=false,finish_sent=false;
     std::optional<uint64_t> pending_finish;
+    // Match length. Economy matches end at the first authoritative winner tick, which
+    // both peers derive identically; o.ticks is then only a safety cap.
+    uint32_t end_tick=o.ticks, pending_finish_tick=0;
     Clock::time_point progress=origin,last_hello=origin-kRetry,last_finish=origin-kRetry,next_due=origin;
     std::optional<Clock::time_point> complete_since,stall_since;
 
@@ -197,7 +199,7 @@ struct Session::Impl {
         const auto now=Clock::now();
         if(o.exit_tick==stats.tick) throw std::runtime_error("injected disconnect at tick "+std::to_string(o.exit_tick));
         if(!complete_since && now-progress>std::chrono::milliseconds(o.timeout))
-            throw std::runtime_error("timeout/disconnect waiting for "+std::string(!joined?"handshake":!stats.session_ready_ms?"initial input readiness":stats.tick==o.ticks?"all checksums/terminal confirmation":"missing input/checksum")+" at tick "+std::to_string(stats.tick));
+            throw std::runtime_error("timeout/disconnect waiting for "+std::string(!joined?"handshake":!stats.session_ready_ms?"initial input readiness":stats.tick==end_tick?"all checksums/terminal confirmation":"missing input/checksum")+" at tick "+std::to_string(stats.tick));
         if(!peer_ready && now-last_hello>=kRetry) { hello(hello_sent); hello_sent=true; last_hello=now; }
         if(joined && !initialized) {
             for(uint32_t tick=0;tick<std::min(o.input_delay,o.ticks);++tick) create_input(tick,0,true);
@@ -213,7 +215,7 @@ struct Session::Impl {
                 stats.session_ready_ms=milliseconds(now-origin); next_due=now; progress=now;
             }
         }
-        if(stats.session_ready_ms && stats.tick<o.ticks && now>=next_due && generated_source!=stats.tick) {
+        if(stats.session_ready_ms && stats.tick<end_tick && now>=next_due && generated_source!=stats.tick) {
             // Sampling is tied to deterministic source state, never packet arrival.
             // It occurs at this tick's deadline before executing that tick.
             if(stats.tick+o.input_delay<o.ticks) create_input(stats.tick+o.input_delay,stats.tick,false);
@@ -237,8 +239,8 @@ struct Session::Impl {
             }
             stats.max_unacked_frames=std::max(stats.max_unacked_frames,outstanding_inputs);
             stats.max_unacked_checksums=std::max(stats.max_unacked_checksums,outstanding_hashes);
-            if(stats.tick==o.ticks && stats.confirmed_ticks==o.ticks && now-last_finish>=kRetry) {
-                tagged(Kind::Finish,o.ticks,stats.hash,finish_sent); finish_sent=true; last_finish=now;
+            if(stats.tick==end_tick && stats.confirmed_ticks==end_tick && now-last_finish>=kRetry) {
+                tagged(Kind::Finish,end_tick,stats.hash,finish_sent); finish_sent=true; last_finish=now;
             }
         }
         // Bounded receive drain plus progress-based timeout defeats irrelevant traffic floods.
@@ -297,14 +299,15 @@ struct Session::Impl {
                     }
                     reconcile();
                 } else {
-                    if(tick!=o.ticks) throw std::runtime_error("invalid terminal tick");
+                    if(tick==0 || tick>o.ticks || (tick!=end_tick && (end_tick<o.ticks || stats.tick>=tick))) throw std::runtime_error("invalid terminal tick");
                     if(kind==Kind::Finish) {
                         if(tick>stats.tick && tick-stats.tick>kVerificationLag) throw std::runtime_error("premature terminal confirmation");
                         if(pending_finish && *pending_finish!=hash) throw std::runtime_error("conflicting terminal hash");
-                        pending_finish=hash;
-                        if(stats.tick==o.ticks && hash!=stats.hash) mismatch(tick,stats.hash,hash);
+                        pending_finish=hash; pending_finish_tick=tick;
+                        if(tick!=end_tick && stats.tick>=tick) throw std::runtime_error("terminal tick disagrees with local outcome");
+                        if(stats.tick==end_tick && hash!=stats.hash) mismatch(tick,stats.hash,hash);
                     } else {
-                        if(!finish_sent || stats.tick!=o.ticks) throw std::runtime_error("premature terminal acknowledgment");
+                        if(!finish_sent || stats.tick!=end_tick) throw std::runtime_error("premature terminal acknowledgment");
                         if(hash!=stats.hash) mismatch(tick,stats.hash,hash);
                         if(!finish_acked) { finish_acked=true; progress=Clock::now(); }
                     }
@@ -312,7 +315,7 @@ struct Session::Impl {
             }
         }
         const auto due_now=Clock::now();
-        if(stats.session_ready_ms && stats.tick<o.ticks && due_now>=next_due && generated_source==stats.tick) {
+        if(stats.session_ready_ms && stats.tick<end_tick && due_now>=next_due && generated_source==stats.tick) {
             const auto tick=stats.tick;
             const bool ready=local[tick].frame && remote[tick] && stats.tick-stats.confirmed_ticks<kVerificationLag;
             if(!ready) {
@@ -351,28 +354,30 @@ struct Session::Impl {
                     if(*peer_hashes[stats.tick]!=stats.hash) mismatch(stats.tick,stats.hash,*peer_hashes[stats.tick]);
                     tagged(Kind::ChecksumAck,stats.tick,stats.hash);
                 }
+                if(o.map==2 && lock.sim().winner()!=-1 && stats.tick<end_tick) end_tick=stats.tick;
                 reconcile();
                 stats.max_verification_lag=std::max(stats.max_verification_lag,stats.tick-stats.confirmed_ticks);
                 progress=executed;
                 // Preserve the 20 Hz phase under ordinary polling jitter; this
                 // can produce one shorter phase-correction interval. Reset after
                 // a missing-data stall or a whole missed slot instead of catching up.
-                next_due+=kTickPeriod;
-                if(resumed_after_stall || next_due<=executed) next_due=executed+kTickPeriod;
+                next_due+=std::chrono::milliseconds(o.tick_ms);
+                if(resumed_after_stall || next_due<=executed) next_due=executed+std::chrono::milliseconds(o.tick_ms);
             }
         }
-        if(stats.tick==o.ticks && stats.confirmed_ticks==o.ticks && pending_finish) {
-            if(*pending_finish!=stats.hash) mismatch(o.ticks,stats.hash,*pending_finish);
+        if(stats.tick==end_tick && stats.confirmed_ticks==end_tick && pending_finish) {
+            if(pending_finish_tick!=end_tick) throw std::runtime_error("terminal tick disagrees with local outcome");
+            if(*pending_finish!=stats.hash) mismatch(end_tick,stats.hash,*pending_finish);
             if(!peer_finished) { peer_finished=true; progress=Clock::now(); }
-            tagged(Kind::FinishAck,o.ticks,stats.hash);
+            tagged(Kind::FinishAck,end_tick,stats.hash);
             pending_finish.reset();
         }
-        if(stats.tick==o.ticks && stats.confirmed_ticks==o.ticks && peer_finished && finish_acked && !complete_since)
+        if(stats.tick==end_tick && stats.confirmed_ticks==end_tick && peer_finished && finish_acked && !complete_since)
             complete_since=Clock::now();
         // Full-timeout linger answers retried Finish and Checksum packets after loss.
         if(complete_since && Clock::now()-*complete_since>=std::chrono::milliseconds(o.timeout)) {
             state=SessionStatus::Complete; socket.reset();
-        } else if(stats.tick==o.ticks) state=SessionStatus::Finishing;
+        } else if(stats.tick==end_tick) state=SessionStatus::Finishing;
         else if(!joined) state=SessionStatus::Handshake;
         else if(!stats.session_ready_ms) state=SessionStatus::Readiness;
         else state=stall_since ? SessionStatus::Stalled : SessionStatus::Running;
