@@ -1,5 +1,30 @@
 # Voidfront progress
 
+## 2026-10-17 America/Los_Angeles - packaged early-end verification
+
+Baseline dev `d4f435a`; STOP/COMPLETE/run marker absent; marker acquired exclusively and
+released at the end. Pre-existing `last-run.json`/`roadmap.md` edits left unstaged.
+Goal: close the Oct 16 exact next step (packaged confirmation of the early session end).
+
+Result: rebuilt the Release package and reran the paired rendered economy fixture
+(`tools/run_net_match.ps1 -Out artifacts/net-match-2026-10-17`, cap 12000, seed 7, delay 2).
+Both clients completed at the authoritative winner tick **6988** (previously waited to
+12000), winner 0, matching hash `4938008c163e2fa7`, byte-identical VFR recordings, 0 stalls.
+`tools/verify_net_match.py` required terminal tick == requested cap; relaxed to
+final == confirmed <= requested. The audit then passes (70 phases, Debug+Release replays,
+19 corruption rejections; `artifacts/net-match-2026-10-17/audit.json`).
+Debug bridge: the earlier link failure did not reproduce; full `build/windows` Debug builds
+and Debug/Release CTest are 12/12 each. Cause of the earlier failure not identified
+(probably a stale partial configuration).
+
+Gaps: no independent critic this run; input/restart unlock after the early end was inferred
+from clean exit and state `complete` at 6988, not exercised by a rematch; scripted attacker
+vs holding opponent only; no human play, contested combat, performance or shipping gates.
+
+**Exact next step:** coordinated setup/rematch over the shared session, then contested
+opposing-army and pending-combat queue fixtures, then direct full-match play. All SPEC gates
+remain open. No COMPLETE.md.
+
 ## 2026-10-16 America/Los_Angeles - network session ends at authoritative outcome
 
 Baseline dev `1faaf72`; STOP/COMPLETE/run marker absent. Pre-existing uncommitted

@@ -164,7 +164,7 @@ def audit_reports(reports, raws):
         require(network['state'] == 'complete' and not network['error'] and network['evidence_complete'] and network['ready'], 'session not complete/confirmed')
         require(network['sent'] > 0 and network['received'] > 0, 'missing real transport traffic')
         n = network['recorded_ticks']
-        require(n == report['final_tick'] == network['tick'] == network['confirmed_ticks'] == network['requested_ticks'], 'terminal tick counts differ')
+        require(n == report['final_tick'] == network['tick'] == network['confirmed_ticks'] <= network['requested_ticks'], 'terminal tick counts differ')
         require([r['tick'] for r in network['trace']] == list(range(1, n + 1)), 'all-tick trace gap/length')
         for row in network['trace']:
             hash_value(row['hash'])
