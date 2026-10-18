@@ -121,7 +121,7 @@ func finish_exploration() -> void:
 	await key(KEY_R)
 	check(game.current.hash == initial.hash and game._vision_at(22.5, 32.5) == 0, "Restart resets economy and explored fog identically")
 	check(game.camera_target.x < 16 and game.selected.is_empty(), "Restart restores base camera and clears selection")
-	var report := {"ok": errors.is_empty(), "mode": "exploration", "ticks": final_tick, "checks": checks, "errors": errors, "trace": trace, "inputs": inputs, "vision_samples": vision_samples, "captures": captures, "replay_path": replay_path}
+	var report := {"ok": errors.is_empty(), "mode": "exploration", "initial_snapshot": initial, "ticks": final_tick, "checks": checks, "errors": errors, "trace": trace, "inputs": inputs, "vision_samples": vision_samples, "captures": captures, "replay_path": replay_path}
 	var output := FileAccess.open(game.report_path, FileAccess.WRITE)
 	if output: output.store_string(JSON.stringify(report, "\t"))
 	print("VOIDFRONT_EXPLORATION ok=", errors.is_empty(), " errors=", errors)

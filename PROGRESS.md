@@ -1,5 +1,71 @@
 # Voidfront progress
 
+## 2026-10-18 America/Los_Angeles - symmetric-map package integration verified
+
+Baseline dev `a313f4f`; STOP/COMPLETE/prior marker absent. Exclusive task
+`01a15060-4c1e-78c1-abf5-4b9ea07b7c33`; existing roadmap/last-run edits preserved.
+Closes the latest package-validation handoff after the map symmetry fix. No rules,
+AI policy, content identity or protocol changed this run.
+
+Repairs: exploration reports retain initial setup; auditor binds replay protocol,
+content and map instead of stale protocol9, with five setup/trace corruptions.
+Scale adapter test compares metadata across ordinary/scale resets instead of
+stale protocol4 (3591checks pass). Paired audit requires terminal==first outcome,
+replays the preceding no-winner tick, binds/bounds both caps and rejects five new
+endpoint/cap corruptions at the exact intended assertions. Independent source
+review reproduces old Oct11 padded-terminal rejection and Oct17 early-end success.
+Specialists authored their auditor fixes; root reviewed exploration/scale changes,
+and integration critic independently reviewed the paired-auditor changes.
+
+Pinned Godot4.7.2/godot-cpp, MSVC Debug/Release12/12 CTest each,15 malformed
+replays/7output aliases per configuration,2000cross-build hashes and ten repeats
+pass. Logs `artifacts/weekly-verify-approved-2026-10-18.log` and
+`weekly-package-2026-10-18.log`. Initial sandbox MSVC helper stall retained;
+only the owned build tree was stopped and unchanged approved verification passed.
+Same-process bridge contract passes. Initial scale-test failure/repaired source
+rerun retained in `weekly-bridge-scale*-2026-10-18.log`. Source-only scale test
+repair postdates export; packaged gameplay sources/binaries were unchanged.
+
+Package `artifacts/package/Voidfront.exe` and frozen identical
+`artifacts/symmetry-package-2026-10-18`: PCK
+`9e4fba81f6b4e5031c6ef82aefcdec017b5f2385fcfb3e8ddad482632d44942e`,DLL
+`eb274014308b344bf3997f80ac3627579f92d4c00bbfa8f557c92a98d957eabd`.
+Exploration3032ticks/36checks,5human+14AI inputs,11matching replays/5corruptions;
+player victory4432ticks/winner0/hash`6fb7a43ab1ef02f3`,38736unitrows,
+11replays/11corruptions and input restart pass. Both use8ticks/rendered frame.
+
+Real rendered clients22732/15052,UDP60333/60334,seed7,delay2 complete/confirm
+7088,winner0/hash`c68e8d4f139b2618`,below cap12000.75/63checks,22/18inputs,
+39/31phases,14captures each: exact build/production/refund,flux/research/Lancer,
+four queued formation legs and anchor victory. Independent audit passes22full
+replays,105native prefixes,70phases/28capture snapshots and24corruptions. Native
+7087 has no winner;7088 first winner. Both VFR3 streams byte-identical. Evidence
+`artifacts/critic-symmetry-net-audit-2026-10-18/summary.json`. Host361.727s,
+resident224219136/222138368B are overlapping process observations,not performance.
+
+Root/independent critic opened actual PNGs: fog/scouting/defeat,victory/restart,
+formation queues,992HP anchor damage and terminal COMPLETE/offline-return text.
+P0 combat/counterattack PNGs miss the army; all opposing combat armies remain
+fullHP in network fixture. Scripted anchor attack is not contested1v1. Six-unit
+overlay clutter/HUD occlusion,blockout art/reused rigs remain. No movie,motion,
+audio,newSC2,human,impairment/physical-network/soak,performance or shipping proof.
+Independent reviews `.voidfront-agent/review-symmetry-{integration,network}-2026-10-18.md`.
+
+Balance correction: prior30/30P0 does not isolate ID first-mover bias. AI Foundry
+fallback mirrors x but not z; service positions depend on global worker IDs.
+Critic300tick Debug/Release traces match but paired goals/cargo already differ
+before combat. Exact cause of eventual winner remains unisolated.
+
+Exact next: make AI Foundry and worker service policies rotation partners; test
+mirrored commands and vary AI/build parameters before changing iteration priority.
+Then coordinated setup/rematch,successful-pair R/offline input,contested armies
+and pending-combat queues,direct full games. Add early-outcome Finish/FinishAck
+loss,wrong terminal tick/hash,disconnect,cap-without-winner and accepted-tail
+prefix tests; establish explicit transport compatibility (session files are not
+in current content digest). Every crowd/frame/response/content/art/audio/human/
+balance/SPEC gate stays open. No COMPLETE.md; automation continues.
+
+
 ## 2026-10-18 America/Los_Angeles - economy map symmetry (balance fix)
 
 Baseline dev `9619485`; STOP/COMPLETE absent; run marker acquired exclusively and released at the end.
@@ -1011,3 +1077,13 @@ deterministic collision/replanning work,then a genuine128x128 benchmark for grou
 orders/repeated orders/replans before accepting crowd routing. Full game/economy,
 network scale,production content and shipping remain mandatory. No COMPLETE.md;
 automation stays active and this game continues.
+
+## 2026-10-18 11:58 America/Los_Angeles - symmetric-map package integration goals
+
+Baseline dev `a313f4f`; STOP/COMPLETE/prior marker absent. Exclusive task
+`01a15060-4c1e-78c1-abf5-4b9ea07b7c33`. Preserve existing roadmap/last-run edits.
+Goal: rebuild pinned Debug/Release and package, exercise client smoke/capture paths
+on the rotation-symmetric economy layout, then audit real paired clients through
+terminal confirmation. Repair demonstrated integration defects without changing
+balance/rules speculatively. Independent critics will inspect source and actual
+retained evidence. Mirror first-mover bias and all SPEC gates remain open.

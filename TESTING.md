@@ -1,5 +1,40 @@
 # Verification ledger
 
+## 2026-10-18 - symmetric-map package and first-outcome audit
+
+`tools/verify.ps1` then `tools/package.ps1`: pinned Debug/Release12/12 each,
+malformed/output-alias/cross-build/repeat checks pass. Logs,package hashes and
+limits in latest PROGRESS and `.voidfront-agent/symmetry-results-2026-10-18.json`.
+Godot `bridge_network_test.gd` passes. `bridge_scale_test.gd` initially fails only
+stale protocol4; repaired source run passes3591checks. Test-only repair postdates
+export; packaged gameplay files are unchanged. Failed and repaired logs retained.
+
+Executed current-layout captures/audits:
+
+- `tools/capture.ps1 -Packaged -Exploration -Ticks 10000 -Name weekly-exploration-2026-10-18`
+- `python tools/verify_exploration_capture.py artifacts/weekly-exploration-2026-10-18.json --out artifacts/weekly-exploration-audit-2026-10-18`
+- `tools/capture.ps1 -Packaged -Victory -Ticks 12000 -Name weekly-victory-2026-10-18`
+- `python tools/verify_match_capture.py artifacts/weekly-victory-2026-10-18.json --out artifacts/weekly-victory-audit-2026-10-18`
+- `tools/run_net_match.ps1 -Out artifacts/net-match-symmetry-2026-10-18 -PackagePath artifacts/symmetry-package-2026-10-18/Voidfront.exe`
+- `python tools/verify_net_match.py artifacts/net-match-symmetry-2026-10-18 --out artifacts/critic-symmetry-net-audit-2026-10-18`
+
+Exploration3032ticks/36checks/11replays/5corruptions. Offline victory4432ticks,
+winner0/hash6fb7a43ab1ef02f3,38736unitrows/11replays/11corruptions; restart passes.
+Both accelerated8ticks/frame. Paired20Hz clients complete first winner7088,
+hashc68e8d4f139b2618,cap12000;22fullreplays/105prefixes/70phases/28captures/
+24corruptions pass. Native7087 has no winner; coherent terminal padding rejects
+at the exact intended assertion. Both canonical streams byte-identical.
+
+Actual primary/critic PNG inspection confirms fog/retreat,defeat,victory/restart,
+formations,anchor damage and completed terminal UI. P0 combat/counterattack PNGs
+miss the army. Held defender and all attacker combat units remain fullHP; no
+contested1v1 claim. Source ownership and independent checks in dated reviews.
+No new movie/audio/human/SC2/LAN/Internet/impairment/soak/performance/shipping proof.
+Offline captures overlap paired run; process time/memory are diagnostics only.
+All existing crowd/budget/quality failures remain. PROGRESS corrects the earlier
+unisolated ID-bias diagnosis and states exact next tests/gameplay work.
+
+
 ## 2026-10-11 - paired economy route and accurate unit feedback
 
 Pinned `tools/verify.ps1`: MSVC Debug/Release12/12 CTest each,15 malformed replays

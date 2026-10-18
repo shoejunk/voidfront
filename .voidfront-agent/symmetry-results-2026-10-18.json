@@ -1,0 +1,52 @@
+{
+  "baseline": "a313f4f",
+  "task_id": "01a15060-4c1e-78c1-abf5-4b9ea07b7c33",
+  "recorded_utc": "2026-10-18T19:14:59.804803+00:00",
+  "rules_changed": false,
+  "debug_ctest": "12/12",
+  "release_ctest": "12/12",
+  "package": {
+    "package_sha256": "D34D36F3BE1A6C49C56525AE86469B92E4F417DDF0B43CF00DD80C385C4B0562",
+    "pck_sha256": "9E4FBA81F6B4E5031C6EF82AEFCDEC017B5F2385FCFB3E8DDAD482632D44942E",
+    "bridge_sha256": "EB274014308B344BF3997F80AC3627579F92D4C00BBFA8F557C92A98D957EABD"
+  },
+  "network": {
+    "ticks": 7088,
+    "requested_ticks": 12000,
+    "first_outcome_tick": 7088,
+    "final_hash": "c68e8d4f139b2618",
+    "winner": 0,
+    "rejected_corruptions": [
+      "trace-gap",
+      "trace-extra",
+      "trace-endpoint",
+      "shared-false-hash",
+      "unexecuted-input",
+      "input-sequence",
+      "input-order",
+      "input-delay",
+      "missing-phase",
+      "phase-hash",
+      "phase-resource",
+      "phase-queue",
+      "phase-target",
+      "phase-winner",
+      "replay-truncated",
+      "replay-trailing",
+      "replay-count",
+      "post-outcome-terminal",
+      "cap-zero",
+      "cap-overflow",
+      "cap-below-terminal",
+      "paired-cap-drift",
+      "replay-trace-short",
+      "replay-trace-long"
+    ]
+  },
+  "full_replays": 22,
+  "prefix_replays": 105,
+  "network_audit": "artifacts/critic-symmetry-net-audit-2026-10-18/summary.json",
+  "exploration_audit": "artifacts/weekly-exploration-audit-2026-10-18/summary.json",
+  "victory_audit": "artifacts/weekly-victory-audit-2026-10-18/summary.json",
+  "remaining": "AI policy/service rotation; contested armies; successful-pair offline return/rematch; early terminal faults; all SPEC quality gates"
+}

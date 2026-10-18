@@ -34,12 +34,15 @@ func check_population(bridge: RefCounted, count: int) -> void:
 
 func _initialize() -> void:
 	var bridge: RefCounted = ClassDB.instantiate("VoidfrontBridge")
+	var compatibility: Dictionary = bridge.snapshot()
 	for count in [100, 250]:
 		check(bridge.reset_scale(42, count, false), "scale reset accepts population")
 		check_population(bridge, count)
 		var initial: Dictionary = bridge.snapshot()
 		check(initial.tick == 0, "reset begins at tick zero")
-		check(initial.content_id.length() == 16 and initial.protocol == 4, "replay compatibility metadata")
+		check(initial.content_id.length() == 16 and initial.content_id == compatibility.content_id
+			and initial.protocol > 0 and initial.protocol == compatibility.protocol,
+			"scale reset preserves replay compatibility metadata")
 		# The leading right edge of the friendly formation has open space to move.
 		var id: int = count
 		var before: Dictionary = initial.units[id - 1]

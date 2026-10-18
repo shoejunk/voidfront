@@ -1,5 +1,24 @@
 # Continuing roadmap
 
+## 2026-10-18 current checkpoint - symmetric-map package verified
+
+Latest PROGRESS/TESTING supersede older terminal-next notes: actual packaged
+peers complete/confirm first winner7088 below cap12000;22full native replays,
+105prefixes and24corruptions pass. New-map exploration/AI defeat,player victory/
+restart and queued economy-network route retain package proof. Stale exploration/
+scale checks repaired; no rules changed. Independent critics inspected actual
+source/captures. Held armies remain undamaged; human acceptance is absent.
+
+Exact next: correct/test rotational AI Foundry and worker service policies,
+then vary AI/build parameters before attributing/changing lower-ID iteration.
+Map symmetry does not make these policies symmetric; prior30/30P0 did not isolate
+first-mover bias. Then coordinated setup/rematch,successful-pair offline return/
+input,contested armies/pending-combat queues,direct complete games. Early-outcome
+fault/tail-prefix and transport compatibility tests remain. Preserve every crowd/
+frame/response,production content,art/audio,physical-network/soak,human/balance and
+SPEC shipping gate. No COMPLETE.md.
+
+
 ## 2026-10-11 checkpoint - network route and unit feedback
 
 Paired rendered economy clients now retain canonical evidence through exact

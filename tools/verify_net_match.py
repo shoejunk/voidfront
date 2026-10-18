@@ -156,6 +156,8 @@ def snapshot_binding(snapshot, report):
 def audit_reports(reports, raws):
     commands = [parse_replay(raw, report) for raw, report in zip(raws, reports, strict=True)]
     require(raws[0] == raws[1], 'two applied VFR3 recordings differ')
+    caps = [report['network']['requested_ticks'] for report in reports]
+    require(caps[0] == caps[1] and all(1 <= cap <= 100000 for cap in caps), 'invalid/mismatched requested session caps')
     for p, report in enumerate(reports):
         network, fixture = report['network'], report['fixture']
         require(report['ok'] and report['player'] == fixture['player'] == network['player'] == p, 'fixture/player failure')
@@ -175,6 +177,8 @@ def audit_reports(reports, raws):
         phases = fixture['phases']
         require([s['label'] for s in phases] == phase_labels(p), 'required full phase snapshots missing/reordered')
         require(phases[0]['snapshot'] == initial and phases[-1]['tick'] <= fixture['final_snapshot']['tick'], 'phase endpoint mismatch')
+        require(phases[-1]['tick'] == fixture['final_snapshot']['tick'] == n,
+                'session terminal tick must equal authoritative outcome tick')
         require([s['tick'] for s in phases] == sorted(s['tick'] for s in phases), 'phase tick order')
         for phase in phases:
             require(phase['tick'] == phase['snapshot']['tick'], 'phase tick/snapshot mismatch')
@@ -366,6 +370,7 @@ def audit_semantics(reports, commands, states):
         outcome = row('outcome')
         anchors = {s['player']: s['hp'] for s in outcome['structures'] if s['kind'] == 0}
         require(outcome['winner'] == 0 and anchors[0] > 0 and anchors[1] == 0, 'anchor destruction/victory mismatch')
+        require(states[outcome['tick'] - 1]['winner'] == -1, 'session did not stop at first authoritative outcome')
     return dict(purchases=purchased, full_phases_audited=phases_reviewed, initial_resources=total)
 
 
@@ -430,6 +435,7 @@ def main():
         ticks.update(s['tick'] for s in report['fixture']['phases'])
         ticks.update(i['event_tick'] for i in report['fixture']['inputs'])
         ticks.add(report['fixture']['final_snapshot']['tick'])
+        ticks.add(report['fixture']['phases'][-1]['tick'] - 1)
         ticks.update(c['tick'] for c in report['fixture']['captures'])
     for c in commands:
         if c['order'] == 9:
@@ -463,7 +469,8 @@ def main():
     rejected = []
     for name in ('trace-gap', 'trace-extra', 'trace-endpoint', 'shared-false-hash', 'unexecuted-input', 'input-sequence',
                  'input-order', 'input-delay', 'missing-phase', 'phase-hash', 'phase-resource',
-                 'phase-queue', 'phase-target', 'phase-winner', 'replay-truncated', 'replay-trailing', 'replay-count'):
+                 'phase-queue', 'phase-target', 'phase-winner', 'replay-truncated', 'replay-trailing', 'replay-count',
+                 'post-outcome-terminal', 'cap-zero', 'cap-overflow', 'cap-below-terminal', 'paired-cap-drift'):
         bad, bad_raws = copy.deepcopy(reports), list(raws)
         if name == 'trace-gap': bad[0]['network']['trace'].pop(1)
         elif name == 'trace-extra': bad[0]['network']['trace'].append(copy.deepcopy(bad[0]['network']['trace'][-1]))
@@ -483,8 +490,26 @@ def main():
         elif name == 'phase-winner': bad[0]['fixture']['phases'][-1]['snapshot']['winner'] = 1
         elif name == 'replay-truncated': bad_raws[0] = bad_raws[0][:-1]
         elif name == 'replay-trailing': bad_raws[0] += b'x'
-        else:
+        elif name == 'replay-count':
             broken = bytearray(bad_raws[0]); struct.pack_into('<I', broken, 20, len(commands) + 1); bad_raws[0] = bytes(broken)
+        elif name == 'post-outcome-terminal':
+            # Keep both endpoint reports, recordings and trace lengths mutually
+            # consistent; the outcome-to-terminal relation must reject padding.
+            for p, report in enumerate(bad):
+                network, fixture = report['network'], report['fixture']
+                n = network['recorded_ticks'] + 1
+                report['final_tick'] = network['tick'] = network['confirmed_ticks'] = network['recorded_ticks'] = n
+                network['requested_ticks'] = max(network['requested_ticks'], n)
+                network['trace'].append(dict(tick=n, hash=network['hash']))
+                fixture['final_snapshot']['tick'] = n
+                broken = bytearray(bad_raws[p]); struct.pack_into('<I', broken, 16, n); bad_raws[p] = bytes(broken)
+        elif name in ('cap-zero', 'cap-overflow', 'cap-below-terminal'):
+            cap = {'cap-zero': 0, 'cap-overflow': 100001,
+                   'cap-below-terminal': bad[0]['network']['recorded_ticks'] - 1}[name]
+            for report in bad:
+                report['network']['requested_ticks'] = cap
+        else:
+            bad[1]['network']['requested_ticks'] += 1
         try:
             audit_reports(bad, bad_raws)
             trace_equal([(r['tick'], hash_value(r['hash'])) for r in bad[0]['network']['trace']], expected, name)
@@ -492,7 +517,18 @@ def main():
                 if phase['tick']:
                     compare_snapshot(phase['snapshot'], states[phase['tick']], name)
             audit_semantics(bad, commands, states)
-        except AssertionError:
+        except AssertionError as error:
+            # These regressions must fail their intended endpoint/cap check,
+            # rather than a later trace or snapshot comparison masking a gap.
+            endpoint_errors = {
+                'post-outcome-terminal': 'session terminal tick must equal authoritative outcome tick',
+                'cap-zero': 'invalid/mismatched requested session caps',
+                'cap-overflow': 'invalid/mismatched requested session caps',
+                'cap-below-terminal': 'terminal tick counts differ',
+                'paired-cap-drift': 'invalid/mismatched requested session caps',
+            }
+            if name in endpoint_errors:
+                require(str(error) == endpoint_errors[name], f'{name}: wrong rejection: {error}')
             rejected.append(name)
         else:
             raise AssertionError(f'accepted deliberately corrupted evidence: {name}')
@@ -504,7 +540,9 @@ def main():
         else:
             raise AssertionError(f'accepted deliberate replay trace length mismatch: {name}')
     require(fingerprints == {c: digest(path) for c, path in binaries.items()}, 'binaries changed during audit')
-    summary.update(ok=True, ticks=len(expected), final_hash=reports[0]['network']['hash'], winner=0,
+    summary.update(ok=True, ticks=len(expected), requested_ticks=reports[0]['network']['requested_ticks'],
+                   first_outcome_tick=reports[0]['fixture']['phases'][-1]['tick'],
+                   final_hash=reports[0]['network']['hash'], winner=0,
                    rejected_corruptions=rejected, completed_utc=datetime.now(timezone.utc).isoformat(),
                    limitations='Scripted two-process loopback economy match only; no human play, LAN/Internet, latency, performance, balance, production quality or shipping acceptance.')
     (args.out / 'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
