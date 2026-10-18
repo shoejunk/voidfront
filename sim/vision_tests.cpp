@@ -8,7 +8,7 @@ int main() {
     Sim sim(1,3,Map::Economy), replay(1,3,Map::Economy);
     check(sim.width()==64 && sim.height()==48,"map not enlarged");
     check(sim.visibility(0,4,12)==2 && sim.visibility(0,7,7)==2,"home economy lacks vision");
-    check(sim.visibility(0,59,36)==0 && sim.visibility(1,4,12)==0,"enemy spawn leaked");
+    check(sim.visibility(0,59,35)==0 && sim.visibility(1,4,12)==0,"enemy spawn leaked");
     check(sim.visibility(2,4,12)==0 && sim.visibility(0,-1,0)==0 && sim.visibility(0,64,0)==0,"vision bounds invalid");
     const auto command=[&](uint32_t sequence,int x,int z) {
         Command c{sim.tick(),sequence,0,Order::Move,{1},x*256+128,z*256+128};

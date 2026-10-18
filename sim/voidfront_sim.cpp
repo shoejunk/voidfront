@@ -80,20 +80,21 @@ Sim::Sim(uint32_t seed, uint32_t count, Map map) : map_(map), rng_(seed ? seed :
     if (count < 1 || count > 250) throw std::invalid_argument("units_per_team must be 1..250");
     if (map==Map::Economy) {
         for (uint8_t p=0;p<2;++p) {
-            structures_.push_back({uint32_t(p)+1,p,StructureKind::Anchor,(p==0?4:59)*kScale+128,(p==0?12:36)*kScale+128});
-            deposits_.push_back({uint32_t(p)+1,(p==0?7:56)*kScale+128,(p==0?7:31)*kScale+128,2000});
+            structures_.push_back({uint32_t(p)+1,p,StructureKind::Anchor,(p==0?4:59)*kScale+128,(p==0?12:35)*kScale+128});
+            deposits_.push_back({uint32_t(p)+1,(p==0?7:56)*kScale+128,(p==0?7:40)*kScale+128,2000});
             for (int n=0;n<3;++n) {
                 Unit u;
                 u.id=static_cast<uint32_t>(units_.size())+1; u.player=p; u.kind=UnitKind::Worker;
                 u.x=u.goal_x=u.next_x=(p==0?6:57)*kScale+128;
-                u.z=u.goal_z=u.next_z=(11+n+(p==0?0:24))*kScale+128;
+                u.z=u.goal_z=u.next_z=(p==0?11+n:36-n)*kScale+128;
                 units_.push_back(u);
             }
         }
-        // Contested flux sits on the central crossing, equidistant from both bases.
+        // The map is a 180-degree rotation about (32,24): cell x<->63-x, z<->47-z, so bases,
+        // mineral and flux deposits are exactly equidistant by construction.
         // Deposit IDs are 1-based indices into deposits_.
         deposits_.push_back({3,29*kScale+128,24*kScale+128,1000,1});
-        deposits_.push_back({4,36*kScale+128,24*kScale+128,1000,1});
+        deposits_.push_back({4,34*kScale+128,23*kScale+128,1000,1});
         rebuild_navigation();
         update_vision();
         return;
@@ -719,7 +720,7 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         std::vector<uint32_t> army;
         for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind!=UnitKind::Worker && u.order!=Order::AttackMove)
             army.push_back(u.id);
-        if (!army.empty()) emit(Order::AttackMove,std::move(army),(player==0?59:4)*kScale+128,(player==0?36:12)*kScale+128);
+        if (!army.empty()) emit(Order::AttackMove,std::move(army),(player==0?59:4)*kScale+128,(player==0?35:12)*kScale+128);
         return commands;
     }
     Command c;

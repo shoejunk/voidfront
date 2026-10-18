@@ -3,6 +3,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 namespace {
 void check(bool ok,const char* message) { if (!ok) throw std::runtime_error(message); }
@@ -96,8 +98,31 @@ void dead_selection() {
     }
     check(slot>0,"mixed selection had no live subjects");
 }
+void economy_symmetry() {
+    // The economy map must be a 180-degree rotation about its centre so neither
+    // player gets a positional advantage: cell (c,r) <-> (w-1-c,h-1-r).
+    vf::Sim sim(42,3,vf::Map::Economy);
+    const int w=sim.width(),h=sim.height();
+    for (int r=0;r<h;++r) for (int c=0;c<w;++c)
+        check(sim.blocked(c,r)==sim.blocked(w-1-c,h-1-r),"economy terrain is not rotationally symmetric");
+    const auto cell=[](int v){ return v/256; };
+    const auto& st=sim.structures();
+    check(st.size()==2 && cell(st[0].x)==w-1-cell(st[1].x) && cell(st[0].z)==h-1-cell(st[1].z),"anchors are not rotation partners");
+    int workers[2]={0,0}; std::vector<std::pair<int,int>> w0,w1;
+    for (const auto& u:sim.units()) { ++workers[u.player]; (u.player?w1:w0).emplace_back(cell(u.x),cell(u.z)); }
+    check(workers[0]==workers[1],"unequal worker counts");
+    for (size_t i=0;i<w0.size();++i)
+        check(w0[i].first==w-1-w1[i].first && w0[i].second==h-1-w1[i].second,"worker spawns are not rotation partners");
+    const auto& d=sim.deposits();
+    check(d.size()==4,"unexpected deposit count");
+    check(d[0].kind==d[1].kind && cell(d[0].x)==w-1-cell(d[1].x) && cell(d[0].z)==h-1-cell(d[1].z),"mineral deposits are not rotation partners");
+    check(d[2].kind==1 && d[3].kind==1 && cell(d[2].x)==w-1-cell(d[3].x) && cell(d[2].z)==h-1-cell(d[3].z),"flux deposits are not rotation partners");
+    const auto dist2=[](int64_t ax,int64_t az,int64_t bx,int64_t bz){ return (ax-bx)*(ax-bx)+(az-bz)*(az-bz); };
+    for (int f=2;f<4;++f)
+        check(dist2(st[0].x,st[0].z,d[f].x,d[f].z)==dist2(st[1].x,st[1].z,d[5-f].x,d[5-f].z),"flux distances differ between players");
+}
 }
 int main() {
-    try { maps(); dead_selection(); } catch (const std::exception& e) { std::cerr<<"FAIL: "<<e.what()<<'\n'; return 1; }
-    std::cout<<"PASS: map bounds, 500 spawns, large-map precise route, wire admission, exhaustive group assignment\n";
+    try { maps(); dead_selection(); economy_symmetry(); } catch (const std::exception& e) { std::cerr<<"FAIL: "<<e.what()<<'\n'; return 1; }
+    std::cout<<"PASS: map bounds, 500 spawns, large-map precise route, wire admission, exhaustive group assignment, economy map symmetry\n";
 }
