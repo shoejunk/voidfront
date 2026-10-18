@@ -1,5 +1,36 @@
 # Voidfront progress
 
+## 2026-10-18 America/Los_Angeles - economy map symmetry (balance fix)
+
+Baseline dev `9619485`; STOP/COMPLETE absent; run marker acquired exclusively and released at the end.
+Pre-existing `last-run.json`/`roadmap.md` edits left unstaged. Goal: first balance evidence for the AI duel.
+
+Finding: a 20-seed AI-vs-AI sweep on the economy map (`voidfront_headless --map economy --profile ai`)
+had player 1 win 20/20. Open-field mirrored Strider fights were not biased (P0 narrowly wins 5v5), and
+early salvage/Foundry timing was near-equal, so the cause was the map: terrain walls are a 180-degree
+rotation about (32,24) but player 1's anchor (z 36 vs 35), mineral deposit (z 31 vs 40), worker rows and
+nearest flux deposit (36,24 vs 34,23) were translated rather than rotated, leaving P1's flux about 1.8
+tiles closer than P0's.
+
+Change (`sim/voidfront_sim.cpp`): bases, workers, minerals and flux deposits are now exact rotation
+partners; the AI attack-move target follows the anchor. New `economy_symmetry` test in `map_tests.cpp`
+checks terrain cells, anchors, worker spawns, deposits and flux distances. `client/exploration_smoke.gd`
+now uses the P1 anchor at (59.5,35.5) (not run). Content/hash change: older economy-map recordings and
+artifacts are not replay-compatible.
+
+Verification: Debug and Release CTest 12/12 each; Debug/Release duel hashes equal (seed 7, winner 0,
+hash 14284596852550152657). 30-seed duel sweep after the fix: **P0 wins 30/30**. The seed does not vary
+the economy match, so this is one deterministic scenario; the residual first-mover (lower-ID priority in
+ties/collision) bias decides a perfect mirror. Not fixed, not claimed balanced.
+
+Gaps: packaged client and paired network fixtures were NOT rerun on the new layout (Oct 11/17 evidence is
+for the old map); no independent critic this run; no human play.
+
+**Exact next step:** rebuild the package, run the Godot smoke tests and rerun the paired net-match audit and
+capture fixtures on the new layout; then address the mirror first-mover bias (e.g. alternate per-tick
+iteration priority) with a sweep that varies AI/build parameters; then coordinated setup/rematch and
+contested pending-combat fixtures. All SPEC gates remain open. No COMPLETE.md.
+
 ## 2026-10-17 America/Los_Angeles - packaged early-end verification
 
 Baseline dev `d4f435a`; STOP/COMPLETE/run marker absent; marker acquired exclusively and
