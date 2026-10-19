@@ -45,6 +45,9 @@ void validation() {
     check(!s.can_build(0,16*kScale,5*kScale),"terrain overlap accepted");
     check(!s.can_build(0,27*kScale,18*kScale),"enemy anchor linkage accepted");
     check(!s.can_build(0,0,0),"edge placement accepted");
+    // Structures keep a two-cell worker lane: centers 3 cells from the anchor leave a one-cell gap.
+    check(!s.can_build(0,s.structures()[0].x+3*kScale,s.structures()[0].z),"one-cell structure gap accepted");
+    check(s.can_build(0,s.structures()[0].x+4*kScale,s.structures()[0].z),"two-cell structure gap rejected");
 }
 void interruption_and_depletion() {
     Sim s(42,3,Map::Economy); gather(s,1,{1});

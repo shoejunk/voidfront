@@ -52,10 +52,13 @@ bool Sim::can_build(uint8_t player,int32_t x,int32_t z) const {
     const auto center=snapped(x,z);
     const auto area=footprint(center.x,center.z,kScale);
     const auto buffer=footprint(center.x,center.z,2*kScale);
+    const auto spacing=footprint(center.x,center.z,3*kScale);
     if (buffer.min_x<kScale || buffer.min_z<kScale || buffer.max_x>(width()-1)*kScale || buffer.max_z>(height()-1)*kScale) return false;
     bool linked=false;
     for (const auto& b:structures_) if (b.hp>0) {
-        if (overlaps(buffer,footprint(b.x,b.z,kScale))) return false;
+        // Keep a two-cell lane between structures: a one-cell gap leaves one worker lane,
+        // which a parked unit seals permanently (route planning ignores units).
+        if (overlaps(spacing,footprint(b.x,b.z,kScale))) return false;
         const int64_t dx=int64_t(b.x)-center.x,dz=int64_t(b.z)-center.z;
         if (b.player==player && b.kind==StructureKind::Anchor && dx*dx+dz*dz<=int64_t(8*kScale)*(8*kScale)) linked=true;
     }
