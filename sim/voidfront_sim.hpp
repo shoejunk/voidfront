@@ -121,7 +121,7 @@ private:
     void apply(const Command& command);
     void apply_economy(const Command& command);
     void apply_queued(const Command& command);
-    std::vector<nav::Point> formation_slots(int32_t x,int32_t z,size_t count) const;
+    std::vector<nav::Point> formation_slots(int32_t x,int32_t z,size_t count,bool rotated=false) const;
     void advance_queue(Unit& unit);
     void economy_step();
     void apply_production(const Command& command);

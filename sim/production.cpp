@@ -77,8 +77,10 @@ void Sim::production_step() {
         if (b.production_ticks<kProductionTicks) continue;
         b.spawn_blocked=true;
         if (units_.size()>=kLifetimeUnitLimit) continue;
+        // Player 1's exits are the 180-degree rotation of player 0's (east first, mirrored).
+        const int sign=b.player==1?-1:1;
         for (const auto offset:offsets) {
-            const nav::Point point{b.x+offset.x*exit_distance,b.z+offset.z*exit_distance};
+            const nav::Point point{b.x+sign*offset.x*exit_distance,b.z+sign*offset.z*exit_distance};
             if (!navigation_.valid(point)) continue;
             const bool occupied=std::any_of(units_.begin(),units_.end(),[&](const Unit& u) {
                 return u.hp>0 && std::abs(u.x-point.x)<128 && std::abs(u.z-point.z)<128;

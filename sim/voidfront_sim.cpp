@@ -71,7 +71,11 @@ void step_candidates(nav::Point here,nav::Point waypoint,std::vector<nav::Point>
     };
     std::sort(result.begin(),result.end(),[&](nav::Point a,nav::Point b) {
         const auto ea=error(a),eb=error(b);
-        return ea!=eb?ea<eb:std::tie(a.x,a.z)<std::tie(b.x,b.z);
+        if (ea!=eb) return ea<eb;
+        // Ties break on the offset signed by travel direction, so a 180-degree rotated
+        // trip (negated delta and offsets) selects the rotated step.
+        const int sign=dx>0||(dx==0&&dz>0)?1:-1;
+        return std::make_tuple(sign*(a.x-here.x),sign*(a.z-here.z))<std::make_tuple(sign*(b.x-here.x),sign*(b.z-here.z));
     });
 }
 }
@@ -175,13 +179,18 @@ bool Sim::submit(Command command) {
 // Enumerate Manhattan rings once in row-major order. This preserves the
 // original exhaustive search's exact distance/row/column ties without
 // rescanning every map cell for each selected unit.
-std::vector<nav::Point> Sim::formation_slots(int32_t x0,int32_t z0,size_t count) const {
+// `rotated` reverses the row and column tie order (the 180-degree image of the
+// default), so player 1 on the rotation-symmetric economy map gets the mirrored
+// slot set of player 0.
+std::vector<nav::Point> Sim::formation_slots(int32_t x0,int32_t z0,size_t count,bool rotated) const {
     std::vector<nav::Point> slots;
     const int rx=x0/kScale,rz=z0/kScale;
     for (int radius=0;radius<width()+height() && slots.size()<count;++radius) {
-        for (int z=std::max(0,rz-radius);z<=std::min(height()-1,rz+radius) && slots.size()<count;++z) {
+        const int low=std::max(0,rz-radius),high=std::min(height()-1,rz+radius);
+        for (int step=0;step<=high-low && slots.size()<count;++step) {
+            const int z=rotated?high-step:low+step;
             const int dx=radius-std::abs(z-rz);
-            for (const int x : {rx-dx,rx+dx}) {
+            for (const int x : {rotated?rx+dx:rx-dx,rotated?rx-dx:rx+dx}) {
                 if (!blocked(x,z)) slots.push_back({x*kScale+kScale/2,z*kScale+kScale/2});
                 if (dx==0 || slots.size()==count) break;
             }
@@ -203,7 +212,7 @@ void Sim::advance_queue(Unit& u) {
 // any other unit starts the leg immediately, exactly like the plain order.
 void Sim::apply_queued(const Command& c) {
     const Order order=c.order==Order::QueueMove?Order::Move:Order::AttackMove;
-    const auto slots=formation_slots(c.x,c.z,c.units.size());
+    const auto slots=formation_slots(c.x,c.z,c.units.size(),map_==Map::Economy && c.player==1);
     size_t next_slot=0;
     for (const auto id : c.units) {
         auto& u=units_[id-1];
@@ -236,7 +245,7 @@ void Sim::apply(const Command& c) {
     if (static_cast<uint8_t>(c.order)>=4) { apply_economy(c); return; }
     if (map_==Map::Economy) { results_[c.player]=CommandResult::Accepted; result_sequences_[c.player]=c.sequence; }
     std::vector<nav::Point> slots;
-    if (c.order==Order::Move || c.order==Order::AttackMove) slots=formation_slots(c.x,c.z,c.units.size());
+    if (c.order==Order::Move || c.order==Order::AttackMove) slots=formation_slots(c.x,c.z,c.units.size(),map_==Map::Economy && c.player==1);
     size_t next_slot=0;
     for (const auto id : c.units) {
         auto& u = units_[id - 1];
@@ -667,7 +676,7 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
             bool placed=false;
             for (int z_offset : {3,4,5,0,-3,-4,-5}) {
                 for (int x_offset : {5,4,3,0,-3,-4,-5}) {
-                    const int x=anchor->x+direction*x_offset*kScale,z=anchor->z+z_offset*kScale;
+                    const int x=anchor->x+direction*x_offset*kScale,z=anchor->z+direction*z_offset*kScale;
                     if (!sim.can_build(player,x,z)) continue;
                     emit(Order::Build,{builder->id},x,z); assigned_builder=builder->id; placed=true; break;
                 }

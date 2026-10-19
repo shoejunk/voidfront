@@ -132,9 +132,39 @@ void economic_match(bool duel) {
     check(sim.units().size()>6 && sim.structures().size()>(duel?3u:2u),"match did not produce/build");
     std::cout<<(duel?"AI duel":"AI vs passive")<<" winner="<<sim.winner()<<" tick="<<finish<<" hash="<<sim.state_hash()<<'\n';
 }
+// Mirror audit: until the opposing armies come within contact range, the two AI
+// economies must be exact 180-degree rotations of each other (units, structures,
+// orders, cargo and balances). Combat itself is excluded: exact ties there must
+// resolve by a stable rule, which necessarily favors one side.
+void mirrored_economy() {
+    Sim sim(42,3,Map::Economy); std::array<uint32_t,2> sequences{};
+    const int32_t w=int32_t(sim.width())*kScale,h=int32_t(sim.height())*kScale;
+    int audited=0;
+    for (int tick=0;tick<3000;++tick) {
+        for (uint8_t p=0;p<2;++p) for (const auto& c:make_ai_commands(sim,p,sequences[p])) check(sim.submit(c),"mirror AI rejected");
+        sim.step();
+        int64_t nearest=std::numeric_limits<int64_t>::max();
+        for (const auto& a:sim.units()) for (const auto& b:sim.units()) if (a.hp>0 && b.hp>0 && a.player==0 && b.player==1) {
+            const int64_t dx=a.x-b.x,dz=a.z-b.z; nearest=std::min(nearest,dx*dx+dz*dz);
+        }
+        if (nearest<int64_t(12*kScale)*(12*kScale)) break;
+        using Row=std::array<int32_t,10>;
+        std::array<std::vector<Row>,2> rows{};
+        const auto rot=[&](const Unit& u,int32_t v,bool x) { return u.player?(x?w:h)-v:v; };
+        for (const auto& u:sim.units()) rows[u.player].push_back({int32_t(u.kind),rot(u,u.x,true),rot(u,u.z,false),u.hp,int32_t(u.order),
+            int32_t(u.cargo),rot(u,u.goal_x,true),rot(u,u.goal_z,false),int32_t(u.returning),int32_t(u.moving)});
+        std::array<std::vector<Row>,2> st{};
+        for (const auto& b:sim.structures()) st[b.player].push_back({int32_t(b.kind),(b.player?w-b.x:b.x),b.player?h-b.z:b.z,
+            b.hp,int32_t(b.build_ticks),int32_t(b.production_queue),int32_t(b.production_ticks),int32_t(b.spawn_blocked),0,0});
+        const bool same=rows[0]==rows[1] && st[0]==st[1] && sim.salvage(0)==sim.salvage(1) && sim.flux(0)==sim.flux(1);
+        if (!same) { std::cout<<"mirror diverged tick="<<sim.tick()<<std::endl; check(false,"AI economy not rotationally symmetric before contact"); }
+        ++audited;
+    }
+    check(audited>1000,"mirror audit ended before the economy matured");
+}
 }
 int main() {
-    try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands(); economic_match(false); economic_match(true);
+    try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands(); economic_match(false); economic_match(true); mirrored_economy();
         std::cout<<"economic match tests passed\n"; }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }

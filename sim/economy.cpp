@@ -29,8 +29,13 @@ void Sim::rebuild_navigation() {
 nav::Point Sim::service_point(const Unit& u,int32_t x,int32_t z,int32_t extent,const nav::World* world) const {
     const auto& navigation=world?*world:navigation_;
     constexpr std::array<nav::Point,8> offsets{{{-1,0},{0,-1},{1,0},{0,1},{-1,-1},{1,-1},{1,1},{-1,1}}};
+    // Spread by the unit's rank within its own team and rotate player 1's offsets by 180
+    // degrees, so mirrored workers on the rotation-symmetric map pick mirrored service points.
+    size_t rank=0;
+    for (const auto& other:units_) if (other.player==u.player && other.id<u.id) ++rank;
+    const int sign=u.player==1?-1:1;
     for (size_t n=0;n<offsets.size();++n) {
-        const auto d=offsets[(u.id-1+n)%offsets.size()];
+        auto d=offsets[(rank+n)%offsets.size()]; d={d.x*sign,d.z*sign};
         const nav::Point point{x+d.x*(extent+radius+32),z+d.z*(extent+radius+32)};
         if (!navigation.valid(point)) continue;
         bool free=true;
@@ -119,8 +124,12 @@ void Sim::economy_step() {
     if (map_!=Map::Economy) return;
     // Stable worker ordering resolves simultaneous last-unit extraction.
     std::vector<bool> worked(structures_.size(),false);
+    // Staggered goal checks key on rank within the team, not the global ID, so both
+    // players of the rotation-symmetric map are examined on the same ticks.
+    std::vector<uint32_t> rank(units_.size());
+    { std::array<uint32_t,2> next{}; for (const auto& u:units_) rank[u.id-1]=next[u.player]++; }
     const auto occupied_goal=[&](const Unit& u) {
-        if (tick_%20!=u.id%20) return false;
+        if (tick_%20!=rank[u.id-1]%20) return false;
         for (const auto& other:units_) if (other.hp>0 && other.id!=u.id &&
             std::abs(other.x-u.goal_x)<2*radius && std::abs(other.z-u.goal_z)<2*radius) return true;
         return false;
