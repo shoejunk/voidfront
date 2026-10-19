@@ -1,5 +1,22 @@
 # Verification ledger
 
+## 2026-10-19 - rotational AI/service policies and structure lane
+
+`tools/verify.ps1` (log `artifacts/lane-verify-2026-10-19.log`): Debug/Release 12/12
+CTest, malformed/alias/cross-build/ten-repeat checks pass. New `mirrored_economy`
+(match_tests) proves both AI economies are exact 180-degree images (units, orders,
+cargo, goals, structures, balances) every tick until armies come within 12 cells;
+`economy_tests` covers the two-cell structure lane. Packaged, rebuilt twice:
+`capture.ps1 -Packaged -Victory` + `verify_match_capture.py` (4528 ticks, winner 0,
+11 corruptions rejected); `-Exploration` + `verify_exploration_capture.py`
+(`artifacts/lane3-exploration-*`: 2864 ticks, 37 checks, 5 corruptions rejected);
+`run_net_match.ps1` + `verify_net_match.py` (`artifacts/lane-net-match-*`: both
+peers confirm winner 0 at tick 7145). Failed attempts retained: net match before
+the lane fix (builder deadlocked, `policy-net-match-2026-10-19`), exploration before
+retiming (`policy-exploration-2026-10-19`, `lane-exploration`, `lane2-exploration`).
+Screenshots from the new runs were not inspected. Human play, balance, performance
+and shipping gates unchanged.
+
 ## 2026-10-18 - symmetric-map package and first-outcome audit
 
 `tools/verify.ps1` then `tools/package.ps1`: pinned Debug/Release12/12 each,

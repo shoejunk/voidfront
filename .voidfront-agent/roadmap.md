@@ -114,16 +114,77 @@ the first economy increment has been fulfilled for its bounded scope. Existing
 large-crowd/performance/production-quality failures remain required final gates.
 This checkpoint preserves the user's gameplay-first sequencing change below.
 
+## Current priority: complete a playable small match (2026-09-26)
+
+User-directed sequencing change: build the complete small RTS gameplay loop now.
+This section supersedes older movement-first next steps in dated checkpoints,
+reviews and handoffs. Preserve the existing game, deterministic architecture,
+tool pins, regression coverage and every final SPEC acceptance requirement.
+Large-scale crowd recovery and performance acceptance remain required, but are
+no longer prerequisites for implementing economy, construction or match content.
+
+The next development run must deliver the first playable economy increment:
+command anchors, workers, salvage deposits, gather/return orders, resource
+accounting and construction of a production structure through canonical commands.
+Expose selection, resource totals, build costs and construction progress in the
+actual packaged client. Reuse existing combat and presentation where suitable.
+Start with this bounded feature increment and carry it through to playable
+interaction; do not spend the run exclusively on a new movement experiment.
+
+Implement the remaining small-match scope in this order, with each checkpoint
+adding a usable part of the same match:
+
+1. Worker harvesting and construction, as specified above, including valid
+   placement and movement around the structures actually used in the match.
+2. Resource-funded unit production, production queues and population limits;
+   clear command feedback, queued unit orders and enemy context targeting.
+3. A canonical-command economic AI that gathers, builds, produces and attacks;
+   destroy the command anchor to win, with defeat and reliable restart.
+4. Contested flux, a meaningful technology progression and fog/scouting, with
+   the AI participating in those systems and a minimal skirmish setup screen.
+5. Integrate and play complete matches, address demonstrated blockers, and
+   provide readable unit/building roles, essential action feedback and sound.
+
+Use one small map and a modest starting population to develop this milestone.
+That working scope does not replace the final two factions, three maps, unit
+rosters or 200/500-unit budgets. Fix movement/collision, dynamic construction,
+determinism or performance defects immediately when they block the small match;
+retain failed large-scale fixtures and defer unrelated solver research until
+the gameplay loop works. Do not hide failed scale gates or mark them passed.
+
+Small-match acceptance requires an actual packaged game in which a player can
+start from workers and an anchor, gather both resources, construct, produce,
+tech, scout, fight an economic AI and reach victory or defeat, then restart.
+Retain complete-match command recordings with matching Debug/Release replays,
+inspect gameplay captures and record direct playtest findings and remaining
+limitations. A headless AI battle, a build, or passing infrastructure tests alone
+does not establish this milestone or human-play quality.
+
+Each development handoff must state what the player can newly do, how that was
+verified in the package, and the next missing gameplay capability. If a blocker
+prevents that increment, retain a concrete reproducer and a bounded repair plan;
+do not repeatedly substitute diagnostics-only passes for gameplay delivery.
+Build Debug and Release and run the relevant existing and new checks before
+committing implementation. Broaden verification for affected simulation,
+replay, network and presentation behavior; avoid repeating unchanged suites
+without a new change, failure or unresolved concern. Shipping still requires
+the full regression and independent review in SPEC.md.
+
+## Milestone order
+
 1. **Foundation / playable skirmish (first increment verified):** independent deterministic sim, canonical commands/persistent replays/tests, pinned extension, camera/selection/move/combat, original animated Blender unit and packaged runtime evidence exist. Production art, crowd routing and manual responsiveness remain open.
 2. **Real network lockstep (packaged loopback client path verified):** protocol 2 scheduled frames and independent executed checksums now drive two rendered Godot packages through the reusable Session. Players select their own army; readiness/stalls/errors/final confirmation and explicit input delay are visible. The six-case client suite covers clean/80/160 ms RTT, withheld input, mismatched delay and disconnect, with exact applied-prefix replay and original event-to-execution/render timing. Offline mode remains intact. This is loopback combat-skirmish evidence, not LAN/Internet or full RTS multiplayer acceptance. Only three synthetic commands per peer/profile were measured; strict pacing and frame targets remain unmet. Follow-up network gates: broad input phase/cadence and queued-during-stall/tail tests, packaged post-advance desync recording, physical endpoints, coordinated match setup/restart and complete-match/30-minute soak. Preserve all CLI/API/client regressions and tool pins.
-3. **Complete small match (next development milestone):** gather/build/produce/tech/fog/victory/restart; command-driven economy AI; queued orders and enemy context targeting; finish the movement requirements below before production content expansion. **Current increment:** static visibility routes, arbitrary fixed-point headings, exact destinations, spatial broadphase, bounded local swept detours and control groups 0-9 are implemented. Seven repeated crowd fixtures, packaged InputEvent swap/chain/Stop/resume and control-group tests pass. An actual 128x128 Sim harness now covers eight 200/500-unit traffic/combat scenarios with 96 executions and 11,202,800 independently audited unit rows; all Release p95/p99 observations meet 4/8 ms on this host, but every noncombat crossing/repeated/Stop-resume case has zero arrivals. **Exact next step:** coordinated yielding or preventative avoidance for the retained dense opposing-stream fixture, following crowd-failure-2026-09-12.md and scale-contract.md. Preserve all replay/network, static-route and packaged tests. General crowd progress, dynamic construction, per-command response, representative production battles, reference performance and human responsiveness remain unaccepted.
-4. **Content and production systems:** two asymmetric factions, three maps, complete art/animation pipeline, UI/audio/VFX, tutorials, accessibility, robust match UX.
+3. **Complete small match (active milestone):** implement the playable economy increment and ordered gameplay scope above. Existing any-angle routes, bounded crowd fixes, control groups and replay/network infrastructure support this work. Repair movement defects that block the match; the failed dense-stream and scale-performance gates do not block gameplay feature development.
+4. **Scale, content and production systems:** after the small match works, complete general crowd recovery, dynamic routing and representative 200/500-unit performance, expand to two asymmetric factions and three maps, and finish the art/animation pipeline, UI/audio/VFX, tutorials, accessibility and match UX. Preserve the existing scale contract, failed reproducers and quantitative budgets.
 5. **Quality iterations:** independent visual/RTS/determinism/performance critics, reference comparisons, large battles, balance, responsiveness and network soak on documented hardware.
 6. **Shipping gate:** full regression, actual complete games, reproducible package, adversarial independent review against every SPEC requirement. COMPLETE.md only with passing evidence, then pause automation.
 
 Reorder work when measured defects justify it, preserving architecture and all quality gates. No deadline-based relaxation.
 
 ## 2026-09-13 checkpoint refinement
+
+Historical evidence and deferred investigation notes follow. Their sequencing
+instructions are superseded by the current priority above.
 
 The existing Scale128 scenario is now available in the actual offline package
 with configurable 1..250 walkers per side, map-aware camera/orders/minimap and
@@ -143,10 +204,14 @@ The same-run twelve-unit capture also slows under hidden-window conditions, so
 first profile ordinary foreground play with controlled presentation conditions;
 separate capture/fixture overhead, snapshot conversion, skeletons, draw calls and
 HUD cost before choosing an optimization. Preserve the original budgets and
-report actual product responsiveness separately. Production/content expansion
-still waits on the movement and complete-small-match requirements above.
+report actual product responsiveness separately. The former movement-first
+content prerequisite is superseded by the current small-match priority.
 
-## Required movement and pathfinding milestone
+## Required movement and pathfinding acceptance (retained final gates)
+
+These requirements remain mandatory for final acceptance. During the active
+small-match milestone, prioritize the subset needed for the actual match;
+complete the general scale requirements in milestone 4.
 
 2026-09-20 evidence refinement: ordinary-play stage profiling is now available
 in `tools/profile.ps1`, with raw focus/window/stage samples, payload fingerprints
@@ -156,7 +221,8 @@ Whole-frame p99 remains 20.400/63.897 ms for 200/500 units on the development
 host. Focus flags pass in hidden launches, but unoccluded human foreground play,
 same-state engine animation/skeleton/render attribution and representative frame
 acceptance remain open. Preserve the independent evidence in TESTING.md. This
-does not change the failed crowd-progress gate or production prerequisites.
+does not change the failed crowd-progress gate. It does not block the current
+small-match gameplay implementation.
 
 The bounded current-map implementation now has arbitrary authoritative headings and static clearance routes. Finished movement must additionally satisfy the dynamic crowd, route quality and performance gates below, with direct travel toward unobstructed destinations and efficient routes around obstacles. Neither four/eight-direction movement nor presentation-only smoothing satisfies this requirement.
 
@@ -186,7 +252,7 @@ retains twelve small regression trajectories, exact relative-sweep checks and
 final routing diagnostics. Read `review-crowd-recovery-2026-09-26.md` and the
 rejected experiment archive before resuming. Fixed gate offsets and passing-half
 restrictions did not coordinate same-stream merging, egress or goal fan-out.
-Next implement bounded follower dependencies and cooperative entry/exit ordering,
+The deferred movement investigation calls for bounded follower dependencies and cooperative entry/exit ordering,
 with a geometrically valid progression objective and full collision checks;
 retain exact goals and immutable Stop/Hold/firing eligibility. Passing the small
 tests is preservation evidence only. Dense arrival, full matches, production
@@ -204,9 +270,16 @@ The optional six-unit reversed-goal probe isolates the next smaller defect.
 Five units arrive; unit 2 stops at (2448,2928), targeting (2304,2944), between
 already-arrived neighbors at z=2816 and z=3072. Independent frozen-scene geometry
 permits vertical alignment to z=2944 at x=2448, then horizontal travel into the
-exact slot. Next implement bounded, collision-checked goal-axis or multi-blocker
+exact slot. When this deferred investigation resumes, implement bounded, collision-checked goal-axis or multi-blocker
 clearance-boundary candidates. Prove this canonical fixture before combining it
 with cooperative entry/exit ordering on the unchanged 500-unit opposing stream.
 Do not displace stopped arrivals, change goals, substitute static feasibility for
 executed progress, or claim transaction-cap/cycle exhaustion coverage that has
 not been exercised. Preserve replay/network/package gates and original budgets.
+
+## 2026-10-19 checkpoint - rotational policies done
+
+AI/service/exit/formation/tie policies are now exact rotations (mirror test). Residual duel
+bias is combat tie order. Exact next: quantify/neutralize combat-order bias, vary AI build
+parameters, general stationary-blocker deadlock handling, then setup/rematch and contested
+network fixtures. All prior gates stand. No COMPLETE.md.

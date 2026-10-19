@@ -1087,3 +1087,37 @@ on the rotation-symmetric economy layout, then audit real paired clients through
 terminal confirmation. Repair demonstrated integration defects without changing
 balance/rules speculatively. Independent critics will inspect source and actual
 retained evidence. Mirror first-mover bias and all SPEC gates remain open.
+
+## 2026-10-19 08:00 America/Los_Angeles - rotational policies, structure lane
+
+Baseline dev `8d89ace`; STOP/COMPLETE/marker absent. Goal: act on the critic's finding that
+AI/service policies were not rotationally symmetric, then re-verify package fixtures.
+
+Found and fixed (sim, commits b5a0c89, next): AI Foundry z-offset not mirrored; service-point
+perimeter order keyed on global unit ID; goal-check stagger keyed on ID%20; factory exit order
+fixed west-first; formation-slot ring ties and movement-step ties not rotation-covariant.
+All now rotate with the player (team rank / negated offsets). Added `mirrored_economy`: both
+AI economies are exact rotations tick-by-tick until contact (~tick 1250-1600). Debug+Release
+12/12 CTest, cross-build/repeat/malformed checks pass.
+
+Consequences: the mirrored AI is much faster than before (Foundry/Strider earlier), so the
+scripted exploration player now loses at tick 2864 (was 6032). AI duel now won by player 1 at
+4712 (was P0 at 5264): the residual bias flips with the policy, so it comes from combat tie
+resolution by lower ID/iteration order and cannot be removed by symmetry alone; not yet
+quantified or fixed. A paired network fixture then exposed a real defect: a one-cell gap between
+a Foundry and the anchor let a parked worker seal the only lane; the builder waited forever
+(route planning ignores units). Structures now require a two-cell lane (`can_build`).
+Exploration fixture retimed (Foundry at 100 salvage, wait for 50 before Strider); assertions
+unchanged. Package evidence passes (see TESTING 2026-10-19). Content id changed
+(49a23b59... -> 935f6db8...), so older replays are rejected by content check; protocol number
+stays 12 per the previous symmetric-map precedent.
+
+Not done: no independent critic this run (gap recorded); screenshots not inspected;
+`verify_match_capture.py` still lacks Research/TrainLancer parsing; combat tie bias, human play,
+balance, crowd/frame budgets, art/audio, physical-network/soak and all SPEC shipping gates open.
+
+**Exact next step:** measure combat-order bias (swap which player's units are processed first /
+randomize ties by a seeded stream) and vary AI build parameters before changing tie priority;
+fix stationary-blocker deadlock generally (service points/route replanning ignoring parked units
+remain a hazard beyond the lane rule). Then coordinated setup/rematch, contested armies in the
+network fixture, direct full games. No COMPLETE.md.

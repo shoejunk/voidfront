@@ -65,13 +65,14 @@ func run() -> void:
 	await key(KEY_F1)
 	label = "gather"
 	await mouse(MOUSE_BUTTON_RIGHT, Vector3(7.5, 0.5, 7.5))
-	check(await until(func(): return game.current.salvage[0] >= 150, 2400), "Workers harvest enough salvage for Foundry and Strider")
+	check(await until(func(): return game.current.salvage[0] >= 100, 2400), "Workers harvest enough salvage for the Foundry")
 	await mouse(MOUSE_BUTTON_LEFT, game.actors[1].root.position + Vector3(0, 0.5, 0))
 	await key(KEY_B)
 	label = "build"
 	await mouse(MOUSE_BUTTON_LEFT, Vector3(9.5, 0, 15.5))
 	check(await until(func(): return not own_foundries().is_empty() and own_foundries()[0].build_ticks == game.current.build_duration, 3000), "Existing paid construction remains functional")
 	await mouse(MOUSE_BUTTON_LEFT, Vector3(9.5, 0.5, 15.5))
+	check(await until(func(): return game.current.salvage[0] >= 50, 3000), "Mining refunds the Strider cost after the Foundry purchase")
 	label = "train"
 	await key(KEY_T)
 	check(await until(func(): return not striders().is_empty(), 3400), "Foundry produces a paid Strider")
