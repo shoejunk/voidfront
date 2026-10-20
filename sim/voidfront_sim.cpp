@@ -315,8 +315,21 @@ void Sim::step() {
             for (const auto id : nearby) {
                 const auto& other=units_[id-1];
                 if (other.hp <= 0 || other.player == u.player) continue;
-                const auto d = distance2(u, other);
-                if (d < nearest) { nearest = d; target = &other; }
+                const auto& op = tick_start[other.id-1];  // start-of-tick positions: processing order must not matter
+                const int64_t ddx = op.x - u.x, ddz = op.z - u.z;
+                const auto d = ddx*ddx + ddz*ddz;
+                bool better = d < nearest;
+                if (!better && d == nearest && target) {
+                    // Exact ties resolve by the offset in the attacker's own frame
+                    // (player 1 negates), so mirrored positions pick mirrored targets
+                    // instead of favoring the lower unit ID.
+                    const int sign = u.player == 0 ? 1 : -1;
+                    const auto ox = sign*(op.x-u.x), oz = sign*(op.z-u.z);
+                    const auto& tp = tick_start[target->id-1];
+                    const auto tx = sign*(tp.x-u.x), tz = sign*(tp.z-u.z);
+                    better = ox < tx || (ox == tx && (oz < tz || (oz == tz && other.id < target->id)));
+                }
+                if (better) { nearest = d; target = &other; }
             }
         }
         nav::Point goal{u.goal_x, u.goal_z};

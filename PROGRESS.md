@@ -1121,3 +1121,29 @@ randomize ties by a seeded stream) and vary AI build parameters before changing 
 fix stationary-blocker deadlock generally (service points/route replanning ignoring parked units
 remain a hazard beyond the lane rule). Then coordinated setup/rematch, contested armies in the
 network fixture, direct full games. No COMPLETE.md.
+
+## 2026-10-20 America/Los_Angeles - combat-order bias removed
+
+Baseline dev `73e854c`; STOP/COMPLETE absent. Goal: find and remove the residual first-mover bias the previous run
+attributed to combat tie/iteration order (mirrored AI duel was always won by player 1 at tick 4712, for every seed 1-8).
+
+Cause (measured by per-tick hp traces): unit target acquisition measured distance to enemies' *live* positions, so
+units processed earlier in the ID-ordered loop had already moved and later units saw the updated positions. P0 was
+hit first (hp differed by one 8-damage shot from the first exchange). Fix (`sim/voidfront_sim.cpp`): acquisition and
+range checks use start-of-tick positions; exact distance ties resolve by offset in the attacker's own frame (player 1
+negated), then ID. Structure targeting was untouched.
+
+Result: the mirrored duel is now exactly symmetric end to end (hp totals equal every sampled tick); both armies
+annihilate, 2 workers/2 structures/22 salvage remain per side, and the AI cannot rebuild, so the match is an unresolved
+symmetric stalemate at the 16000 cap (hash 7942617639625604552). `economic_match(true)` now asserts that symmetry
+instead of a winner; `duel_seed_survey` (seeds 1-8) reports outcomes. AI-vs-passive still wins at tick 2588.
+Debug+Release 12/12 CTest. Gameplay consequence found: the economic AI has no recovery after losing its army (no
+income/rebuild at 22 salvage) - a real AI/economy defect.
+
+Not done: packaged Godot/network fixtures NOT re-run after this sim change (replays and the scripted exploration
+fixture timing may shift; content id/protocol unchanged by me); no independent critic this run (gap); no screenshots;
+human play, balance, crowd/frame budgets, art/audio, soak and all SPEC gates remain open.
+
+**Exact next step:** re-run packaged exploration/paired-network fixtures against the new combat timing and retime if
+needed; then fix AI recovery (workers should keep gathering/re-train when army dies; find why salvage stalls at 22);
+vary AI build parameters; coordinated setup/rematch; contested armies in network fixture. No COMPLETE.md.

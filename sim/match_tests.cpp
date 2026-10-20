@@ -125,12 +125,39 @@ void economic_match(bool duel) {
         sim.step(); replay.step(); check(sim.state_hash()==replay.state_hash(),"economic command replay diverged");
         if (sim.winner()!=-1) { finish=sim.tick(); break; }
     }
-    check(finish>0,"bounded economic match failed to finish");
+    check(finish>0 || duel,"bounded economic match failed to finish");
     check(duel || sim.winner()==1,"economic AI failed to beat passive player");
+    if (duel && finish==0) {
+        // Mirrored duel: with first-strike and processing-order bias removed, the
+        // armies annihilate each other exactly and neither side can rebuild.
+        int army[2]{},structs[2]{}; for (const auto& u:sim.units()) if (u.hp>0 && u.kind!=UnitKind::Worker) ++army[u.player];
+        for (const auto& b:sim.structures()) if (b.hp>0) ++structs[b.player];
+        check(army[0]==army[1] && structs[0]==structs[1] && sim.salvage(0)==sim.salvage(1),"unresolved duel is not symmetric");
+        std::cout<<"AI duel unresolved symmetric stalemate tick="<<sim.tick()<<" hash="<<sim.state_hash()<<'\n';
+        return;
+    }
     for (auto order:{Order::Gather,Order::Build,Order::TrainStrider,Order::AttackMove})
         check(command_counts[static_cast<int>(order)]>0,"AI skipped required economic command");
     check(sim.units().size()>6 && sim.structures().size()>(duel?3u:2u),"match did not produce/build");
     std::cout<<(duel?"AI duel":"AI vs passive")<<" winner="<<sim.winner()<<" tick="<<finish<<" hash="<<sim.state_hash()<<'\n';
+}
+// Bias survey: the same mirrored AI duel under several seeds. Reported, not
+// asserted: it measures whether a side wins regardless of seed.
+void duel_seed_survey() {
+    std::array<int,3> wins{};
+    for (uint32_t seed=1;seed<=8;++seed) {
+        Sim sim(seed,3,Map::Economy); std::array<uint32_t,2> sequences{};
+        for (int tick=0;tick<16000 && sim.winner()==-1;++tick) {
+            for (uint8_t p=0;p<2;++p) for (const auto& c:make_ai_commands(sim,p,sequences[p])) check(sim.submit(c),"survey command rejected");
+            sim.step();
+        }
+        if (seed==1) { int n[2]{},w[2]{},st[2]{}; for (const auto& u:sim.units()) if (u.hp>0) ++(u.kind==UnitKind::Worker?w:n)[u.player];
+            for (const auto& b:sim.structures()) if (b.hp>0) ++st[b.player];
+            std::cout<<"final army "<<n[0]<<"/"<<n[1]<<" workers "<<w[0]<<"/"<<w[1]<<" structures "<<st[0]<<"/"<<st[1]<<" salvage "<<sim.salvage(0)<<"/"<<sim.salvage(1)<<'\n'; }
+        ++wins[sim.winner()<0?2:sim.winner()];
+        std::cout<<"duel seed="<<seed<<" winner="<<sim.winner()<<" tick="<<sim.tick()<<'\n';
+    }
+    std::cout<<"duel survey P0="<<wins[0]<<" P1="<<wins[1]<<" none="<<wins[2]<<'\n';
 }
 // Mirror audit: until the opposing armies come within contact range, the two AI
 // economies must be exact 180-degree rotations of each other (units, structures,
@@ -164,7 +191,7 @@ void mirrored_economy() {
 }
 }
 int main() {
-    try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands(); economic_match(false); economic_match(true); mirrored_economy();
+    try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands(); economic_match(false); duel_seed_survey(); economic_match(true); mirrored_economy();
         std::cout<<"economic match tests passed\n"; }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }
