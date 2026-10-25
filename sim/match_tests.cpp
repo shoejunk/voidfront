@@ -113,8 +113,10 @@ void terminal_commands() {
 }
 void economic_match(bool duel) {
     Sim sim(42,3,Map::Economy),replay(42,3,Map::Economy);
-    std::array<uint32_t,2> sequences{}; std::array<int,10> command_counts{};
+    std::array<uint32_t,2> sequences{}; std::array<int,13> command_counts{};
     uint32_t finish=0;
+    bool fielded_armies=false,recovered=false;
+    size_t wipe_roster=0;
     // The 64x48 field increases travel and duel attrition; observed finish is ~12k ticks.
     for (int tick=0;tick<16000;++tick) {
         for (uint8_t p=duel?0:1;p<2;++p) for (const auto& c:make_ai_commands(sim,p,sequences[p])) {
@@ -123,23 +125,82 @@ void economic_match(bool duel) {
             check(sim.submit(c) && replay.submit(decoded),"economic AI command rejected"); ++command_counts[static_cast<int>(c.order)];
         }
         sim.step(); replay.step(); check(sim.state_hash()==replay.state_hash(),"economic command replay diverged");
+        if (duel) {
+            int army[2]{};
+            for (const auto& u:sim.units()) if (u.hp>0 && u.kind!=UnitKind::Worker) ++army[u.player];
+            fielded_armies=fielded_armies || (army[0]>0 && army[1]>0);
+            if (fielded_armies && !wipe_roster && army[0]==0 && army[1]==0) wipe_roster=sim.units().size();
+            if (wipe_roster && sim.units().size()>wipe_roster) recovered=true;
+        }
         if (sim.winner()!=-1) { finish=sim.tick(); break; }
     }
     check(finish>0 || duel,"bounded economic match failed to finish");
     check(duel || sim.winner()==1,"economic AI failed to beat passive player");
     if (duel && finish==0) {
         // Mirrored duel: with first-strike and processing-order bias removed, the
-        // armies annihilate each other exactly and neither side can rebuild.
+        // armies can annihilate at the cap. That snapshot is not economic deadlock:
+        // require actual replacement production after an earlier complete army wipe.
+        check(wipe_roster && recovered,"mirrored AI did not rebuild after losing both armies");
         int army[2]{},structs[2]{}; for (const auto& u:sim.units()) if (u.hp>0 && u.kind!=UnitKind::Worker) ++army[u.player];
         for (const auto& b:sim.structures()) if (b.hp>0) ++structs[b.player];
         check(army[0]==army[1] && structs[0]==structs[1] && sim.salvage(0)==sim.salvage(1),"unresolved duel is not symmetric");
-        std::cout<<"AI duel unresolved symmetric stalemate tick="<<sim.tick()<<" hash="<<sim.state_hash()<<'\n';
+        std::cout<<"AI duel unresolved symmetric cap with recovery tick="<<sim.tick()<<" hash="<<sim.state_hash()<<'\n';
         return;
     }
     for (auto order:{Order::Gather,Order::Build,Order::TrainStrider,Order::AttackMove})
         check(command_counts[static_cast<int>(order)]>0,"AI skipped required economic command");
     check(sim.units().size()>6 && sim.structures().size()>(duel?3u:2u),"match did not produce/build");
     std::cout<<(duel?"AI duel":"AI vs passive")<<" winner="<<sim.winner()<<" tick="<<finish<<" hash="<<sim.state_hash()<<'\n';
+}
+void lone_worker_recovery() {
+    Sim sim(42,3,Map::Economy);
+    std::array<uint32_t,2> sequences{};
+    bool funded=false;
+    for (int tick=0;tick<2000 && !funded;++tick) {
+        for (uint8_t p=0;p<2;++p) for (const auto& c:make_ai_commands(sim,p,sequences[p])) check(sim.submit(c),"recovery setup AI rejected");
+        sim.step();
+        bool queues[2]{};
+        for (const auto& b:sim.structures()) if (b.kind==StructureKind::Foundry && b.production_queue) queues[b.player]=true;
+        funded=queues[0] && queues[1];
+    }
+    check(funded && sim.salvage(0)<kStriderCost && sim.salvage(1)<kStriderCost,"recovery fixture not below replacement cost");
+    // Controlled casualty fixture: only the first worker on each side survives,
+    // already assigned to flux with a partial load. Keep banks and paid queues
+    // intact; recovery must deliver new salvage and produce beyond those queues.
+    for (auto& u:const_cast<std::vector<Unit>&>(sim.units())) {
+        if (u.id!=1 && u.id!=4) { u.hp=0; continue; }
+        u.order=Order::Gather; u.resource_id=u.player?4:3; u.build_id=0;
+        u.cargo=5; u.cargo_kind=1; u.returning=false; u.work_ticks=0;
+        u.goal_x=u.next_x=u.x; u.goal_z=u.next_z=u.z;
+        u.path.clear(); u.detour.clear(); u.queue.clear();
+    }
+    const auto roster=sim.units().size();
+    const auto existing_reservations=sim.population_reserved(0)+sim.population_reserved(1);
+    const int initial_salvage[2]{sim.salvage(0),sim.salvage(1)},initial_flux[2]{sim.flux(0),sim.flux(1)};
+    bool delivered[2]{},flux_returned[2]{};
+    auto replay=sim;
+    for (int tick=0;tick<4000;++tick) {
+        for (uint8_t p=0;p<2;++p) for (const auto& c:make_ai_commands(sim,p,sequences[p])) {
+            Command decoded; check(deserialize_command(serialize_command(c),decoded),"recovery command roundtrip failed");
+            check(sim.submit(c) && replay.submit(decoded),"recovery AI command rejected");
+        }
+        sim.step(); replay.step();
+        check(sim.state_hash()==replay.state_hash(),"recovery command replay diverged");
+        for (int p=0;p<2;++p) {
+            delivered[p]=delivered[p] || sim.salvage(p)>initial_salvage[p];
+            flux_returned[p]=flux_returned[p] || sim.flux(p)>=initial_flux[p]+5;
+        }
+        const auto& a=sim.units()[0]; const auto& b=sim.units()[3];
+        check(a.hp==b.hp && a.x==sim.width()*kScale-b.x && a.z==sim.height()*kScale-b.z &&
+            a.order==b.order && a.cargo==b.cargo && a.cargo_kind==b.cargo_kind &&
+            a.returning==b.returning && sim.salvage(0)==sim.salvage(1) && sim.flux(0)==sim.flux(1),
+            "lone-worker recovery lost rotational symmetry");
+        if (delivered[0] && delivered[1] && flux_returned[0] && flux_returned[1] &&
+            sim.units().size()>roster+existing_reservations) break;
+    }
+    check(flux_returned[0] && flux_returned[1],"recovery discarded partial flux cargo");
+    check(delivered[0] && delivered[1],"sole flux workers never resumed salvage income");
+    check(sim.units().size()>roster+existing_reservations,"sole workers failed to fund replacement production");
 }
 // Bias survey: the same mirrored AI duel under several seeds. Reported, not
 // asserted: it measures whether a side wins regardless of seed.
@@ -161,8 +222,8 @@ void duel_seed_survey() {
 }
 // Mirror audit: until the opposing armies come within contact range, the two AI
 // economies must be exact 180-degree rotations of each other (units, structures,
-// orders, cargo and balances). Combat itself is excluded: exact ties there must
-// resolve by a stable rule, which necessarily favors one side.
+// orders, cargo and balances). Combat itself has a separate start-of-tick,
+// rotationally covariant tie policy; this audit isolates the economy before contact.
 void mirrored_economy() {
     Sim sim(42,3,Map::Economy); std::array<uint32_t,2> sequences{};
     const int32_t w=int32_t(sim.width())*kScale,h=int32_t(sim.height())*kScale;
@@ -191,7 +252,7 @@ void mirrored_economy() {
 }
 }
 int main() {
-    try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands(); economic_match(false); duel_seed_survey(); economic_match(true); mirrored_economy();
+    try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands(); lone_worker_recovery(); economic_match(false); duel_seed_survey(); economic_match(true); mirrored_economy();
         std::cout<<"economic match tests passed\n"; }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }

@@ -675,7 +675,9 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         if (!anchor || !enemy) return {};
         const Unit* builder=nullptr;
         bool constructing=false;
+        uint32_t worker_count=0;
         for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker) {
+            ++worker_count;
             if (!builder) builder=&u;
             if (foundry && u.order==Order::Build && u.build_id==foundry->id) constructing=true;
         }
@@ -696,8 +698,9 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
                 if (placed) break;
             }
         }
-        // Once the Foundry stands, dedicate exactly one worker to the nearest explored
-        // flux deposit. Fog applies: an unexplored crossing is simply unknown to the AI.
+        // Once the Foundry stands, dedicate one worker to explored flux only when
+        // another worker remains for salvage. The last survivor must retain the
+        // common-resource income needed to replace an army after casualties.
         uint32_t flux_worker=0;
         bool flux_mined=false;
         const Deposit* flux_site=nullptr;
@@ -709,7 +712,7 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
                 const int64_t dx=int64_t(anchor->x)-d.x,dz=int64_t(anchor->z)-d.z;
                 if (dx*dx+dz*dz<best) { best=dx*dx+dz*dz; flux_site=&d; }
             }
-            if (!flux_mined && flux_site) for (const auto& u:sim.units())
+            if (worker_count>1 && !flux_mined && flux_site) for (const auto& u:sim.units())
                 if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker && u.id!=assigned_builder && u.order!=Order::Build) {
                     flux_worker=u.id; emit(Order::Gather,{u.id},flux_site->x,flux_site->z); break;
                 }
@@ -717,7 +720,13 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
                 emit(Order::Research,{foundry->id});
         }
         for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker &&
-            u.id!=assigned_builder && u.id!=flux_worker && u.order!=Order::Build && u.order!=Order::Gather && u.order!=Order::ReturnCargo) {
+            u.id!=assigned_builder && u.id!=flux_worker && u.order!=Order::Build && u.order!=Order::ReturnCargo) {
+            // Reassign an existing sole flux miner once; Gather's mixed-cargo
+            // rule delivers its flux first, then resumes the salvage deposit.
+            // Existing salvage trips keep their goals and work progress.
+            const bool sole_flux_miner=worker_count==1 && u.resource_id>0 &&
+                u.resource_id<=sim.deposits().size() && sim.deposits()[u.resource_id-1].kind==1;
+            if (u.order==Order::Gather && !sole_flux_miner) continue;
             const Deposit* nearest=nullptr;
             int64_t distance=std::numeric_limits<int64_t>::max();
             for (const auto& d:sim.deposits()) if (d.kind==0 && d.remaining>0 && sim.visibility(player,d.x/kScale,d.z/kScale)>0) {

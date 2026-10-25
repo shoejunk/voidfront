@@ -31,7 +31,7 @@ def commands_from_replay(raw, report):
         tick, seq, player, order, x, z, count = struct.unpack_from('<IIBBIII', frame, 4)
         require(count in range(1, 257) and size == 26 + 4*count, 'command ids size')
         ids = list(struct.unpack_from('<'+'I'*count, frame, 26))
-        require(ids == sorted(set(ids)) and player in (0, 1) and order in range(9), 'command canonical fields')
+        require(ids == sorted(set(ids)) and ids[0] > 0 and player in (0, 1) and order in range(13), 'command canonical fields')
         require(0 <= tick < ticks and 0 <= x < initial['width']*256 and 0 <= z < initial['height']*256, 'command bounds')
         require(seq > sequences[player], 'player sequence')
         sequences[player] = seq
@@ -39,7 +39,9 @@ def commands_from_replay(raw, report):
             prior = commands[-1]
             require((tick, player, seq) > (prior['tick'], prior['player'], prior['sequence']), 'canonical replay ordering')
         state = report['snapshots'][tick]
-        actors = state['structures'] if order in (7, 8) else state['units']
+        actors = state['structures'] if 7 <= order <= 10 else state['units']
+        if 7 <= order <= 10:
+            require(count == 1 and x == z == 0, 'production/research canonical fields')
         require(all(any(a['id'] == uid and a['player'] == player for a in actors) for uid in ids), 'actor ownership')
         commands.append(dict(tick=tick, sequence=seq, player=player, order=order, x=x, z=z, units=ids))
     require(pos == len(raw), 'trailing bytes')
@@ -61,8 +63,8 @@ def audit_roles(report, commands):
         before, after = event['before'], event['after']
         require(before == rows[before['tick']] and after == rows[after['tick']] and event['tick'] == after['tick'], 'role snapshot binding')
         require(event['key'] in ('F1', 'F2'), 'unknown role key')
-        kind = 1 if event['key'] == 'F1' else 0
-        expected = [u['id'] for u in before['units'] if u['player'] == 0 and u['hp'] > 0 and u['kind'] == kind]
+        kinds = (1,) if event['key'] == 'F1' else (0, 2)
+        expected = [u['id'] for u in before['units'] if u['player'] == 0 and u['hp'] > 0 and u['kind'] in kinds]
         require(event['selected'] == expected, 'role selection includes wrong units')
         require(not any(event['pending_after'].values()), 'role switch retained targeting')
     require(any(e['pending_before']['attack'] for e in events) and any(e['pending_before']['build'] for e in events), 'missing pending mode cancellation')
@@ -80,6 +82,63 @@ def audit_roles(report, commands):
         current = after['units'][miner['id']-1]
         require(miner['id'] not in command['units'] and current['hp'] > 0 and current['order'] == 4 and current['resource_id'] == miner['resource_id'], 'army order disrupted miner')
     return len(events)
+
+
+def queue_investment(site, skip=0):
+    count, mask = site['production_queue'], site['queue_lancers']
+    require(0 <= count <= 5 and 0 <= mask < (1 << count), 'production queue/mask bounds')
+    require(0 <= skip <= count, 'births exceed paid queue')
+    lancers = (mask >> skip).bit_count()
+    return [50 * (count - skip - lancers) + 75 * lancers, 25 * lancers]
+
+
+def resource_inventory(row, forfeited=(0, 0)):
+    result = [sum(row['salvage']) + forfeited[0], sum(row['flux']) + forfeited[1]]
+    for deposit in row['deposits']:
+        require(deposit['kind'] in (0, 1) and deposit['remaining'] >= 0, 'deposit bounds')
+        result[deposit['kind']] += deposit['remaining']
+    for unit in row['units']:
+        require(unit['kind'] in (0, 1, 2) and unit['cargo_kind'] in (0, 1), 'unit/resource kind')
+        result[unit['cargo_kind']] += unit['cargo']
+        if unit['kind'] == 0: result[0] += 50
+        elif unit['kind'] == 2:
+            result[0] += 75
+            result[1] += 25
+    for site in row['structures']:
+        if site['kind'] == 1: result[0] += 100
+        costs = queue_investment(site)
+        for resource in (0, 1): result[resource] += costs[resource]
+    result[1] += 50 * sum(bool(r) or bool(t) for r, t in zip(row['researched'], row['research_ticks'], strict=True))
+    return result
+
+
+def health_bound(prior, row, old, unit, existing=True):
+    bonus = 50 if (existing and old['hp'] > 0 and unit['kind'] == 0 and
+                   not prior['researched'][unit['player']] and row['researched'][unit['player']]) else 0
+    maximum = 70 if unit['kind'] == 2 else 150 if unit['kind'] == 0 and row['researched'][unit['player']] else 100
+    require(unit['max_hp'] == maximum and 0 <= unit['hp'] <= min(maximum, old['hp'] + bonus)
+            and 0 <= unit['cargo'] <= 10, 'unit health/cargo')
+
+
+def tier_two_regressions():
+    """Positive mixed-queue/plating cases plus adversarial boundary checks."""
+    require(queue_investment(dict(production_queue=3, queue_lancers=5)) == [200, 50], 'mixed queue valuation')
+    require(queue_investment(dict(production_queue=3, queue_lancers=5), 1) == [125, 25], 'post-birth forfeiture valuation')
+    old = dict(hp=60)
+    unit = dict(player=0, kind=0, hp=110, max_hp=150, cargo=0)
+    before, after = dict(researched=[False, False]), dict(researched=[True, False])
+    health_bound(before, after, old, unit)
+    health_bound(after, after, dict(hp=70), dict(player=0, kind=2, hp=70, max_hp=70, cargo=0))
+    cases = [lambda: queue_investment(dict(production_queue=1, queue_lancers=2)),
+             lambda: queue_investment(dict(production_queue=1, queue_lancers=0), 2),
+             lambda: health_bound(after, after, old, unit),
+             lambda: health_bound(before, after, dict(hp=0), unit),
+             lambda: health_bound(after, after, dict(hp=70), dict(player=0, kind=2, hp=71, max_hp=70, cargo=0))]
+    for case in cases:
+        try: case()
+        except AssertionError: pass
+        else: raise AssertionError('tier-two corrupted evidence accepted')
+    return dict(positive_cases=4, rejected_corruptions=len(cases))
 
 
 def audit(report, commands):
@@ -101,13 +160,13 @@ def audit(report, commands):
         unit = state['units'][event['unit']-1]
         require(unit['target_structure'] == event['target_structure'] and unit['cooldown'] == event['cooldown']
                 and 'attack' in event['clip'].lower(), 'rendered attack request binding')
-    total = sum(initial['salvage']) + sum(d['remaining'] for d in initial['deposits']) + sum(u['cargo'] for u in initial['units'])
-    prior, forfeited, unit_rows, damage_ticks = initial, 0, 0, 0
+    total = resource_inventory(initial)
+    prior, forfeited, unit_rows, damage_ticks = initial, [0, 0], 0, 0
     damaged, dead = set(), set()
     for row, hash_row in zip(rows, trace, strict=True):
         tick = row['tick']
         require(row['hash'] == hash_row['hash'] and row['replay_complete'], 'trace binding/evidence incomplete')
-        require(min(row['salvage']) >= 0, 'negative salvage')
+        require(min(row['salvage'] + row['flux']) >= 0, 'negative resource')
         require(len(row['units']) >= len(prior['units']) and [u['id'] for u in row['units']] == list(range(1, len(row['units'])+1)), 'unit identity')
         require(len(row['structures']) >= len(prior['structures']) and [s['id'] for s in row['structures']] == list(range(1, len(row['structures'])+1)), 'structure identity')
         for player in (0, 1):
@@ -127,24 +186,23 @@ def audit(report, commands):
                         before = prior['units'][u['id']-1] if u['id'] <= len(prior['units']) else u
                         cooldown = before['cooldown'] if u['id'] <= len(prior['units']) else 0
                         dx, dz = max(0, abs(before['x']-s['x'])-256), max(0, abs(before['z']-s['z'])-256)
-                        if before['hp'] > 0 and before['kind'] == 0 and before['player'] != s['player'] and cooldown <= 1 and u['order'] != 1 and dx*dx+dz*dz <= 768*768:
-                            firing_budget += 8
+                        reach, damage = (1280, 6) if before['kind'] == 2 else (768, 8)
+                        if before['hp'] > 0 and before['kind'] in (0, 2) and before['player'] != s['player'] and cooldown <= 1 and u['order'] != 1 and dx*dx+dz*dz <= reach*reach:
+                            firing_budget += damage
                     require(old['hp']-s['hp'] <= firing_budget, f'tick {tick}: structure damage exceeds in-range firing budget')
                     damaged.add(s['id'])
                     damage_ticks += 1
                 if old['hp'] > 0 and s['hp'] == 0:
                     dead.add(s['id'])
-                    require(not any(c['tick'] == tick-1 and c['order'] in (7, 8) and c['units'] == [s['id']] for c in commands),
+                    require(not any(c['tick'] == tick-1 and c['order'] in (7, 8, 10) and c['units'] == [s['id']] for c in commands),
                             'fixture has simultaneous purchase/destruction requiring richer queue audit')
                     births = sum(u['player'] == s['player'] and max(abs(u['x']-s['x']), abs(u['z']-s['z'])) == 352
                                  for u in row['units'][len(prior['units']):])
-                    forfeited += 50*(old['production_queue']-births)
+                    costs = queue_investment(old, births)
+                    for resource in (0, 1): forfeited[resource] += costs[resource]
             if s['hp'] == 0:
                 require(s['production_queue'] == s['production_ticks'] == 0 and not s['spawn_blocked'], 'dead producer retains paid queue')
-        observed = sum(row['salvage']) + sum(row.get('flux', [0, 0])) + 50*sum(bool(r) or bool(t) for r, t in zip(row.get('researched', [0, 0]), row.get('research_ticks', [0, 0]))) + sum(d['remaining'] for d in row['deposits']) + sum(u['cargo'] for u in row['units'])
-        observed += 100*sum(s['kind'] == 1 for s in row['structures'])
-        observed += 50*(sum(u['kind'] == 0 for u in row['units']) + sum(s['production_queue'] for s in row['structures'])) + forfeited
-        require(observed == total, f'tick {tick}: resource conservation with tombstones and lost queues')
+        require(resource_inventory(row, forfeited) == total, f'tick {tick}: resource conservation with tombstones and lost queues')
         # Production/movement precede end-of-tick damage: a structure destroyed
         # this tick still blocks movement, and a newly purchased one already does.
         movement_structures = prior['structures'] + row['structures'][len(prior['structures']):]
@@ -153,7 +211,7 @@ def audit(report, commands):
         for i, u in enumerate(row['units']):
             old = prior['units'][i] if i < len(prior['units']) else u
             require(all(u[k] == old[k] for k in ('id', 'player', 'kind')), 'unit changed identity')
-            require(0 <= u['hp'] <= old['hp'] and 0 <= u['cargo'] <= 10, 'unit health/cargo')
+            health_bound(prior, row, old, u, i < len(prior['units']))
             if old['hp'] <= 0: continue
             a, b = (old['x'], old['z']), (u['x'], u['z'])
             require(sum((p-q)**2 for p, q in zip(a, b)) <= 1024, 'speed limit')
@@ -169,7 +227,7 @@ def audit(report, commands):
         winner = -1 if all(anchors) else 0 if anchors[0] else 1 if anchors[1] else 2
         require(row['winner'] == winner, 'anchor outcome')
         if prior['winner'] != -1:
-            require(all(row[k] == prior[k] for k in ('units', 'structures', 'deposits', 'salvage', 'winner')), 'terminal gameplay changed')
+            require(all(row[k] == prior[k] for k in ('units', 'structures', 'deposits', 'salvage', 'flux', 'research_ticks', 'researched', 'winner')), 'terminal gameplay changed')
         prior = row
     require(report['mode'] in ('match', 'victory'), 'unknown match route')
     expected_winner = 0 if report['mode'] == 'victory' else 1
@@ -177,9 +235,9 @@ def audit(report, commands):
             any(s['kind'] == 0 and s['player'] == 1-expected_winner and s['hp'] == 0 for s in final['structures']),
             'expected anchor outcome missing')
     require(damage_ticks > 0 and dead, 'no executed building combat')
-    require(all(any(u['player'] == p and u['kind'] == 0 for u in final['units']) for p in (0, 1)), 'missing paid production')
+    require(all(any(u['player'] == p and u['kind'] in (0, 2) for u in final['units']) for p in (0, 1)), 'missing paid production')
     return dict(ticks=final['tick'], unit_rows=unit_rows, damage_ticks=damage_ticks, damaged_structures=sorted(damaged),
-                destroyed_structures=sorted(dead), conserved_salvage=total, forfeited_salvage=forfeited,
+                destroyed_structures=sorted(dead), conserved_resources=total, forfeited_resources=forfeited,
                 final_hash=final['hash'], winner=final['winner'])
 
 
@@ -193,15 +251,20 @@ def main():
     raw = Path(report['replay_path']).read_bytes()
     commands = commands_from_replay(raw, report)
     summary = audit(report, commands)
+    summary['tier_two_regressions'] = tier_two_regressions()
     if report['mode'] == 'victory': summary['role_selection_events'] = audit_roles(report, commands)
     rejected = []
-    mutations = ['ledger-gap', 'trace-gap', 'resource-created', 'population-lie', 'unfunded-damage', 'wrong-outcome', 'restart-ai-off', 'shot-target-lie', 'wrong-route']
+    mutations = ['ledger-gap', 'trace-gap', 'resource-created', 'resource-kind-swap', 'queue-mask', 'population-lie', 'unfunded-damage', 'wrong-outcome', 'restart-ai-off', 'shot-target-lie', 'wrong-route']
     if report['mode'] == 'victory': mutations += ['wrong-role-selection', 'retained-build-mode']
     for name in mutations:
         bad = copy.deepcopy(report)
         if name == 'ledger-gap': bad['snapshots'].pop(1)
         elif name == 'trace-gap': bad['trace'].pop(1)
         elif name == 'resource-created': bad['snapshots'][1]['salvage'][0] += 1
+        elif name == 'resource-kind-swap':
+            next(d for d in bad['snapshots'][1]['deposits'] if d['kind'] == 0)['remaining'] -= 1
+            next(d for d in bad['snapshots'][1]['deposits'] if d['kind'] == 1)['remaining'] += 1
+        elif name == 'queue-mask': bad['snapshots'][1]['structures'][0]['queue_lancers'] = 1
         elif name == 'population-lie': bad['snapshots'][1]['population_used'][0] += 1
         elif name == 'unfunded-damage': bad['snapshots'][1]['structures'][0]['hp'] -= 8
         elif name == 'wrong-outcome':
@@ -236,7 +299,7 @@ def main():
             require(result.returncode == 0, f'{name}: replay failed {result.stderr}')
             require(trace.read_text() == golden, f'{name}: client/replay divergence')
             data = json.loads(metrics.read_text())
-            for key in ('salvage', 'structures', 'deposits', 'population_used', 'population_reserved', 'population_cap', 'winner'):
+            for key in ('salvage', 'flux', 'researched', 'research_ticks', 'structures', 'deposits', 'population_used', 'population_reserved', 'population_cap', 'winner'):
                 require(data[key] == report['final_snapshot'][key], f'{name}: {key} differs')
             summary['runs'].append(name)
     require(fingerprints == {c: digest(p) for c, p in binaries.items()}, 'binaries changed')
