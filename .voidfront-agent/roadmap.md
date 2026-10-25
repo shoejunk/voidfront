@@ -1,5 +1,34 @@
 # Continuing roadmap
 
+## 2026-10-25 current checkpoint - last-worker recovery
+
+Source `e721d48` fixes the demonstrated sole-surviving-flux-worker income failure:
+retain one salvage worker and deliver mixed cargo through canonical Gather.
+Native mirrored casualty test fails before/passes after, preserving paid queues,
+banks, rotation and replay parity. Fixed test counter overflow and modernized
+match verifier for Research/Lancer/queues/plating/typed resources. Fresh pinned
+Debug/Release12/12 and packaged exploration/victory/restart audits pass; see
+current PROGRESS/TESTING and independent recovery review for exact evidence.
+
+Fresh real paired clients confirm first winner7147; native audit22replays/106prefixes/70phases/28captures/24corruptions passes. Defender army holds fullHP; contested combat and rematch remain open.
+
+The Oct20 statement that AI cannot rebuild at22salvage is superseded: rebuilt
+source metrics show22->32 at16000->16020 and natural duel tests require actual
+production after prior full army wipe. Symmetric unresolved cap is not a
+permanent recovery failure, balance result or full-match acceptance. General
+chase/service-point iteration dependence and stationary-blocker routing remain.
+
+Next implement coordinated match setup/rematch and verify successful-pair return
+to offline with accepted movement; add contested opposing-army/pending-combat-queue
+package evidence and direct complete-match play. Exercise terminal endpoint loss,
+wrong-tick/hash/disconnect/no-winner-cap/accepted-tail-prefix and transport identity
+regressions. Later AI/content work must support worker replacement/all-workers-dead
+recovery, finite-resource strategy and varied army policies; one-worker salvage
+reservation does not fulfill those requirements. Improve capture framing (current
+counterattack PNG misses army), label/bar overlap and selection/waypoint clutter.
+All dense-crowd, frame/response, production content/art/audio/animation, physical
+network/soak, human/balance and final SPEC gates stand. No COMPLETE.md.
+
 ## 2026-10-18 current checkpoint - symmetric-map package verified
 
 Latest PROGRESS/TESTING supersede older terminal-next notes: actual packaged

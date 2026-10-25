@@ -1,5 +1,81 @@
 # Voidfront progress
 
+## 2026-10-25 America/Los_Angeles - last-worker recovery and current match audits
+
+Continuing clean `dev d785bd1`, exclusively owned task
+`01a1746d-fd48-7742-81fe-5fc18b2f9d03`; STOP/COMPLETE absent. Source checkpoint
+`e721d48` built/tested and pushed to origin/dev. Existing implementation retained.
+
+Changed behavior: with only one living worker, economic AI keeps salvage income
+rather than dedicating its last worker to flux. An existing flux miner receives
+canonical Gather on explored salvage; mixed cargo delivers carried flux first.
+Two-or-more-worker flux policy and existing salvage trips retain their behavior.
+Mirrored casualty fixture first failed exactly `sole flux workers never resumed
+salvage income`, then passed with new salvage, retained partial flux cargo,
+production beyond pre-existing paid queues, wire roundtrip/hash equality and
+per-tick worker/bank rotation checks. This is a controlled native casualty test,
+not a packaged human casualty playtest. Test command counter now fits all13 orders.
+
+Corrected Oct20 diagnosis: 22 salvage at tick16000 was not proof of a permanent
+stalemate. Fresh source-current Release metrics at16000/16020 show22->32 salvage,
+roster68, and carried salvage10->0. Revised natural-duel test requires actual
+replacement production after a prior full army wipe. Symmetric duels still have
+no winner at16000; this is not balance or complete-match acceptance. Headless
+stdout uses full hash while match tests print state hash; those values differ
+by design. Old source-content replay rejects before simulation. Current automatic
+content ID `04b460ca2d26a0ef`; protocol12, pins unchanged.
+
+Match auditor now parses canonical Research/Lancer/queued commands, includes
+Lancers in army selection, audits separate salvage/flux investment, mixed paid
+queues/forfeitures, Lancer structure damage and legitimate live-Strider plating.
+Four positive helper boundaries/five corrupted helper cases pass; these are
+synthetic validator checks, not live tier-two gameplay. The fresh offline victory
+has no research/Lancer commands; paired tier-two route is checked separately.
+
+Verification: `artifacts/recovery-verify-approved-2026-10-25.log`, MSVC Debug and
+Release12/12 CTest each,15 malformed replays and7 output aliases/config,
+2000 cross-build hashes and ten repeats. Initial sandbox compiler-helper stall
+retained in `recovery-verify-2026-10-25.log`; verified owned tree stopped and same
+checks passed with approved access. Debug/Release CTest logs separately retained.
+Pinned Godot4.7.2 import/export passed; frozen package
+`artifacts/recovery-package-2026-10-25/Voidfront.exe`, identical candidate copied
+to `artifacts/package/Voidfront.exe`; prior package preserved in
+`artifacts/recovery-prior-package-2026-10-25`.
+
+Fresh packaged exploration:2864ticks/37checks/5human+14AI commands,11native replays,
+5corruptions; fresh victory/restart:4512ticks/winner0/hash`fa4c07b256e51eaf`,
+38934unitrows,166structure-damage ticks,7role events,11native replays and13report
+corruptions. Reports/audits under `artifacts/recovery-{exploration,victory}-*`.
+Both are accelerated8ticks/frame. Independent review:
+`.voidfront-agent/review-recovery-2026-10-25.md`. Root/reviewer inspected actual
+scout/defeat/victory/restart PNGs. Counterattack PNG is empty dark ground: it does
+not show army combat. Label/bar overlap, bright reused walkers, blockout terrain
+and cubes remain. No movie, direct audio, manual play, SC2 comparison, reference
+performance, balance or AAA/shipping acceptance; prior failed SPEC gates stand.
+
+Paired package verification is complete: `run_net_match.ps1 -Out
+artifacts/recovery-net-match-2026-10-25 -PackagePath
+artifacts/recovery-package-2026-10-25/Voidfront.exe`, then
+`verify_net_match.py artifacts/recovery-net-match-2026-10-25 --out
+artifacts/recovery-net-audit-2026-10-25`. Two rendered processes38140/35512,
+UDP54774/54775, seed7/delay2 both confirm first winner0 at7147 belowcap12000,
+hash`34f802c27f1e60b2`. Native audit22fullreplays/106prefixes/70phases/28captures/
+24corruptions passes;7146 has no winner. Both canonical VFR3 streams identical.
+Build/refund/flux/research/Lancer/group-queue/anchor route is retained. All8combat
+units finish fullHP and defender army remains Hold: scripted anchor reachability,
+not contested1v1. Terminal PNGs visibly show COMPLETE/confirmed7147 and offline
+return text; actual successful-pair R input/rematch remains untested. Root/critic
+inspected actual terminal,anchor-damage and group PNGs. Network host364.391s,
+peak220262400/224186368B are process diagnostics only, not performance gates.
+
+Final package EXE SHA256`d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562`,
+PCK`ce656b5951859d7031b95a5177f7c340091e3f8608d22bdf3a4bb0c55b6d4cf6`,
+DLL`217687b5ae1881732045cfb6dfe2df28cdf54ca5b5c4b04bcdf026d5ef4c14ea`.
+Machine-readable run results `.voidfront-agent/recovery-results-2026-10-25.json`.
+Next: coordinated match setup/rematch, successful-pair offline return/input,
+contested opposing-army/pending-combat queues and direct full-match play. Preserve
+all unresolved crowd/frame/response/content/art/audio/human/balance/SPEC gates;
+no COMPLETE.md and no pause.
 ## 2026-10-18 America/Los_Angeles - symmetric-map package integration verified
 
 Baseline dev `a313f4f`; STOP/COMPLETE/prior marker absent. Exclusive task
@@ -1147,3 +1223,24 @@ human play, balance, crowd/frame budgets, art/audio, soak and all SPEC gates rem
 **Exact next step:** re-run packaged exploration/paired-network fixtures against the new combat timing and retime if
 needed; then fix AI recovery (workers should keep gathering/re-train when army dies; find why salvage stalls at 22);
 vary AI build parameters; coordinated setup/rematch; contested armies in network fixture. No COMPLETE.md.
+
+## 2026-10-25 11:59 America/Los_Angeles - AI recovery and package regression goals
+
+Baseline clean dev `d785bd1`; STOP/COMPLETE/prior marker absent. Exclusive task
+`01a1746d-fd48-7742-81fe-5fc18b2f9d03`. The Oct20 combat acquisition repair is newer
+than automation memory; preserve it. This run will diagnose and repair the observed
+22-salvage AI recovery stall, add focused deterministic regressions, then rebuild
+Debug/Release and exercise affected packaged offline/paired routes. Audit replay
+compatibility and match parser gaps. Independent specialists/critics inspect actual
+source and retained evidence; all SPEC budgets and production/human gates stand.
+
+The prior Oct20 handoff's permanent 22-salvage-stall diagnosis was disproved:
+retained `artifacts/recovery-baseline-2026-10-25.*` shows a returning salvage load
+at tick16000; extended agent/reviewer probes show bank32 at16020 and continuing
+production at later cutoffs. A cap snapshot is not a liveness proof. The actual
+regression is a sole surviving flux worker, with explored salvage and insufficient
+bank for replacement units. Tests-only Debug build reproduced the exact failure
+`sole flux workers never resumed salvage income` before any AI source edit;
+logs `artifacts/recovery-before-{build,tests}-2026-10-25.log`. New casualty fixture
+keeps paid queues/banks, requires fresh salvage, delivery of partial flux cargo,
+production beyond initial reservations, per-tick rotation and wire-replay equality.

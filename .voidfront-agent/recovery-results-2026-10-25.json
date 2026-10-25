@@ -1,0 +1,51 @@
+{
+  "run": "2026-10-25-last-worker-recovery",
+  "task_id": "01a1746d-fd48-7742-81fe-5fc18b2f9d03",
+  "baseline_commit": "d785bd1feeae4deeb91ba2a776a9b0f439bbc7e1",
+  "source_commit": "e721d488cb36a3001f32199bc6d248cf589aa5c6",
+  "branch": "dev",
+  "source_pushed": true,
+  "content_id": "04b460ca2d26a0ef",
+  "godot": "4.7.2.stable.official.ed1daf0bf",
+  "godot_cpp": "05057de73de4b99f114d36c40d84ca46926c0e25",
+  "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
+  "frozen_package": "C:/dev/voidfront/artifacts/recovery-package-2026-10-25/Voidfront.exe",
+  "previous_package": "C:/dev/voidfront/artifacts/recovery-prior-package-2026-10-25",
+  "package_hashes": {
+    "Voidfront.exe": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+    "Voidfront.pck": "ce656b5951859d7031b95a5177f7c340091e3f8608d22bdf3a4bb0c55b6d4cf6",
+    "voidfront_bridge.dll": "217687b5ae1881732045cfb6dfe2df28cdf54ca5b5c4b04bcdf026d5ef4c14ea"
+  },
+  "verification": "C:/dev/voidfront/artifacts/recovery-verify-approved-2026-10-25.log",
+  "fail_before": "C:/dev/voidfront/artifacts/recovery-before-tests-2026-10-25.log",
+  "debug_ctest_passed": 12,
+  "release_ctest_passed": 12,
+  "malformed_replays_per_configuration": 15,
+  "output_aliases_per_configuration": 7,
+  "cross_configuration_ticks": 2000,
+  "repeated_traces": 10,
+  "old_content_rejected": true,
+  "source_current_recovery_metrics": [
+    "C:/dev/voidfront/artifacts/recovery-current-16000-2026-10-25.json",
+    "C:/dev/voidfront/artifacts/recovery-current-16020-2026-10-25.json"
+  ],
+  "offline_exploration": "C:/dev/voidfront/artifacts/recovery-exploration-audit-2026-10-25/summary.json",
+  "offline_victory": "C:/dev/voidfront/artifacts/recovery-victory-audit-2026-10-25/summary.json",
+  "review": "C:/dev/voidfront/.voidfront-agent/review-recovery-2026-10-25.md",
+  "network_state": "passed",
+  "network_evidence": "C:/dev/voidfront/artifacts/recovery-net-match-2026-10-25",
+  "limitations": "Controlled native one-worker casualty regression; packaged smoke and scripted loopback. No direct human casualty playtest, motion/audio/SC2, impaired-network soak, reference performance, balance, production quality or shipping acceptance.",
+  "network_audit": "C:/dev/voidfront/artifacts/recovery-net-audit-2026-10-25/summary.json",
+  "network_details": {
+    "ticks": 7147,
+    "winner": 0,
+    "final_hash": "34f802c27f1e60b2",
+    "replays": 22,
+    "prefixes": 106,
+    "phases": 70,
+    "captures": 28,
+    "rejected_corruptions": 24,
+    "contested_army_combat": false
+  },
+  "completed_utc": "2026-10-25T19:21:40.2172926Z"
+}

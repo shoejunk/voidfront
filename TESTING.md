@@ -1,5 +1,64 @@
 # Verification ledger
 
+## 2026-10-25 - recovery regression, tier-two audit and fresh package
+
+`tools/verify.ps1` passed pinned MSVC Debug/Release12/12 each,15 malformed
+replays+7 aliases/config,2000 cross-build tick hashes and ten repeats. Final log
+`artifacts/recovery-verify-approved-2026-10-25.log`; separate
+`recovery-{Debug,Release}-CTest-2026-10-25.log`. Initial sandbox compiler stall
+retained, verified owned helpers stopped before approved unchanged retry.
+
+Fail-before: tests-only Debug `voidfront_match_tests` rejected exactly
+`sole flux workers never resumed salvage income`; logs
+`recovery-before-{build,tests}-2026-10-25.log`. Fixed AI passes controlled mirrored
+one-worker/partial-flux casualty recovery, new salvage, replacement production
+beyond paid reservations, per-tick rotation and canonical replay parity. Natural
+duel separately proves replacement after prior army wipe; no forced winner.
+Source-current16000/16020 metrics prove22->32salvage; initial pre-existing-binary
+probes alone did not establish correspondence with baseline source. Old replay
+content rejection log `recovery-old-content-rejection-2026-10-25.log`.
+
+Pinned import/export logs `recovery-{import,export}-2026-10-25.log`; package frozen
+`artifacts/recovery-package-2026-10-25` and copied to `artifacts/package`.
+Executed `capture.ps1 -Packaged -Exploration -Ticks 10000 -Name recovery-exploration-2026-10-25`
+and `verify_exploration_capture.py ... --out artifacts/recovery-exploration-audit-2026-10-25`:
+2864ticks/37checks/11replays/5corruptions. Executed `capture.ps1 -Packaged -Victory
+-Ticks 12000 -Name recovery-victory-2026-10-25` and `verify_match_capture.py ...
+--out artifacts/recovery-victory-audit-2026-10-25`:4512ticks/38934rows/7roleevents,
+11replays/13report corruptions, winner0/hash`fa4c07b256e51eaf`; restart passes.
+Both captures accelerated8ticks/frame; no frame/response acceptance.
+
+New validator handles orders9..12, typed Lancer queue/resource costs, separate
+resource conservation, plating and Lancer structure shots. Four positive helper
+boundaries and five deliberate helper corruptions are separate synthetic checks;
+offline victory contains noResearch/Lancer commands. Root and independent critic
+actually inspected PNGs: fog,scout,victory,defeat,reset visible; counterattack PNG
+misses army. Review `.voidfront-agent/review-recovery-2026-10-25.md`. No human,
+new motion/audio/SC2/reference performance, balance or shipping claim.
+
+Paired package verification is complete: `run_net_match.ps1 -Out
+artifacts/recovery-net-match-2026-10-25 -PackagePath
+artifacts/recovery-package-2026-10-25/Voidfront.exe`, then
+`verify_net_match.py artifacts/recovery-net-match-2026-10-25 --out
+artifacts/recovery-net-audit-2026-10-25`. Two rendered processes38140/35512,
+UDP54774/54775, seed7/delay2 both confirm first winner0 at7147 belowcap12000,
+hash`34f802c27f1e60b2`. Native audit22fullreplays/106prefixes/70phases/28captures/
+24corruptions passes;7146 has no winner. Both canonical VFR3 streams identical.
+Build/refund/flux/research/Lancer/group-queue/anchor route is retained. All8combat
+units finish fullHP and defender army remains Hold: scripted anchor reachability,
+not contested1v1. Terminal PNGs visibly show COMPLETE/confirmed7147 and offline
+return text; actual successful-pair R input/rematch remains untested. Root/critic
+inspected actual terminal,anchor-damage and group PNGs. Network host364.391s,
+peak220262400/224186368B are process diagnostics only, not performance gates.
+
+Final package EXE SHA256`d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562`,
+PCK`ce656b5951859d7031b95a5177f7c340091e3f8608d22bdf3a4bb0c55b6d4cf6`,
+DLL`217687b5ae1881732045cfb6dfe2df28cdf54ca5b5c4b04bcdf026d5ef4c14ea`.
+Machine-readable run results `.voidfront-agent/recovery-results-2026-10-25.json`.
+Next: coordinated match setup/rematch, successful-pair offline return/input,
+contested opposing-army/pending-combat queues and direct full-match play. Preserve
+all unresolved crowd/frame/response/content/art/audio/human/balance/SPEC gates;
+no COMPLETE.md and no pause.
 ## 2026-10-19 - rotational AI/service policies and structure lane
 
 `tools/verify.ps1` (log `artifacts/lane-verify-2026-10-19.log`): Debug/Release 12/12
