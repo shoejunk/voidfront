@@ -1,5 +1,64 @@
 # Verification ledger
 
+## 2026-11-01 - strict contested queues and successful-pair offline return
+
+MSVC Debug/Release12/12 CTest each,15 malformed recordings+7 alias cases/config,
+2000 cross-build tick hashes and ten repeats pass via `tools/verify.ps1`.
+Log `artifacts/contested-verify-approved-2026-11-01.log`; initial sandbox compiler
+stall retained in `contested-verify-2026-11-01.log`, verified owned tree stopped
+before approved identical retry. No authoritative source/content/protocol change.
+
+Pinned Godot4.7.2 imports and Windows export pass; final logs
+`contested-final2-import-2026-11-01.log` / `contested-final-export-2026-11-01.log`.
+Frozen package `artifacts/contested-final-package-2026-11-01/Voidfront.exe`.
+Executed `tools/run_net_match.ps1 -Out artifacts/contested-final-match-2026-11-01
+-PackagePath artifacts/contested-final-package-2026-11-01/Voidfront.exe -Contested
+-SuccessReturn`, then `python tools/verify_net_match.py
+artifacts/contested-final-match-2026-11-01 --out artifacts/contested-final-audit-2026-11-01`.
+Two rendered PIDs21612/37192 / UDP64091/64092 confirm first winner0 at7277<12000,
+hash `8dc6aebe3034b10b`; both shared recordings SHA256
+`d020234f1048bde0d0e9401e20c5f562fbc73cb1e0f95a26189b192bddb8cf8d`.
+
+Audit passes22 full Debug/Release replays (ten repeats per player),119 Debug
+native prefixes including7276 no winner/7277 winner,44 canonical inputs,82 phases,
+32 fixture PNGs and35 deliberate corrupted-evidence rejections. Native comparisons
+bind all phase/input/capture snapshots. New corruptions cover offline ownership,
+network detachment, movement, replay truncation/setup and shot cooldown/damage,
+worker-target substitution, lost queue and missing resume. Existing cap/terminal,
+trace, command, resource, queue, target and replay rejection cases remain.
+
+Perpeer consecutive native states prove P0 Lancer10 -> P1 Lancer9 at6583/6584,
+HP38->32; P1 Lancer9 -> P0 Strider13 at6551/6552, HP150->144. Cooldown0->10,
+stationary positions and exact pending queue retained. Both combat armies take
+damage; defender dies6651; the same P0 firing survivor resumes original tail6694
+without later own commands. This proves the existing queue/combat rules through
+actual packaged input, not a new combat system or a balance result.
+
+Before R, original player/winner/tick/trace/replay/terminal PNG are frozen. Each
+client then returns to offline player0/AI, selects three workers, submits Move
+at5 and moves at6. Separate VFR3 recordings are both SHA256
+`9ab8bce7090d715a677b907d6deca26018d4e3e4cc901928bf416da580b0c63e`.
+Four Debug/Release offline full replays and six Debug prefixes at1/5/6 compare
+all snapshot state and full hashes. The two terminal and two offline PNGs remain
+separate from32 fixture captures. Final offline full hash `ecbea8c0d03b2a1c`.
+
+First candidate is retained at `artifacts/contested-net-match-2026-11-01`:
+script completed7277/offline6 but first P0 shot targeted a worker. Strengthened
+auditor rejects it at the precise combat-kind assertion; rejection log
+`artifacts/contested-first-audit-rejection-2026-11-01.log`. Both observation and
+auditor tightened, package re-exported, real pair rerun. Independent short offline
+audit for that initial candidate also passes; it does not accept its combat proof.
+Current auditor structurally accepts retained Oct25 passive route; not rerun live.
+
+Independent review `.voidfront-agent/review-contested-2026-11-01.md` inspected
+source, full traces and actual final PNGs. Unequal scripted6vs2 only. No new movie,
+human/motion/audio/SC2, impairment/soak/physical network, reference performance,
+balance or production-quality acceptance. Host wall371.224s and resident peaks
+232873984/230592512B are diagnostics. No SPEC budget was changed; every existing
+failed or unverified shipping gate remains. Package fingerprints and all results
+are bound in `artifacts/contested-final-audit-2026-11-01/summary.json` and
+`.voidfront-agent/contested-results-2026-11-01.json`.
+
 ## 2026-10-25 - recovery regression, tier-two audit and fresh package
 
 `tools/verify.ps1` passed pinned MSVC Debug/Release12/12 each,15 malformed

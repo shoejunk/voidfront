@@ -28,15 +28,21 @@ def phase_labels(player):
                      'combat_started', 'anchor_damaged', 'outcome']
 
 
-def input_labels(player):
+def input_labels(player, contested=False):
     pairs = [('gather', 4), ('miners_stopped', 0), ('build', 6), ('train', 7), ('train_second', 7),
              ('cancel', 8), ('strider_rally', 1), ('scout_flux', 1), ('gather_flux', 4),
              ('miners_stopped_flux', 0), ('research', 9), ('lancer', 10)]
     if player == 0:
         pairs += [(f'reinforcement_{n}', 7) for n in range(4)]
-    return pairs + [('group_move', 1), ('group_queue_move', 11), ('group_queue_attack', 12),
+    pairs += [('group_move', 1), ('group_queue_move', 11), ('group_queue_attack', 12),
                     ('group_queue_move_tail', 11), ('group_queue_attack_tail', 12),
                     ('attack_anchor', 2) if player == 0 else ('defender_hold', 3)]
+    if not contested:
+        return pairs
+    if player == 0:
+        return pairs + [('contest_queue', 12)]
+    return pairs[:-1] + [('contest_stage_move', 1), ('defender_hold', 3),
+                        ('contest_attack', 2), ('contest_queue', 11)]
 SCALARS = ['winner', 'salvage', 'flux', 'research_ticks', 'researched',
            'population_used', 'population_reserved', 'population_cap',
            'command_results', 'result_sequences', 'structures', 'deposits', 'vision']
@@ -175,7 +181,16 @@ def audit_reports(reports, raws):
         require(initial['tick'] == 0 and initial['winner'] == -1 and len(initial['units']) == 6, 'wrong initial match')
         require(all(u['kind'] == 1 and u['hp'] == 100 for u in initial['units']), 'initial worker roster changed')
         phases = fixture['phases']
-        require([s['label'] for s in phases] == phase_labels(p), 'required full phase snapshots missing/reordered')
+        contested = fixture.get('contested', False)
+        labels = [s['label'] for s in phases]
+        extra = {'combat_queue_before', 'combat_queue_after', 'queued_firing_before',
+                 'queued_firing_after', 'contest_resolved'}
+        if p == 0: extra.add('queue_resumed')
+        else: extra.add('contest_staged')
+        require(len(labels) == len(set(labels)), 'duplicate phase labels')
+        require([label for label in labels if label not in extra] == phase_labels(p) and
+                set(labels) == set(phase_labels(p)) | (extra if contested else set()),
+                'required full phase snapshots missing/reordered')
         require(phases[0]['snapshot'] == initial and phases[-1]['tick'] <= fixture['final_snapshot']['tick'], 'phase endpoint mismatch')
         require(phases[-1]['tick'] == fixture['final_snapshot']['tick'] == n,
                 'session terminal tick must equal authoritative outcome tick')
@@ -184,9 +199,14 @@ def audit_reports(reports, raws):
             require(phase['tick'] == phase['snapshot']['tick'], 'phase tick/snapshot mismatch')
             snapshot_binding(phase['snapshot'], report)
         captures = fixture['captures']
-        require([capture['label'] for capture in captures] == ['harvesting', 'completed', 'production-queued',
+        expected_captures = ['harvesting', 'completed', 'production-queued',
                 'refunded', 'flux-revealed', 'flux-mined', 'researching', 'lancer-queued', 'lancer',
-                'group-queued', 'group-arrived', 'combat', 'anchor-damaged', 'outcome'], 'missing runtime capture phases')
+                'group-queued', 'group-arrived', 'combat', 'anchor-damaged', 'outcome']
+        added_captures = {'queued-combat', 'queue-resumed' if p == 0 else 'contest-staged'} if contested else set()
+        capture_labels = [capture['label'] for capture in captures]
+        require(len(capture_labels) == len(set(capture_labels)) and
+                [label for label in capture_labels if label not in added_captures] == expected_captures and
+                set(capture_labels) == set(expected_captures) | added_captures, 'missing runtime capture phases')
         for capture in captures:
             require(capture['error'] == 0 and capture['tick'] == capture['snapshot']['tick'], 'capture failure/tick mismatch')
             snapshot_binding(capture['snapshot'], report)
@@ -197,7 +217,7 @@ def audit_reports(reports, raws):
         events = network['inputs']
         require(len(inputs) == len(events) == len(local) > 0, 'input/canonical command count mismatch')
         require(all(i['accepted'] and i['label'] for i in inputs), 'fixture contains rejected/unlabeled inputs')
-        require([(i['label'], i['order']) for i in inputs] == input_labels(p), 'labeled scenario command schedule differs')
+        require([(i['label'], i['order']) for i in inputs] == input_labels(p, contested), 'labeled scenario command schedule differs')
         for observed, event, command in zip(inputs, events, local, strict=True):
             require(event['disposition'] == 'executed' and event['player'] == p and event['sequence'] == command['sequence'] and
                     event['execution_tick'] == command['tick'], 'input execution identity mismatch')
@@ -210,6 +230,7 @@ def audit_reports(reports, raws):
             snapshot_binding(before, report)
         require({0, 4, 6, 7, 8, 9, 10, 11, 12}.issubset(c['order'] for c in local), 'missing economy/queue command coverage')
         require(fixture['final_snapshot']['winner'] == report['winner'] == 0, 'paired match did not reach player0 victory')
+    require(reports[0]['fixture'].get('contested', False) == reports[1]['fixture'].get('contested', False), 'paired contested mode drift')
     trace_equal(reports[0]['network']['trace'], reports[1]['network']['trace'], 'paired clients')
     require(reports[0]['fixture']['initial_snapshot'] == reports[1]['fixture']['initial_snapshot'], 'initial shared state differs')
     return commands[0]
@@ -374,6 +395,104 @@ def audit_semantics(reports, commands, states):
     return dict(purchases=purchased, full_phases_audited=phases_reviewed, initial_resources=total)
 
 
+def audit_contested(reports, commands):
+    if not reports[0]['fixture'].get('contested', False):
+        return
+    for p, report in enumerate(reports):
+        fixture = report['fixture']
+        phases = {row['label']: row for row in fixture['phases']}
+        before = phases['queued_firing_before']['snapshot']
+        after = phases['queued_firing_after']['snapshot']
+        uid = fixture['witness_unit']
+        require(phases['queued_firing_before'].get('witness_unit') == uid ==
+                phases['queued_firing_after'].get('witness_unit'), 'queued firing witness identity mismatch')
+        require(after['tick'] == before['tick'] + 1, 'queued firing witness must be consecutive ticks')
+        old = next(u for u in before['units'] if u['id'] == uid)
+        new = next(u for u in after['units'] if u['id'] == uid)
+        require(old['player'] == new['player'] == p and old['kind'] != 1 and old['hp'] > 0 and new['hp'] > 0,
+                'queued firing witness is not a live own combat unit')
+        require(old['order'] == new['order'] == 2 and old['order_queue'] and
+                old['order_queue'] == new['order_queue'], 'firing did not preserve pending combat queue')
+        require((old['x'], old['z']) == (new['x'], new['z']) and not new['moving'],
+                'pending queue advanced during firing')
+        require(old['target'] > 0 and new['target'] == old['target'] and new['cooldown'] > old['cooldown'],
+                'witness did not fire at the same opposing unit')
+        target_before = next(u for u in before['units'] if u['id'] == old['target'])
+        target_after = next(u for u in after['units'] if u['id'] == old['target'])
+        require(target_before['player'] != p and target_before['kind'] != 1 and
+                target_before['hp'] > target_after['hp'],
+                'queued firing target is not a damaged opposing combat unit')
+        queue_index = next(i for i, event in enumerate(fixture['inputs']) if event['label'] == 'contest_queue')
+        queued = [c for c in commands if c['player'] == p][queue_index]
+        require(queued['order'] == (12 if p == 0 else 11), 'contested queue canonical order mismatch')
+        require(queued['tick'] < before['tick'] and uid in queued['units'] and
+                not any(c['player'] == p and c['tick'] > queued['tick'] for c in commands),
+                'queued firing/resume hidden by subsequent command')
+        resolved = phases['contest_resolved']['snapshot']
+        ready = phases['combat_queue_before']['snapshot']
+        for player in (0, 1):
+            ids = [u['id'] for u in ready['units'] if u['player'] == player and u['kind'] != 1]
+            require(ids and any(next(u for u in resolved['units'] if u['id'] == uid)['hp'] <
+                                next(u for u in ready['units'] if u['id'] == uid)['hp'] for uid in ids),
+                    'opposing armies did not both take combat damage')
+        require(not any(u['player'] == 1 and u['kind'] != 1 and u['hp'] > 0 for u in resolved['units']),
+                'contested defender army survived resolution')
+        if p == 0:
+            resumed = phases['queue_resumed']['snapshot']
+            unit = next(u for u in resumed['units'] if u['id'] == uid)
+            require(resumed['tick'] > after['tick'] and unit['hp'] > 0 and not unit['order_queue'] and
+                    (unit['x'], unit['z']) != (new['x'], new['z']) and
+                    (unit['goal_x'], unit['goal_z']) == (new['order_queue'][-1]['x'], new['order_queue'][-1]['z']),
+                    'queued attacker did not resume its original tail after combat')
+
+
+def audit_offline_return(report, raw):
+    result = report['offline_return']
+    require(result['ok'] and not result['errors'] and result['checks'], 'offline return fixture failed')
+    states = result['states']
+    require([row['label'] for row in states] == ['terminal', 'offline_reset', 'offline_movement'],
+            'offline return state sequence missing')
+    terminal, reset, moved = states
+    require(terminal['client_network'] and terminal['local_player'] == report['player'] and
+            terminal['bridge_status']['state'] == 'complete' and
+            terminal['snapshot'] == report['fixture']['final_snapshot'], 'offline return did not start at confirmed network endpoint')
+    require('return to offline skirmish' in terminal['result_text'], 'confirmed return action absent from HUD')
+    for row in (reset, moved):
+        snapshot = row['snapshot']
+        require(not row['client_network'] and row['local_player'] == 0 and
+                row['bridge_status']['state'] == 'offline', 'R did not detach network/player ownership')
+        require(snapshot['winner'] == -1 and snapshot['map_id'] == 2 and snapshot['replay_complete'] and
+                snapshot['enemy_ai'] is True and len(snapshot['units']) == 6,
+                'offline return did not recreate an AI economy match')
+    inputs = result['inputs']
+    require(len(inputs) == 1, 'offline return needs exactly one human command')
+    event = inputs[0]
+    require(event['label'] == 'offline_move_after_complete' and event['accepted'] and event['order'] == 1 and
+            event['units'] == [1, 2, 3], 'offline move input/actor identity mismatch')
+    before = event['before_snapshot']
+    require(reset['snapshot']['tick'] <= event['event_tick'] == before['tick'] < moved['snapshot']['tick'],
+            'offline command/reset/movement tick ordering mismatch')
+    require(all(u['player'] == 0 and u['kind'] == 1 and u['hp'] > 0 for u in before['units'] if u['id'] in event['units']),
+            'offline move contains unowned/nonworker actor')
+    require(any((u['x'], u['z']) != (next(v for v in before['units'] if v['id'] == u['id'])['x'],
+                                     next(v for v in before['units'] if v['id'] == u['id'])['z'])
+                for u in moved['snapshot']['units'] if u['id'] in event['units']), 'offline move has no displacement')
+    require(raw[:4] == b'VFR\3' and len(raw) >= 36, 'offline replay missing/truncated')
+    protocol, seed, count, ticks, command_count, content, map_id = struct.unpack_from('<5IQI', raw, 4)
+    require(seed == report['network']['seed'] and ticks == moved['snapshot']['tick'], 'offline replay setup/endpoint drift')
+    shim = dict(fixture=dict(initial_snapshot=reset['snapshot']), network=dict(seed=seed, recorded_ticks=ticks,
+                replay_command_count=command_count))
+    commands = parse_replay(raw, shim)
+    human = [c for c in commands if c['player'] == 0]
+    require(len(human) == 1 and human[0]['tick'] == event['event_tick'] and
+            all(human[0][key] == event[key] for key in ('order', 'x', 'z', 'units')),
+            'offline human event not bound to canonical replay')
+    captures = result['captures']
+    require(len(captures) >= 1 and all(c['error'] == 0 and c['tick'] == c['snapshot']['tick'] for c in captures),
+            'offline return capture failure')
+    return commands
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('folder', type=Path)
@@ -385,12 +504,17 @@ def main():
     reports = [json.loads(path.read_text(encoding='utf-8')) for path in paths]
     raws = [path.read_bytes() for path in replays]
     commands = audit_reports(reports, raws)
+    audit_contested(reports, commands)
     host_path = args.folder / 'host.json'
     host = json.loads(host_path.read_text(encoding='utf-8'))
     require(len(host['pids']) == len(set(host['pids'])) == 2 and all(pid > 0 for pid in host['pids']), 'two distinct client process identities missing')
     require(len(host['ports']) == len(set(host['ports'])) == 2 and all(0 < port <= 65535 for port in host['ports']), 'two distinct UDP endpoints missing')
     require(host['ticks'] == reports[0]['network']['requested_ticks'] and
             all(host['seed'] == r['network']['seed'] and host['delay'] == r['network']['input_delay'] for r in reports), 'launcher/report setup mismatch')
+    require(all(bool(r.get('offline_return')) == bool(host.get('success_return', False)) for r in reports),
+            'host/offline-return evidence mode mismatch')
+    require(all(r['fixture'].get('contested', False) == host.get('contested', False) for r in reports),
+            'host/contested evidence mode mismatch')
     package = Path(host['package_path'])
     package_files = {'package_sha256': package, 'pck_sha256': package.with_suffix('.pck'),
                      'bridge_sha256': package.parent / 'voidfront_bridge.dll'}
@@ -408,15 +532,16 @@ def main():
                    binaries=fingerprints, runs=[], prefix_runs=[], commands=commands)
     expected = [(r['tick'], hash_value(r['hash'])) for r in reports[0]['network']['trace']]
 
-    def run(exe, recording, name, trace_expected):
+    def run(exe, recording, name, trace_expected, hash_mode='state'):
         require(not (ROOT / '.voidfront-agent/STOP').exists(), 'STOP present')
         trace, metrics = args.out / f'{name}.trace', args.out / f'{name}.json'
-        result = subprocess.run([str(exe), '--replay', str(recording), '--hash-mode', 'state', '--trace', str(trace), '--metrics', str(metrics)],
+        result = subprocess.run([str(exe), '--replay', str(recording), '--hash-mode', hash_mode, '--trace', str(trace), '--metrics', str(metrics)],
             capture_output=True, text=True, timeout=120, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         (args.out / f'{name}.log').write_text(result.stdout + result.stderr, encoding='utf-8')
         require(result.returncode == 0, f'{name}: replay failed: {result.stderr}')
         actual = [tuple(map(int, line.split())) for line in trace.read_text().splitlines()]
-        trace_equal(actual, trace_expected, name)
+        if trace_expected is not None:
+            trace_equal(actual, trace_expected, name)
         return json.loads(metrics.read_text())
 
     for config, repeats in (('Debug', 1), ('Release', 10)):
@@ -466,6 +591,45 @@ def main():
             require(capture_path.is_file() and capture_path.read_bytes()[:8] == b'\x89PNG\r\n\x1a\n', 'missing/invalid captured PNG')
     summary['capture_sha256'] = [{c['label']: digest(c['path']) for c in r['fixture']['captures']} for r in reports]
     summary.update(audit_semantics(reports, commands, states))
+    summary['offline_return_runs'] = []
+    offline_raws = []
+    if host.get('success_return', False):
+        for p, report in enumerate(reports):
+            result = report['offline_return']
+            recording = Path(result['replay_path'])
+            raw = recording.read_bytes()
+            offline_raws.append(raw)
+            offline_commands = audit_offline_return(report, raw)
+            expected_offline = None
+            snapshots = [row['snapshot'] for row in result['states'][1:]]
+            snapshots += [row['before_snapshot'] for row in result['inputs']]
+            snapshots += [row['snapshot'] for row in result['captures']]
+            for config in ('Debug', 'Release'):
+                name = f'offline-{config}-p{p}'
+                metrics = run(binaries[config], recording, name, expected_offline, 'full')
+                actual = [tuple(map(int, line.split())) for line in (args.out / f'{name}.trace').read_text().splitlines()]
+                if expected_offline is None:
+                    expected_offline = actual
+                compare_snapshot(result['states'][-1]['snapshot'], metrics, name)
+                summary['offline_return_runs'].append(name)
+            for tick in sorted({row['tick'] for row in snapshots}):
+                require(tick > 0, 'offline native state audit requires positive-tick snapshots')
+                name = f'offline-prefix-p{p}-{tick}'
+                selected = args.out / f'{name}.vfr'
+                selected.write_bytes(prefix(raw, offline_commands, tick))
+                metrics = run(binaries['Debug'], selected, name, expected_offline[:tick], 'full')
+                for snapshot in snapshots:
+                    if snapshot['tick'] == tick:
+                        require(hash_value(snapshot['hash']) == expected_offline[tick - 1][1], 'offline snapshot/hash replay mismatch')
+                        compare_snapshot(snapshot, metrics, name)
+                summary['offline_return_runs'].append(name)
+            for capture in result['captures']:
+                path = Path(capture['path'])
+                require(path.is_file() and path.read_bytes()[:8] == b'\x89PNG\r\n\x1a\n', 'missing/invalid offline return PNG')
+        summary['offline_return_replay_sha256'] = [hashlib.sha256(raw).hexdigest() for raw in offline_raws]
+        summary['offline_return_capture_sha256'] = [
+            {capture['label']: digest(capture['path']) for capture in report['offline_return']['captures']}
+            for report in reports]
     rejected = []
     for name in ('trace-gap', 'trace-extra', 'trace-endpoint', 'shared-false-hash', 'unexecuted-input', 'input-sequence',
                  'input-order', 'input-delay', 'missing-phase', 'phase-hash', 'phase-resource',
@@ -512,6 +676,7 @@ def main():
             bad[1]['network']['requested_ticks'] += 1
         try:
             audit_reports(bad, bad_raws)
+            audit_contested(bad, commands)
             trace_equal([(r['tick'], hash_value(r['hash'])) for r in bad[0]['network']['trace']], expected, name)
             for phase in bad[0]['fixture']['phases']:
                 if phase['tick']:
@@ -539,6 +704,51 @@ def main():
             rejected.append(name)
         else:
             raise AssertionError(f'accepted deliberate replay trace length mismatch: {name}')
+    if host.get('success_return', False):
+        for name in ('offline-still-network', 'offline-wrong-player', 'offline-unowned-move',
+                     'offline-no-displacement', 'offline-replay-truncated', 'offline-replay-setup'):
+            bad, raw = copy.deepcopy(reports[0]), offline_raws[0]
+            result = bad['offline_return']
+            if name == 'offline-still-network': result['states'][1]['client_network'] = True
+            elif name == 'offline-wrong-player': result['states'][2]['local_player'] = 1
+            elif name == 'offline-unowned-move': result['inputs'][0]['units'] = [4, 5, 6]
+            elif name == 'offline-no-displacement':
+                result['states'][2]['snapshot']['units'] = copy.deepcopy(result['inputs'][0]['before_snapshot']['units'])
+            elif name == 'offline-replay-truncated': raw = raw[:-1]
+            else:
+                broken = bytearray(raw); struct.pack_into('<I', broken, 8, reports[0]['network']['seed'] + 1); raw = bytes(broken)
+            try:
+                audit_offline_return(bad, raw)
+            except AssertionError:
+                rejected.append(name)
+            else:
+                raise AssertionError(f'accepted deliberate offline return corruption: {name}')
+    if host.get('contested', False):
+        for name in ('queued-shot-no-cooldown', 'queued-shot-no-damage', 'queued-shot-worker-target',
+                     'queued-shot-drained', 'queue-no-resume'):
+            bad = copy.deepcopy(reports)
+            phases = {row['label']: row for row in bad[0]['fixture']['phases']}
+            uid = bad[0]['fixture']['witness_unit']
+            before = next(u for u in phases['queued_firing_before']['snapshot']['units'] if u['id'] == uid)
+            after = next(u for u in phases['queued_firing_after']['snapshot']['units'] if u['id'] == uid)
+            if name == 'queued-shot-no-cooldown': after['cooldown'] = before['cooldown']
+            elif name == 'queued-shot-no-damage':
+                target = next(u for u in phases['queued_firing_after']['snapshot']['units'] if u['id'] == before['target'])
+                target['hp'] = next(u for u in phases['queued_firing_before']['snapshot']['units'] if u['id'] == before['target'])['hp']
+            elif name == 'queued-shot-worker-target':
+                for label in ('queued_firing_before', 'queued_firing_after'):
+                    target = next(u for u in phases[label]['snapshot']['units'] if u['id'] == before['target'])
+                    target['kind'] = 1
+            elif name == 'queued-shot-drained': after['order_queue'] = []
+            else:
+                unit = next(u for u in phases['queue_resumed']['snapshot']['units'] if u['id'] == uid)
+                unit['x'], unit['z'] = after['x'], after['z']
+            try:
+                audit_contested(bad, commands)
+            except AssertionError:
+                rejected.append(name)
+            else:
+                raise AssertionError(f'accepted deliberate combat queue corruption: {name}')
     require(fingerprints == {c: digest(path) for c, path in binaries.items()}, 'binaries changed during audit')
     summary.update(ok=True, ticks=len(expected), requested_ticks=reports[0]['network']['requested_ticks'],
                    first_outcome_tick=reports[0]['fixture']['phases'][-1]['tick'],

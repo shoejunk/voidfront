@@ -1,0 +1,56 @@
+{
+  "run": "2026-11-01-contested-queues-offline-return",
+  "checkpoint_utc": "2026-11-01T20:21:40.277003+00:00",
+  "baseline_commit": "5323931",
+  "task_id": "01a198af-e182-7d21-b1e6-a12b0eaef63d",
+  "verification": "artifacts/contested-verify-approved-2026-11-01.log",
+  "client_evidence": "artifacts/contested-final-match-2026-11-01",
+  "audit": "artifacts/contested-final-audit-2026-11-01/summary.json",
+  "review": ".voidfront-agent/review-contested-2026-11-01.md",
+  "package": "artifacts/contested-final-package-2026-11-01/Voidfront.exe",
+  "canonical_commands": 44,
+  "phases": 82,
+  "replay_runs": 22,
+  "prefix_runs": 119,
+  "offline_runs": 10,
+  "rejected_corruptions": 35,
+  "ticks": 7277,
+  "winner": 0,
+  "hash": "8dc6aebe3034b10b",
+  "fingerprints": {
+    "package_sha256": "D34D36F3BE1A6C49C56525AE86469B92E4F417DDF0B43CF00DD80C385C4B0562",
+    "pck_sha256": "1CB6F2B1F089C47E377B5B50459339BE50D5890D94FEC3800583572CD7D66B7C",
+    "bridge_sha256": "0C5D47E9EA97265E8200EE3249AF8B439D3A5FF587F5501C78A8A7DC3BAB527B"
+  },
+  "host": {
+    "package_sha256": "D34D36F3BE1A6C49C56525AE86469B92E4F417DDF0B43CF00DD80C385C4B0562",
+    "wall_seconds": 371.2236148,
+    "seed": 7,
+    "peak_resident_bytes": [
+      232873984,
+      230592512
+    ],
+    "ticks": 12000,
+    "contested": true,
+    "delay": 2,
+    "session": 40403372,
+    "ports": [
+      64091,
+      64092
+    ],
+    "bridge_sha256": "0C5D47E9EA97265E8200EE3249AF8B439D3A5FF587F5501C78A8A7DC3BAB527B",
+    "pids": [
+      21612,
+      37192
+    ],
+    "pck_sha256": "1CB6F2B1F089C47E377B5B50459339BE50D5890D94FEC3800583572CD7D66B7C",
+    "note": "Two real rendered processes, loopback only. Process observations do not establish performance or human-play acceptance.",
+    "success_return": true,
+    "utc": "2026-11-01T20:15:50.5131796Z",
+    "package_path": "C:\\dev\\voidfront\\artifacts\\contested-final-package-2026-11-01\\Voidfront.exe"
+  },
+  "first_witness_rejection": "artifacts/contested-first-audit-rejection-2026-11-01.log",
+  "limitations": "Scripted two-process loopback economy match only; no human play, LAN/Internet, latency, performance, balance, production quality or shipping acceptance.",
+  "complete": false,
+  "next": "Coordinated setup/rematch, then direct complete-match play and readability fixes; all SPEC gates remain."
+}

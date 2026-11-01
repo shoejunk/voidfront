@@ -75,6 +75,9 @@ var network := false
 var network_smoke := false
 var network_economy := false
 var network_economy_smoke := false
+var network_contested_smoke := false
+var network_success_return_smoke := false
+var network_success_return_fixture: RefCounted
 var net_economy_fixture
 var queue_smoke := false
 var queue_fixture: RefCounted
@@ -203,6 +206,12 @@ func _ready() -> void:
 			network = true
 			network_economy = true
 			network_economy_smoke = true
+		elif argument == "--net-contested-smoke":
+			network = true
+			network_economy = true
+			network_economy_smoke = true
+			network_contested_smoke = true
+		elif argument == "--net-success-return-smoke": network_success_return_smoke = true
 		elif argument.begins_with("--seed="): setup_seed = _integer_option(argument, 1, 999999)
 		elif argument == "--network-smoke":
 			network = true
@@ -227,6 +236,7 @@ func _ready() -> void:
 	if queue_smoke and not ticks_specified: finish_tick = 1000
 	if queue_smoke and (legacy_mode or network or economy_smoke or production_smoke or match_smoke or exploration_smoke or finish_tick > 2000): option_error = "Queue smoke requires its own offline fixture of at most 2000 ticks."
 	if network_return_smoke and (network_economy_smoke or network_smoke or queue_smoke): option_error = "Network return smoke requires its own missing-peer session."
+	if network_success_return_smoke and not network_economy_smoke: option_error = "Successful return smoke requires a two-client economy fixture."
 	if match_realtime and not match_smoke: option_error = "--match-realtime requires --match-smoke."
 	if exploration_smoke and not ticks_specified: finish_tick = 10000
 	if exploration_smoke and (match_smoke or economy_smoke or production_smoke): option_error = "Exploration fixture requires its own match."
@@ -869,7 +879,8 @@ func _process(delta: float) -> void:
 func _finish_network_economy_smoke() -> void:
 	await get_tree().process_frame
 	await RenderingServer.frame_post_draw
-	completed = true
+	# Preserve the shared endpoint before R detaches the native session and changes
+	# local ownership. Offline-return evidence has its own recording and snapshots.
 	var report_data: Dictionary = bridge.network_report()
 	var replay: PackedByteArray = report_data.get("replay", PackedByteArray())
 	report_data.erase("replay")
@@ -885,12 +896,18 @@ func _finish_network_economy_smoke() -> void:
 			report["replay_path"] = replay_path
 	if not capture_path.is_empty():
 		report["capture_error"] = get_viewport().get_texture().get_image().save_png(capture_path)
+	if network_success_return_smoke and ok:
+		network_success_return_fixture = preload("res://network_success_return_smoke.gd").new(self)
+		report["offline_return"] = await network_success_return_fixture.run()
+		ok = ok and report.offline_return.ok
+		report.ok = ok
+	completed = true
 	if not report_path.is_empty():
 		var report_file := FileAccess.open(report_path, FileAccess.WRITE)
 		if report_file:
 			report_file.store_string(JSON.stringify(report, "	"))
 			report_file.close()
-	print("VOIDFRONT_NETECON ok=", ok, " player=", local_player, " tick=", current.get("tick", 0), " errors=", fixture_report.get("errors", []))
+	print("VOIDFRONT_NETECON ok=", ok, " player=", report.player, " tick=", report.final_tick, " errors=", fixture_report.get("errors", []))
 	get_tree().quit(0 if ok else 1)
 
 func _update_network_status() -> void:
@@ -1178,7 +1195,8 @@ func _issue(order: int, at: Vector3) -> void:
 	if production_smoke and production_fixture: production_fixture.record_input(accepted, order, at, command_actors)
 	if match_smoke and match_fixture: match_fixture.record_input(accepted, order, at, command_actors)
 	if exploration_smoke and exploration_fixture: exploration_fixture.record_input(accepted, order, at, command_actors)
-	if network_economy_smoke and net_economy_fixture: net_economy_fixture.record_input(accepted, order, at, command_actors)
+	if network and network_economy_smoke and net_economy_fixture: net_economy_fixture.record_input(accepted, order, at, command_actors)
+	if network_success_return_fixture: network_success_return_fixture.record_input(accepted, order, at, command_actors)
 	if queue_smoke and queue_fixture: queue_fixture.record_input(accepted, order, at, command_actors)
 	if network_return_smoke and network_return_fixture: network_return_fixture.record_input(accepted, order, at, command_actors)
 	if economy:

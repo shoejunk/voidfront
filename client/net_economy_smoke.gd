@@ -14,10 +14,16 @@ var player := 0
 var done := false
 var stage := "initial"
 var next_progress_tick := 500
+var contested := false
+var combat_observing := false
+var last_combat_snapshot: Dictionary = {}
+var witness_unit := 0
+var witness_snapshot: Dictionary = {}
 
 func _init(owner) -> void:
 	game = owner
 	player = game.local_player
+	contested = game.network_contested_smoke
 	initial_snapshot = game.current.duplicate(true)
 	phase("initial")
 
@@ -47,7 +53,35 @@ func hud_state() -> Dictionary:
 
 func frames() -> void:
 	await game.get_tree().process_frame
+	observe_combat()
 	await game.get_tree().process_frame
+	observe_combat()
+
+func observe_combat() -> void:
+	if not combat_observing or witness_unit != 0: return
+	var snapshot: Dictionary = game.current
+	if not last_combat_snapshot.is_empty() and int(snapshot.tick) == int(last_combat_snapshot.tick): return
+	if not last_combat_snapshot.is_empty() and int(snapshot.tick) == int(last_combat_snapshot.tick) + 1:
+		for unit in snapshot.units:
+			if unit.player != player or unit.kind == 1 or unit.hp <= 0 or unit.target == 0 or unit.order_queue.is_empty(): continue
+			# Preserve a rear-line survivor for the attacker's later queue-resume check.
+			if player == 0 and unit.kind != 2: continue
+			var previous: Dictionary = last_combat_snapshot.units[int(unit.id) - 1]
+			var target: Dictionary = snapshot.units[int(unit.target) - 1]
+			var previous_target: Dictionary = last_combat_snapshot.units[int(unit.target) - 1]
+			if target.player == player or target.kind == 1: continue
+			if previous.hp <= 0 or previous.target != unit.target or previous.order_queue != unit.order_queue: continue
+			if unit.cooldown <= previous.cooldown or target.hp >= previous_target.hp or previous_target.hp <= 0: continue
+			if unit.moving or unit.x != previous.x or unit.z != previous.z: continue
+			witness_unit = int(unit.id)
+			witness_snapshot = snapshot.duplicate(true)
+			for item in [["queued_firing_before", last_combat_snapshot], ["queued_firing_after", snapshot]]:
+				phases.append({"label": item[0], "tick": item[1].tick, "snapshot": item[1].duplicate(true),
+					"witness_unit": witness_unit, "selection": game.selected.duplicate(),
+					"selected_entity": game.selected_entity.duplicate(true), "paths": game._order_paths().duplicate(true), "hud": hud_state()})
+			check(true, "Queued combat unit fires without moving or consuming its pending leg")
+			break
+	last_combat_snapshot = snapshot.duplicate(true)
 
 func key(code: Key, shift := false) -> void:
 	for pressed in [true, false]:
@@ -82,6 +116,7 @@ func mouse(button: MouseButton, point: Vector3, shift := false) -> void:
 
 func until(predicate: Callable, limit: int) -> bool:
 	while game.current.tick < mini(limit, game.finish_tick) and not predicate.call() and not game.completed:
+		observe_combat()
 		if str(game.network_state.get("state", "")) in ["complete", "error"]: break
 		if game.current.tick >= next_progress_tick:
 			print("VOIDFRONT_NETECON_PROGRESS player=", player, " tick=", game.current.tick,
@@ -90,6 +125,7 @@ func until(predicate: Callable, limit: int) -> bool:
 				" hash=", game.current.hash)
 			next_progress_tick += 500
 		await game.get_tree().process_frame
+	observe_combat()
 	return bool(predicate.call())
 
 func capture(name: String) -> void:
@@ -283,20 +319,66 @@ func exercise() -> bool:
 	if not check(await until(func(): return group_arrived(final_goals), game.current.tick + 1600), "Multi-unit queued route drains at exact formation destinations"): return false
 	phase("group_queue_drained")
 	await capture("group-arrived")
+	var enemy_anchor: Dictionary = game.current.structures.filter(func(s): return s.player == 1 and s.kind == 0)[0]
 	if player == 1:
+		if contested:
+			var stage_sequence: int = game.current.result_sequences[player]
+			label = "contest_stage_move"
+			await mouse(MOUSE_BUTTON_RIGHT, Vector3(43, 0.5, 24))
+			if not check(await until(func(): return game.current.result_sequences[player] > stage_sequence and army().all(func(u): return not u.moving and u.x == u.goal_x and u.z == u.goal_z), game.current.tick + 1000), "Defender stages on the open battlefield"): return false
+			phase("contest_staged")
+			await navigate(Vector3(42, 0.5, 24))
+			await capture("contest-staged")
 		label = "defender_hold"
 		await key(KEY_H)
 		if not check(await until(func(): return army().all(func(u): return u.order == 3), game.current.tick + 200), "Defender holds after its queued route"): return false
 		phase("defender_ready")
+		if contested:
+			if not check(await until(func(): return army().any(func(u): return u.target != 0), game.finish_tick - 1000), "Defender acquires the approaching player army"): return false
+			phase("combat_queue_before")
+			combat_observing = true
+			label = "contest_attack"
+			await key(KEY_A)
+			await mouse(MOUSE_BUTTON_LEFT, point_of(army()[0]))
+			label = "contest_queue"
+			await mouse(MOUSE_BUTTON_RIGHT, Vector3(44, 0.5, 24), true)
+			if not check(await until(func(): return army().any(func(u): return u.order == 2 and u.order_queue.size() == 1), game.current.tick + 100), "Defender retains a pending move while engaging"): return false
+			phase("combat_queue_after")
 	else:
 		if not check(await until(func(): return game.current.researched[1] and game.current.units.any(func(u): return u.player == 1 and u.kind == 2 and u.hp > 0) and game.current.units.filter(func(u): return u.player == 1 and u.kind != 1 and u.hp > 0).all(func(u): return u.order == 3), game.current.tick + 1500), "Both players tech before the coordinated attack"): return false
-		var enemy_anchor: Dictionary = game.current.structures.filter(func(s): return s.player == 1 and s.kind == 0)[0]
+		if contested:
+			phase("combat_queue_before")
+			combat_observing = true
 		label = "attack_anchor"
 		await key(KEY_A)
-		await mouse(MOUSE_BUTTON_LEFT, point_of(enemy_anchor))
+		await mouse(MOUSE_BUTTON_LEFT, Vector3(43, 0.5, 24) if contested else point_of(enemy_anchor))
 		phase("attack_submitted")
+		if contested:
+			label = "contest_queue"
+			await key(KEY_A, true)
+			await mouse(MOUSE_BUTTON_LEFT, point_of(enemy_anchor), true)
+			if not check(await until(func(): return army().all(func(u): return u.order == 2 and u.order_queue.size() == 1), game.current.tick + 100), "Attacker retains anchor assault after its combat leg"): return false
+			phase("combat_queue_after")
 	if not check(await until(func(): return game.current.units.any(func(u): return u.target != 0 or u.get("target_structure", 0) != 0), game.finish_tick - 500), "Networked army acquires combat targets"): return false
 	phase("combat_started")
+	if contested:
+		if not check(await until(func(): return witness_unit != 0, game.current.tick + 500), "Consecutive authoritative ticks prove own queued unit firing"): return false
+		await navigate(point_of(witness_snapshot.units[witness_unit - 1]))
+		await capture("queued-combat")
+		if not check(await until(func(): return game.current.units.filter(func(u): return u.player == 1 and u.kind != 1).all(func(u): return u.hp <= 0), game.current.tick + 700), "Attacking army defeats the active opposing combat army"): return false
+		phase("contest_resolved")
+		combat_observing = false
+		if player == 0:
+			var before: Dictionary = witness_snapshot.units[witness_unit - 1]
+			if not check(await until(func():
+				var unit: Dictionary = game.current.units[witness_unit - 1]
+				return unit.hp > 0 and unit.order == 2 and unit.order_queue.is_empty() and (unit.x != before.x or unit.z != before.z), game.current.tick + 700), "Queued firing unit resumes its pending anchor assault after combat"): return false
+			phase("queue_resumed")
+			await navigate(point_of(game.current.units[witness_unit - 1]))
+			await capture("queue-resumed")
+	if contested:
+		var live_combat: Array = game.current.units.filter(func(u): return u.kind != 1 and u.hp > 0)
+		if not live_combat.is_empty(): await navigate(point_of(live_combat[0]))
 	await capture("combat")
 	if not check(await until(func(): return game.current.structures.any(func(s): return s.player == 1 and s.kind == 0 and s.hp < initial_snapshot.structures[1].hp), game.finish_tick - 100), "Player 1 anchor takes authoritative damage"): return false
 	phase("anchor_damaged")
@@ -322,5 +404,6 @@ func report() -> Dictionary:
 	return {"checks": checks, "errors": errors, "inputs": inputs, "phases": phases, "captures": captures,
 		"initial_snapshot": initial_snapshot, "final_snapshot": final_snapshot,
 		"fixture_done": done, "player": player, "stage": stage,
-		"role": "attacker" if player == 0 else "bounded_passive_defender",
+		"role": "attacker" if player == 0 else ("contested_defender" if contested else "bounded_passive_defender"),
+		"contested": contested, "witness_unit": witness_unit,
 		"note": "Two real loopback clients using ordinary software InputEvents and fixed scripted roles. No human play, balance, LAN/Internet, responsiveness, production quality or shipping acceptance."}

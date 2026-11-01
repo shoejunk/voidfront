@@ -1,5 +1,67 @@
 # Voidfront progress
 
+## 2026-11-01 America/Los_Angeles - contested queue and successful return verified
+
+Continued clean dev `5323931`; STOP/COMPLETE/prior marker absent. Exclusive task
+`01a198af-e182-7d21-b1e6-a12b0eaef63d`. This increment adds packaged verification
+and report lifecycle hooks; authoritative combat, economy, AI and transport rules
+are unchanged. Protocol12/content `04b460ca2d26a0ef` and tool pins remain fixed.
+
+Changed files are scoped: `client/net_economy_smoke.gd` adds an opt-in staged
+six-versus-two fight and consecutive queued-shot witnesses; `client/main.gd`
+parses modes and freezes shared evidence before R changes ownership.
+`client/network_success_return_smoke.gd` (and its Godot UID) sends ordinary
+R/F1/RMB events and saves an independent offline recording. The paired launcher
+exposes Contested/SuccessReturn and binds those modes in host evidence. The
+match auditor verifies native state prefixes, combat targets/queues/resumption,
+offline replay identity and deliberate corruption rejection. Existing passive
+route remains available; current structural audit accepts its retained Oct25
+40-command evidence. No new default-route runtime claim.
+
+Pinned MSVC Debug/Release12/12 CTest each pass, plus15 malformed replays and7
+output aliases per configuration,2000 cross-build hashes and ten repeats.
+Logs: `artifacts/contested-verify-approved-2026-11-01.log`. Initial sandbox compiler
+stall is retained; only verified owned helpers were stopped before the unchanged
+approved retry. Final pinned Godot4.7.2 import/export pass; frozen candidate
+`artifacts/contested-final-package-2026-11-01/Voidfront.exe` is copied to the normal
+`artifacts/package/Voidfront.exe` after audit; previous package is preserved.
+
+Actual rendered PIDs21612/37192, UDP64091/64092, seed7/delay2 confirm first outcome
+at7277 below cap12000, winner0/hash `8dc6aebe3034b10b`. Both canonical VFR3 files
+are byte-identical. Native audit passes22 full Debug/Release replays,119 Debug
+prefixes,44 canonical inputs,82 complete phases and35 corrupted-evidence cases.
+Evidence: `artifacts/contested-final-{match,audit}-2026-11-01`.
+
+P0 Lancer10 fires on P1 Lancer9 at6584 (38->32HP); P1 Lancer9 fires on P0
+Strider13 at6552 (150->144HP). Each shot resets cooldown0->10 while stationary
+and retaining its own pending order. Opposing combat armies lose70/220HP from
+P0's pre-fight phase to resolution; defender army dies6651. Same surviving P0
+Lancer resumes its original queued anchor assault6694, with no later own command.
+Both clients then send R, detach native networking, restore offline player0 and
+AI settings, select three workers and move them with accepted RMB at tick5->6.
+Four Debug/Release offline replays and six native prefixes pass; both six-tick
+recordings are byte-identical. These are ten separate offline audit runs.
+
+Independent critic caught the initial P0 firing witness targeting a worker.
+Retained first candidate completes7277 and offline return, but the strengthened
+auditor explicitly rejects that worker witness. Both fixture and audit now
+require an opposing combat-unit target; a fresh package/pair passes. See
+`artifacts/contested-first-audit-rejection-2026-11-01.log` and first offline audit.
+Independent review: `.voidfront-agent/review-contested-2026-11-01.md`. Primary and
+reviewer inspected actual final combat/resume/outcome/offline PNGs. Clustered rigs,
+overlapping labels/rings, dense waypoint lines, cramped1280 HUD, flat terrain and
+cube structures remain. No fresh movie, listening/audio, SC2 comparison or human
+playtest. Two-process wall371.224s and resident232873984/230592512B are diagnostics,
+not frame/response, representative battle/hardware or network-latency acceptance.
+
+This is scripted unequal-army loopback proof, not competitive1v1, balance,
+coordinated rematch or complete small-match acceptance. Physical networking,
+impairment/30-minute soak, crowd/frame/response budgets, finished factions/maps,
+art/animation/audio/VFX, human play and every remaining SPEC gate stay open.
+Exact next: coordinated setup/rematch with agreed fresh session identity and
+settings, then direct complete-match play with recorded findings; address the
+observed HUD/waypoint readability debt. No COMPLETE.md; automation stays active.
+
 ## 2026-10-25 America/Los_Angeles - last-worker recovery and current match audits
 
 Continuing clean `dev d785bd1`, exclusively owned task
@@ -1244,3 +1306,7 @@ bank for replacement units. Tests-only Debug build reproduced the exact failure
 logs `artifacts/recovery-before-{build,tests}-2026-10-25.log`. New casualty fixture
 keeps paid queues/banks, requires fresh salvage, delivery of partial flux cargo,
 production beyond initial reservations, per-tick rotation and wire-replay equality.
+
+## 2026-11-01 11:58 America/Los_Angeles - contested match and terminal return goals
+
+Baseline clean dev `5323931`; STOP/COMPLETE/prior marker absent; exclusive task `01a198af-e182-7d21-b1e6-a12b0eaef63d`. Preserve all source and pins. Add an opt-in real two-client contested army and pending-combat queue fixture, with independently audited canonical replays. Retain the existing passive route. Freeze confirmed terminal evidence before ordinary R/F1/RMB return to offline gameplay; audit both clients' new offline recordings. Independent source/evidence critic will examine actual artifacts. Coordinated network rematch, human play and all production/SPEC gates remain open.

@@ -1,4 +1,4 @@
-param([string]$Out='artifacts/net-match-2026-10-11',[string]$PackagePath='artifacts/package/Voidfront.exe',[ValidateRange(1000,12000)][int]$Ticks=12000,[ValidateRange(1,999999)][int]$Seed=7,[ValidateRange(1,16)][int]$Delay=2)
+param([string]$Out='artifacts/net-match-2026-10-11',[string]$PackagePath='artifacts/package/Voidfront.exe',[ValidateRange(1000,12000)][int]$Ticks=12000,[ValidateRange(1,999999)][int]$Seed=7,[ValidateRange(1,16)][int]$Delay=2,[switch]$Contested,[switch]$SuccessReturn)
 . "$PSScriptRoot/common.ps1"
 Assert-RunningAllowed
 Assert-Godot
@@ -24,6 +24,8 @@ try {
     for ($player=0; $player -lt 2; $player++) {
         $prefix = Join-Path $evidencePath "p$player"
         $arguments = @('--log-file',"$prefix-engine.log",'--resolution','1280x720','--','--network-economy-smoke',"--ticks=$Ticks","--seed=$Seed","--delay=$Delay","--session=$sessionCode","--player=$player","--port=$($ports[$player])","--remote-port=$($ports[1-$player])","--capture=$prefix.png","--report=$prefix.json")
+        if ($Contested) { $arguments += '--net-contested-smoke' }
+        if ($SuccessReturn) { $arguments += '--net-success-return-smoke' }
         $child = Start-Process -FilePath $package -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput "$prefix.out" -RedirectStandardError "$prefix.err"
         $null = $child.Handle
         $children += $child
@@ -39,7 +41,7 @@ try {
         Start-Sleep -Milliseconds 500
     }
     foreach ($child in $children) { $child.WaitForExit() }
-    $hostReport = @{ utc=[DateTime]::UtcNow.ToString('o'); wall_seconds=$clock.Elapsed.TotalSeconds; pids=@($children | ForEach-Object { $_.Id }); ports=$ports; session=$sessionCode; seed=$Seed; delay=$Delay; ticks=$Ticks; peak_resident_bytes=$peak; package_path=$package; package_sha256=(Get-FileHash $package).Hash; pck_sha256=(Get-FileHash ([System.IO.Path]::ChangeExtension($package,'pck'))).Hash; bridge_sha256=(Get-FileHash (Join-Path (Split-Path $package) 'voidfront_bridge.dll')).Hash; note='Two real rendered processes, loopback only. Process observations do not establish performance or human-play acceptance.' }
+    $hostReport = @{ utc=[DateTime]::UtcNow.ToString('o'); wall_seconds=$clock.Elapsed.TotalSeconds; pids=@($children | ForEach-Object { $_.Id }); ports=$ports; session=$sessionCode; seed=$Seed; delay=$Delay; ticks=$Ticks; contested=[bool]$Contested; success_return=[bool]$SuccessReturn; peak_resident_bytes=$peak; package_path=$package; package_sha256=(Get-FileHash $package).Hash; pck_sha256=(Get-FileHash ([System.IO.Path]::ChangeExtension($package,'pck'))).Hash; bridge_sha256=(Get-FileHash (Join-Path (Split-Path $package) 'voidfront_bridge.dll')).Hash; note='Two real rendered processes, loopback only. Process observations do not establish performance or human-play acceptance.' }
     [System.IO.File]::WriteAllText((Join-Path $evidencePath 'host.json'),($hostReport | ConvertTo-Json -Depth 5),[System.Text.UTF8Encoding]::new($false))
     for ($player=0; $player -lt 2; $player++) {
         if ($children[$player].ExitCode -ne 0) { throw "Player $player exited $($children[$player].ExitCode); inspect retained logs." }

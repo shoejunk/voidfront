@@ -1,5 +1,27 @@
 # Continuing roadmap
 
+## 2026-11-01 current checkpoint - contested queues and offline return
+
+Fresh packaged pair confirms first winner7277; native22 full replays/119 prefixes,
+44 commands/82 phases/35 corruptions pass. Both armies fight, both queued-shot
+witnesses target opposing combat units, and the same surviving P0 Lancer resumes
+its original pending anchor assault. Both former player roles return via R to
+offline player0, F1 selects workers and RMB moves them; ten separate native offline
+audit runs pass. See current PROGRESS/TESTING and independent contested review.
+This adds verification/lifecycle hooks; existing authoritative rules are unchanged.
+Initial worker-target witness was rejected and tightened before a fresh passing run.
+
+Next implement coordinated network setup/rematch: peers agree fresh session
+identity/settings before readiness, preserve terminal evidence, reject stale traffic
+and verify another shared game plus disconnect/cancel behavior. Then direct full
+1vAI/1v1 match play with recordings and concrete usability findings. Current6vs2
+script is contested combat proof, not competitive balance or human acceptance.
+Improve cramped role/waypoint HUD, labels/rings and dense queued formation overlays.
+Keep terminal-fault/tail-prefix/transport-identity, AI recovery/finite-resource and
+stationary-blocker/chase/service work on the roadmap. All dense-crowd/frame/response,
+finished faction/map/content/art/animation/audio/VFX, physical-network/soak, human,
+balance and SPEC shipping gates remain open. No COMPLETE.md.
+
 ## 2026-10-25 current checkpoint - last-worker recovery
 
 Source `e721d48` fixes the demonstrated sole-surviving-flux-worker income failure:
