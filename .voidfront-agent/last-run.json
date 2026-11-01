@@ -5,20 +5,20 @@
   "new_movie": false,
   "crowd_report": "C:\\dev\\voidfront\\artifacts\\cooperative-crowd-verified-2026-09-26.json",
   "movement_report": "C:\\dev\\voidfront\\artifacts\\cooperative-movement-verified-2026-09-26.json",
-  "run": "2026-10-25-last-worker-recovery",
-  "state": "Last AI worker preserves salvage; corrected cap-stall diagnosis; tier-two auditor and fresh package regressions pass",
-  "checkpoint_utc": "2026-10-25T19:21:40.2328062Z",
-  "source_commit": "e721d488cb36a3001f32199bc6d248cf589aa5c6",
-  "runtime_evidence_date": "2026-10-25",
-  "verification": "C:/dev/voidfront/artifacts/recovery-verify-approved-2026-10-25.log",
-  "runtime_report": "C:/dev/voidfront/artifacts/recovery-victory-2026-10-25.json",
-  "client_report": "C:/dev/voidfront/artifacts/recovery-net-audit-2026-10-25/summary.json",
+  "run": "2026-11-01-contested-queues-offline-return",
+  "state": "Contested queued combat and both successful-pair offline returns verified; authoritative rules unchanged",
+  "checkpoint_utc": "2026-11-01T20:22:41.445155+00:00",
+  "source_commit": "aa3319d3469c21d41fd930acb0ef1141a9e605f2",
+  "runtime_evidence_date": "2026-11-01",
+  "verification": "C:/dev/voidfront/artifacts/contested-verify-approved-2026-11-01.log",
+  "runtime_report": "C:/dev/voidfront/artifacts/contested-final-match-2026-11-01/p0.json",
+  "client_report": "C:/dev/voidfront/artifacts/contested-final-audit-2026-11-01/summary.json",
   "scale_reports": [
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-2026-09-26\\summary.json",
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-client-replays-2026-09-26\\summary.json"
   ],
   "reviews": [
-    "C:/dev/voidfront/.voidfront-agent/review-recovery-2026-10-25.md"
+    "C:/dev/voidfront/.voidfront-agent/review-contested-2026-11-01.md"
   ],
   "profile_reports": [
     "C:/dev/voidfront/artifacts/presentation-ordinary12-final-2026-09-25.json",
@@ -26,15 +26,15 @@
     "C:/dev/voidfront/artifacts/presentation-ordinary500-final-2026-09-25.json"
   ],
   "profile_integrity": "C:/dev/voidfront/.voidfront-agent/presentation-results-2026-09-25.json",
-  "next": "Coordinated setup/rematch and successful-pair offline return; contested armies/pending-combat queues and direct complete games. Preserve every SPEC gate.",
-  "package_pck_sha256": "ce656b5951859d7031b95a5177f7c340091e3f8608d22bdf3a4bb0c55b6d4cf6",
-  "package_bridge_sha256": "217687b5ae1881732045cfb6dfe2df28cdf54ca5b5c4b04bcdf026d5ef4c14ea",
+  "next": "Coordinated setup/rematch, then direct complete-match play and readability fixes. All remaining SPEC gates stay open.",
+  "package_pck_sha256": "1cb6f2b1f089c47e377b5b50459339be50d5890d94fec3800583572cd7d66b7c",
+  "package_bridge_sha256": "0c5d47e9ea97265e8200ee3249af8b439d3a5ff587f5501c78a8a7dc3bab527b",
   "remote_backup": true,
   "crowd_regressions": "C:/dev/voidfront/artifacts/economy-crowds-2026-09-26/summary.json",
   "crowd_experiments": "C:/dev/voidfront/.voidfront-agent/crowd-recovery-results-2026-09-26.json",
   "new_package": true,
   "new_network_suite": false,
-  "current_pass_limits": "Controlled native one-worker casualty regression; packaged smoke and scripted loopback. No direct human casualty playtest, motion/audio/SC2, impaired-network soak, reference performance, balance, production quality or shipping acceptance.",
+  "current_pass_limits": "Scripted two-process loopback economy match only; no human play, LAN/Internet, latency, performance, balance, production quality or shipping acceptance.",
   "presentation_profile_evidence_date": "2026-09-25",
   "cooperative_results": "C:\\dev\\voidfront\\.voidfront-agent\\cooperative-results-2026-09-26.json",
   "scripted_frame_p99_ms": {
@@ -52,9 +52,10 @@
   },
   "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
   "economy_results": "C:/dev/voidfront/.voidfront-agent/economy-results-2026-09-26.json",
-  "next_checkpoint": "Economy first increment now fulfilled: implement funded production queues and population, then economic AI and anchor victory. This supersedes the historical next field while preserving the user priority edit.",
+  "next_checkpoint": "Coordinated setup/rematch, then direct complete-match play and readability fixes. All remaining SPEC gates stay open.",
   "previous_scripted_frame_evidence_date": "2026-09-26 cooperative run; not rerun for scale this checkpoint",
   "movie": "C:/dev/voidfront/artifacts/economy-movie-2026-09-26.mp4",
   "recovery_results": "C:/dev/voidfront/.voidfront-agent/recovery-results-2026-10-25.json",
-  "new_paired_network_match": true
+  "new_paired_network_match": true,
+  "contested_results": "C:/dev/voidfront/.voidfront-agent/contested-results-2026-11-01.json"
 }
