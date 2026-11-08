@@ -1310,3 +1310,42 @@ production beyond initial reservations, per-tick rotation and wire-replay equali
 ## 2026-11-01 11:58 America/Los_Angeles - contested match and terminal return goals
 
 Baseline clean dev `5323931`; STOP/COMPLETE/prior marker absent; exclusive task `01a198af-e182-7d21-b1e6-a12b0eaef63d`. Preserve all source and pins. Add an opt-in real two-client contested army and pending-combat queue fixture, with independently audited canonical replays. Retain the existing passive route. Freeze confirmed terminal evidence before ordinary R/F1/RMB return to offline gameplay; audit both clients' new offline recordings. Independent source/evidence critic will examine actual artifacts. Coordinated network rematch, human play and all production/SPEC gates remain open.
+
+## 2026-11-08 America/Los_Angeles - fresh-session isolation goals
+
+Baseline clean dev9697dae; STOP/COMPLETE/marker absent. Exclusively acquired current task marker. Implement bounded transport prerequisite for coordinated rematch: foreign session datagrams must not terminate a fresh same-port session or refresh progress. Preserve current-session compatibility rejection. Add actual separate-process endpoint-reuse/stale-wire evidence and independent source/evidence review. Coordinated negotiation/UI and full second packaged game remain open; all SPEC gates stand.
+
+Source checkpoint `2be73fc` pushed to origin/dev. Reproduced the real defect with
+fingerprinted original binaries: both old peers finish, then both fresh peers
+fail at0 on authentic stale traffic. Foreign-identity full envelopes now bypass
+settings/payload handling and cannot join, acknowledge, advance or reset progress.
+Current-identity mismatches still fail. No sim/content/protocol change.
+
+Pinned MSVC Debug/Release12/12 each, malformed/alias/cross-build2000tick/ten-repeat
+regressions pass. Native tests exercise endpoint reuse, reordered stale traffic,
+timeout and current compatibility errors. Actual successive mixed-build pairs
+reuse56569/56571; each new peer withstands3507 old datagrams covering7 kinds and
+confirms100 ticks, with four opposite-build replays equal. Godot bridge objects
+complete two sessions with changed identity/seed/map/delay, fresh sequences/timing,
+frozen prior evidence and offline reset. The22case short concurrent fault suite
+passes; timing is diagnostic. Logs and scope are in TESTING and independent review.
+
+Fresh frozen package `artifacts/session-package-2026-11-08/Voidfront.exe` matches
+normal `artifacts/package`; previous package preserved. Offline400tick smoke
+passes input/combat/restart, hash`af2f6380026525c2`. Actual paired rendered
+processes40260/32576, UDP64291/64292, finish first winner0 at7207 below12000 and
+return offline. Primary inspected offline battle, queued formation and terminal
+PNGs. Dense overlay/HUD clutter, reused bright rigs and flat blockout terrain/
+buildings remain. No new motion/audio/human/SC2/reference-performance/balance/
+physical-network/soak/shipping claim. Coordinated negotiation and second shared
+packaged match remain next; every prior SPEC gate stands. Final audit details below.
+
+Final paired audit passes22 full Debug/Release replays,121 native prefixes,
+44 commands,82 phases,35 deliberate corruptions and10 separate offline full/prefix
+runs. First outcome7207/hash`311581103f35b35a`; preceding native tick has no winner.
+Reports: `artifacts/session-net-audit-2026-11-08/summary.json` and
+`.voidfront-agent/session-results-2026-11-08.json`. Both shared recordings are
+byte-identical; both offline recordings preserve the expected canonical movement.
+Independent image review additionally found player1 defeat/return text clipped
+at the right edge; retain this concrete fix in next run's player-flow work.
+Host367.714s,225394688/222416896B are concurrent process diagnostics only.

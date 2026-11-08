@@ -1,0 +1,21 @@
+{
+  "run": "2026-11-08-fresh-session-isolation",
+  "source_commit": "2be73fc",
+  "completed_utc": "2026-11-08T20:18:10.783053+00:00",
+  "verification": "artifacts/session-verify-approved-2026-11-08.log",
+  "reuse_report": "artifacts/session-reuse-final-2026-11-08/summary.json",
+  "network_report": "artifacts/session-network-final-2026-11-08/summary.json",
+  "bridge_report": "artifacts/session-bridge-2026-11-08.log",
+  "package_audit": "artifacts/session-net-audit-2026-11-08/summary.json",
+  "ticks": 7207,
+  "final_hash": "311581103f35b35a",
+  "full_replays": 22,
+  "prefixes": 121,
+  "corruptions": 35,
+  "package": {
+    "package_sha256": "D34D36F3BE1A6C49C56525AE86469B92E4F417DDF0B43CF00DD80C385C4B0562",
+    "pck_sha256": "19FF39B3293378323922DCA5B8BB01FC1CB82D98946606E85EAF5CE98D286F9C",
+    "bridge_sha256": "94AFFA5E129213ECD200703F6A678209B019367394C7E3BC08896724D3250C9D"
+  },
+  "next": "Coordinated setup/rematch negotiation and packaged second game; fix clipped defender banner and dense overlays. All SPEC gates stand."
+}

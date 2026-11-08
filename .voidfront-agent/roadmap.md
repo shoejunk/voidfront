@@ -1,5 +1,22 @@
 # Continuing roadmap
 
+## 2026-11-08 current checkpoint - fresh-session transport isolation
+
+Foreign-identity full transport envelopes are now ignored without readiness,
+ACK, simulation or progress-timeout effects. Current-identity compatibility
+errors remain terminal. Native Debug/Release, actual same-port successive peer
+pairs with all7 authentic old wire kinds,22case short impairment/fault suite and
+two-session Godot bridge contract pass; see TESTING and independent session review.
+
+Next implement coordinated setup/rematch negotiation and player flow: agree a
+fresh identity and all settings before readiness, allow cancel/disconnect, retain
+the first terminal recording, then complete another shared packaged game. Current
+tests externally supply identity/settings; they do not implement that negotiation.
+Fresh terminal capture review also found player1's defeat banner shifted right,
+clipping its offline-return text. Fix and recapture this alongside the existing
+dense queue/label/HUD readability debt when implementing the rematch player flow.
+Keep every prior human/content/art/audio/performance/pathfinding/SPEC gate open.
+
 ## 2026-11-01 current checkpoint - contested queues and offline return
 
 Fresh packaged pair confirms first winner7277; native22 full replays/119 prefixes,

@@ -5,20 +5,20 @@
   "new_movie": false,
   "crowd_report": "C:\\dev\\voidfront\\artifacts\\cooperative-crowd-verified-2026-09-26.json",
   "movement_report": "C:\\dev\\voidfront\\artifacts\\cooperative-movement-verified-2026-09-26.json",
-  "run": "2026-11-01-contested-queues-offline-return",
-  "state": "Contested queued combat and both successful-pair offline returns verified; authoritative rules unchanged",
-  "checkpoint_utc": "2026-11-01T20:22:41.445155+00:00",
-  "source_commit": "aa3319d3469c21d41fd930acb0ef1141a9e605f2",
-  "runtime_evidence_date": "2026-11-01",
-  "verification": "C:/dev/voidfront/artifacts/contested-verify-approved-2026-11-01.log",
-  "runtime_report": "C:/dev/voidfront/artifacts/contested-final-match-2026-11-01/p0.json",
-  "client_report": "C:/dev/voidfront/artifacts/contested-final-audit-2026-11-01/summary.json",
+  "run": "2026-11-08-fresh-session-isolation",
+  "state": "Fresh-session isolation verified; coordinated rematch negotiation remains open",
+  "checkpoint_utc": "2026-11-08T20:18:10.783053+00:00",
+  "source_commit": "2be73fc",
+  "runtime_evidence_date": "2026-11-08",
+  "verification": "C:\\dev\\voidfront\\artifacts\\session-verify-approved-2026-11-08.log",
+  "runtime_report": "C:\\dev\\voidfront\\artifacts\\session-net-match-2026-11-08\\p0.json",
+  "client_report": "C:\\dev\\voidfront\\artifacts\\session-net-audit-2026-11-08\\summary.json",
   "scale_reports": [
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-2026-09-26\\summary.json",
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-client-replays-2026-09-26\\summary.json"
   ],
   "reviews": [
-    "C:/dev/voidfront/.voidfront-agent/review-contested-2026-11-01.md"
+    "C:\\dev\\voidfront\\.voidfront-agent\\review-session-2026-11-08.md"
   ],
   "profile_reports": [
     "C:/dev/voidfront/artifacts/presentation-ordinary12-final-2026-09-25.json",
@@ -52,10 +52,14 @@
   },
   "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
   "economy_results": "C:/dev/voidfront/.voidfront-agent/economy-results-2026-09-26.json",
-  "next_checkpoint": "Coordinated setup/rematch, then direct complete-match play and readability fixes. All remaining SPEC gates stay open.",
+  "next_checkpoint": "Coordinated setup/rematch negotiation and packaged second game; fix clipped defender banner and dense overlays. All SPEC gates stand.",
   "previous_scripted_frame_evidence_date": "2026-09-26 cooperative run; not rerun for scale this checkpoint",
   "movie": "C:/dev/voidfront/artifacts/economy-movie-2026-09-26.mp4",
   "recovery_results": "C:/dev/voidfront/.voidfront-agent/recovery-results-2026-10-25.json",
   "new_paired_network_match": true,
-  "contested_results": "C:/dev/voidfront/.voidfront-agent/contested-results-2026-11-01.json"
+  "contested_results": "C:/dev/voidfront/.voidfront-agent/contested-results-2026-11-01.json",
+  "session_reuse_report": "C:\\dev\\voidfront\\artifacts\\session-reuse-final-2026-11-08\\summary.json",
+  "network_report": "C:\\dev\\voidfront\\artifacts\\session-network-final-2026-11-08\\summary.json",
+  "next_step": "Coordinated setup/rematch negotiation and packaged second game; fix clipped defender banner and dense overlays. All SPEC gates stand.",
+  "historical_fields_note": "Retained scale/profile/other evidence fields refer to their explicitly dated prior artifacts."
 }

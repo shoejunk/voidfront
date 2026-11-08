@@ -1,5 +1,61 @@
 # Verification ledger
 
+## 2026-11-08 - fresh-session endpoint isolation
+
+`tools/verify.ps1` passes pinned Godot4.7.2/MSVC Debug and Release12/12
+CTest each,15 malformed recordings and7 output aliases/config,2000 cross-build
+hashes and ten repeats. Log: `artifacts/session-verify-approved-2026-11-08.log`.
+The initial sandbox compiler tree stalled; it was identified and stopped before
+the approved unchanged retry. This is an environment failure, not product proof.
+
+`python tools/verify_session_reuse.py --out artifacts/session-reuse-final-2026-11-08`
+passes two actual mixed-build peer pairs,100 ticks each, reusing ports56569/56571.
+First PIDs39788/26096; fresh PIDs35384/23568. The fresh pair changes externally
+agreed identity64040903->64040904 and seed42->99;3507 authentic old packets per
+peer cover all7 kinds through the configured remote endpoints. Both confirm100
+ticks and hash4549765800361604596. Four opposite-build replays match. Fingerprints,
+raw wire packets, reports and traces are retained. Fail-before evidence:
+`artifacts/session-reuse-before-fingerprinted-2026-11-08`: first pair succeeds,
+both fresh peers reject at0 with incompatible session. Initial sandbox-only
+handshake failure is retained separately and is not a reproduction of that defect.
+
+Native contract tests also require stale-only handshake timeout, no readiness or
+simulation effects from reordered old traffic, fresh canonical replay, and strict
+current-identity rejection. Godot `res://bridge_network_test.gd` completes two
+sessions on the same bridges/ports with new identity/seed/map/delay, fresh command
+sequences and timing, preserved first evidence and offline reset. Log
+`artifacts/session-bridge-2026-11-08.log`: ok:true. Same-process contract only.
+
+`python tools/verify_network.py --ticks 100 --jobs 3 --out
+artifacts/session-network-final-2026-11-08` passes22 cases, opposite-build replays,
+ten repeats per delay and malformed replays. Includes0/80/160ms,20ms jitter,1%
+loss, withheld input/checksum/readiness, ACK/terminal loss, incompatibility,
+disconnect and desync. Runs overlap: timing is diagnostic, not acceptance. This
+short regression does not replace earlier1000tick evidence or30minute soak.
+
+Independent review: `.voidfront-agent/review-session-2026-11-08.md`.
+Pinned import/export logs: `artifacts/session-{import,export}-2026-11-08.log`;
+frozen package `artifacts/session-package-2026-11-08/Voidfront.exe`, copied to
+`artifacts/package` after preserving the prior package. Packaged offline400tick
+input/selection/stop/combat/restart smoke passes, hash`af2f6380026525c2`, winner1.
+`artifacts/session-offline-2026-11-08.json` and its battle PNG were inspected.
+Requested animation clips do not prove transitions or deformation. Framep99
+7.358ms/bridgep99.052ms are12unit concurrent-run diagnostics, not budget acceptance.
+
+Final paired audit passes22 full Debug/Release replays,121 native prefixes,
+44 commands,82 phases,35 deliberate corruptions and10 separate offline full/prefix
+runs. First outcome7207/hash`311581103f35b35a`; preceding native tick has no winner.
+Reports: `artifacts/session-net-audit-2026-11-08/summary.json` and
+`.voidfront-agent/session-results-2026-11-08.json`. Both shared recordings are
+byte-identical; both offline recordings preserve the expected canonical movement.
+Independent image review additionally found player1 defeat/return text clipped
+at the right edge; retain this concrete fix in next run's player-flow work.
+Host367.714s,225394688/222416896B are concurrent process diagnostics only.
+
+No simulation/content/protocol change. Coordinated setup/rematch negotiation,
+player flow and a second packaged shared game remain open. No human, balance,
+art/animation/audio, reference-performance or shipping acceptance is implied.
+
 ## 2026-11-01 - strict contested queues and successful-pair offline return
 
 MSVC Debug/Release12/12 CTest each,15 malformed recordings+7 alias cases/config,
