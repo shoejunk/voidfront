@@ -36,11 +36,14 @@ std::vector<uint8_t> packet(const SessionOptions& o,Kind kind,std::span<const ui
     if(b.size()>kMaxDatagram) throw std::runtime_error("frame exceeds bounded datagram size");
     return b;
 }
-Kind header(const SessionOptions& o,std::span<const uint8_t> b) {
+std::optional<Kind> header(const SessionOptions& o,std::span<const uint8_t> b) {
     if(b.size()<kHeaderBytes || get(b,0,4)!=kMagic) throw std::runtime_error("invalid transport header");
+    // Endpoint reuse can deliver delayed traffic from an earlier match. Its
+    // settings and payload belong to that identity, never to this session.
+    // Do not acknowledge it, join, or reset the progress timeout.
+    if(get(b,16,8)!=o.session) return std::nullopt;
     if(get(b,4,4)!=o.protocol) throw std::runtime_error("incompatible protocol version");
     if(get(b,8,8)!=o.content) throw std::runtime_error("incompatible content identity");
-    if(get(b,16,8)!=o.session) throw std::runtime_error("incompatible session");
     if(get(b,24,4)!=1-o.player) throw std::runtime_error("incompatible player assignment");
     if(get(b,28,4)!=o.seed || get(b,32,4)!=(o.count|(o.map<<16)) || get(b,36,4)!=o.ticks)
         throw std::runtime_error("incompatible match setup (seed/count/map/ticks)");
@@ -249,7 +252,9 @@ struct Session::Impl {
             if(received->empty()) continue;
             ++stats.received;
             const auto bytes=std::span<const uint8_t>(*received);
-            const auto kind=header(o,bytes); const auto body=bytes.subspan(kHeaderBytes);
+            const auto parsed_kind=header(o,bytes);
+            if(!parsed_kind) continue;
+            const auto kind=*parsed_kind; const auto body=bytes.subspan(kHeaderBytes);
             if(kind==Kind::Hello) {
                 if(body.size()!=4 || get(body,0,4)!=o.input_delay) throw std::runtime_error("incompatible input delay");
                 if(!joined) { joined=true; progress=Clock::now(); hello(); }

@@ -145,3 +145,22 @@ the socket immediately and the remote peer subsequently times out. Errors,
 completion (after terminal retry linger), and destruction also release WinSock
 and the exclusive bind. The adapter retains match-bounded histories and metrics;
 it is not a constant-memory production networking implementation.
+
+### Fresh-session endpoint reuse
+
+Callers must agree a fresh nonzero session identity before starting another
+match on the same endpoints. A full transport envelope with valid magic and a
+different identity is discarded before its compatibility fields or payload are
+interpreted. It cannot join, acknowledge, advance or refresh the progress timeout.
+Current-identity protocol/content/player/settings/input-delay errors still fail.
+Malformed envelopes still fail; this is session isolation, not authentication.
+
+`python tools/verify_session_reuse.py --out artifacts/session-reuse-UNIQUE`
+launches two successive Debug/Release peer pairs on the same ports and changes
+the externally agreed identity and seed. During the second pair it injects all
+seven authentic captured packet kinds from the prior pair through the configured
+remote endpoint, repeatedly and reordered. It binds both traces to opposite-build
+replays and saves executable fingerprints and raw packet witnesses. Native
+session tests separately cover stale-only timeout and current-identity errors.
+This is a transport prerequisite; coordinated setup/rematch negotiation and its
+packaged player flow remain unimplemented.

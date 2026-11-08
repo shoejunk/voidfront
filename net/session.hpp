@@ -56,7 +56,10 @@ void validate_session_options(const SessionOptions& options);
 // timer period. The CLI retains scoped timeBeginPeriod(1) around its Sleep(1) loop;
 // a Godot host must validate its own polling cadence and input latency.
 // Construction allocates match-bounded history (<=100000 ticks) and binds a
-// socket. All socket/WinSock lifetime ends on completion, error, cancel or
+// socket. Callers must agree a fresh nonzero session identity for each match;
+// well-formed envelopes with another identity are ignored without progress.
+// Current-identity protocol/content/settings mismatches remain terminal errors.
+// All socket/WinSock lifetime ends on completion, error, cancel or
 // destruction. Destroying a session does not notify its peer; the peer times out.
 // Completion includes the full terminal retry linger. This is not yet Godot
 // integration, Internet transport, reconnect, authentication or production netcode.

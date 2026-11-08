@@ -72,6 +72,39 @@ std::array<SessionOptions, 2> options(Ports& ports, uint32_t ticks = 8) {
 
 const CommandProvider empty = [](const Sim&, uint8_t, uint32_t&) { return std::vector<Command>{}; };
 
+// Bind the actual configured peer endpoint; packets from another source port
+// would only exercise the socket's unrelated-endpoint filter.
+struct WirePeer {
+    SOCKET handle = INVALID_SOCKET;
+    sockaddr_in destination{};
+    explicit WirePeer(const SessionOptions& local) {
+        handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        check(handle != INVALID_SOCKET, "wire peer socket");
+        sockaddr_in source{}; source.sin_family = AF_INET;
+        source.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        source.sin_port = htons(static_cast<u_short>(local.remote_port));
+        if (bind(handle, reinterpret_cast<const sockaddr*>(&source), sizeof(source)) != 0) {
+            closesocket(handle); handle = INVALID_SOCKET;
+            throw std::runtime_error("wire peer bind");
+        }
+        destination = source; destination.sin_port = htons(static_cast<u_short>(local.port));
+    }
+    ~WirePeer() { if (handle != INVALID_SOCKET) closesocket(handle); }
+    void send(const SessionOptions& peer, uint32_t kind, std::vector<uint8_t> body = {}) {
+        std::vector<uint8_t> bytes;
+        const auto put = [&](uint64_t value, size_t width) {
+            for (size_t i = 0; i < width; ++i) bytes.push_back(static_cast<uint8_t>(value >> (8 * i)));
+        };
+        put(0x32504656, 4); put(peer.protocol, 4); put(peer.content, 8); put(peer.session, 8);
+        put(peer.player, 4); put(peer.seed, 4); put(peer.count | (peer.map << 16), 4);
+        put(peer.ticks, 4); put(kind, 4);
+        bytes.insert(bytes.end(), body.begin(), body.end());
+        check(sendto(handle, reinterpret_cast<const char*>(bytes.data()), static_cast<int>(bytes.size()), 0,
+            reinterpret_cast<const sockaddr*>(&destination), sizeof(destination)) == static_cast<int>(bytes.size()),
+            "wire peer send");
+    }
+};
+
 template<class Done, class Step>
 void until(Done done, Step step) {
     const auto deadline = Clock::now() + std::chrono::seconds(10);
@@ -273,6 +306,85 @@ void post_advance_failure_retains_frames() {
     check(!recording[1].poll(second).advanced && !second.applied_frames(), "terminal poll repeated failed applied frames");
     first.cancel();
 }
+
+void fresh_identity_reuses_endpoints() {
+    Ports ports;
+    auto old = options(ports, 4);
+    for (auto& side : old) { side.tick_ms = 1; side.timeout = 200; }
+    {
+        Session first(old[0], empty), second(old[1], empty);
+        until([&] { return first.status() == SessionStatus::Complete && second.status() == SessionStatus::Complete; },
+            [&] { first.poll(); second.poll(); healthy(first); healthy(second); });
+        check(first.stats().confirmed_ticks == 4 && second.stats().confirmed_ticks == 4,
+            "original match did not finish before endpoint reuse");
+    }
+    auto next = old;
+    for (auto& side : next) ++side.session;
+    uint32_t sampled = 0;
+    const CommandProvider tracked = [&](const Sim&, uint8_t, uint32_t&) {
+        ++sampled; return std::vector<Command>{};
+    };
+    Session first(next[0], tracked);
+    const auto initial_hash = first.sim().state_hash();
+    {
+        WirePeer wire(next[0]);
+        // Reordered old terminal/ACK/checksum/frame/hello envelopes, including
+        // an older protocol/content/setup, must not join or validate payloads.
+        auto stale = old[1]; --stale.protocol; ++stale.content; ++stale.seed;
+        for (const auto kind : {5u, 4u, 3u, 7u, 6u, 2u, 1u, 2u, 4u}) wire.send(stale, kind);
+        for (int i = 0; i < 5; ++i) {
+            check(!first.poll().advanced && first.status() == SessionStatus::Handshake,
+                "stale traffic changed fresh session readiness");
+        }
+        check(first.stats().received == 9 && sampled == 0 && first.sim().state_hash() == initial_hash,
+            "stale datagrams were not consumed without authoritative effects");
+    }
+    Session second(next[1], tracked);
+    std::array<Recorded, 2> recording;
+    until([&] { return first.status() == SessionStatus::Complete && second.status() == SessionStatus::Complete; },
+        [&] { recording[0].poll(first); recording[1].poll(second); healthy(first); healthy(second); });
+    check(recording[0].hashes == recording[1].hashes && recording[0].hashes.size() == 4 &&
+        recording[0].commands == 0 && recording[1].commands == 0 && sampled == 4,
+        "fresh match after stale traffic did not replay canonically");
+}
+
+void stale_traffic_cannot_keep_session_alive() {
+    Ports ports;
+    auto o = options(ports);
+    o[0].timeout = 200;
+    Session first(o[0], empty);
+    WirePeer wire(o[0]);
+    auto stale = o[1]; --stale.session;
+    until([&] { return first.status() == SessionStatus::Error; }, [&] {
+        wire.send(stale, 1, {2, 0, 0, 0}); first.poll();
+    });
+    check(first.sim().tick() == 0 && !first.stats().session_ready_ms &&
+        first.error().find("timeout/disconnect waiting for handshake") != std::string::npos,
+        "stale traffic suppressed timeout or changed readiness");
+}
+
+void current_identity_mismatch_is_terminal() {
+    const std::array<std::string, 7> messages{"protocol version", "content identity", "player assignment",
+        "match setup", "match setup", "match setup", "input delay"};
+    for (size_t mode = 0; mode < messages.size(); ++mode) {
+        Ports ports;
+        auto o = options(ports);
+        Session first(o[0], empty);
+        WirePeer wire(o[0]);
+        auto peer = o[1];
+        if (mode == 0) ++peer.protocol;
+        if (mode == 1) ++peer.content;
+        if (mode == 2) peer.player = 0;
+        if (mode == 3) ++peer.seed;
+        if (mode == 4) ++peer.count;
+        if (mode == 5) ++peer.ticks;
+        wire.send(peer, 1, {static_cast<uint8_t>(mode == 6 ? 3 : 2), 0, 0, 0});
+        until([&] { return first.status() == SessionStatus::Error; }, [&] { first.poll(); });
+        check(first.sim().tick() == 0 && !first.stats().session_ready_ms &&
+            first.error().find(messages[mode]) != std::string::npos,
+            "current-identity mismatch lost strict rejection: " + first.error());
+    }
+}
 }
 
 // Economy matches end at the first authoritative winner tick instead of the cap.
@@ -301,8 +413,11 @@ int main() {
         successful_pair(true);
         for (int mode = 0; mode < 3; ++mode) rejected_provider(mode);
         post_advance_failure_retains_frames();
+        fresh_identity_reuses_endpoints();
+        stale_traffic_cannot_keep_session_alive();
+        current_identity_mismatch_is_terminal();
         early_outcome_completion();
-        std::cout << "Session API: lifetime/cancel, empty/custom providers, canonical replay, overdue polling, provider errors and failed applied prefix passed\n";
+        std::cout << "Session API: lifetime/cancel, providers/replay, overdue polling, failed applied prefix, fresh endpoint reuse, stale timeout and current-identity rejection passed\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Session API failure: " << error.what() << '\n';
