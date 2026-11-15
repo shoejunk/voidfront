@@ -1,5 +1,42 @@
 # Voidfront progress
 
+## 2026-11-15 America/Los_Angeles - loopback lobby and rematch
+
+Baseline: clean `dev` at `705a373`, STOP/COMPLETE/previous run marker absent.
+The previous verified pair needed externally supplied common settings and a
+new launch for each game. This run adds a consent-based lobby on loopback,
+keeps each confirmed replay across rematches, and unifies the outcome text
+and panel layout. Verification target: both roles complete two economy games
+in the same rendered processes with fresh settings and a native replay audit.
+
+The host offers seed, delay and tick limit for the fixed Glass Reach economy
+map; the guest accepts the exact offer before the native compatibility and
+readiness checks. Both roles reuse the same windows and adjacent UDP ports.
+Every agreed round starts with a fresh positive 63-bit identity. The TCP
+lobby is loopback only and carries no authoritative commands. The only native
+change exposes the existing session identity as a string in diagnostics.
+
+The client archives the confirmed VFR before allowing either role to start
+another round. TCP disconnect while UDP is finishing allows native terminal
+confirmation to run to completion or timeout. Independent review caught
+the cancellation race corrected here; a targeted integrated terminal TCP
+loss test is still needed. Open/setup cancellation, fragmented frames and
+disconnect are covered by the 77-check TCP contract.
+
+Frozen package: `artifacts/rematch-final-package-2026-11-15/Voidfront.exe`.
+The same two rendered processes confirmed first outcomes at 7,145 and 7,088.
+Both roles matched each other's recordings and preserved both rounds' archives.
+The guest adopted the host's settings twice, with seed/delay changing 7/2 to 8/3.
+Independent replays and inspection: `.voidfront-agent/review-rematch-2026-11-15.md`.
+The source checkpoint is `1131af8`; build and runtime details are in TESTING.md.
+The packaged offline control path still reaches victory and restarts the AI.
+
+Next: human match/rematch/return verification, then targeted final-confirmation
+disconnect coverage and HUD cleanup. Outcome actions fit at 1280×720; health
+bars still overlap the winner banner. Blockout terrain, reused unit rigs,
+competitive balance, large battle budgets, networking beyond loopback and every
+remaining SPEC gate stay open.
+
 ## 2026-11-01 America/Los_Angeles - contested queue and successful return verified
 
 Continued clean dev `5323931`; STOP/COMPLETE/prior marker absent. Exclusive task

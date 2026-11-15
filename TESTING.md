@@ -1,5 +1,68 @@
 # Verification ledger
 
+## 2026-11-15 - loopback setup and rematch
+
+`tools/verify.ps1` passed pinned Godot 4.7.2, the recorded godot-cpp SHA,
+MSVC Debug/Release 12/12 CTest each, 15 malformed replay and seven output
+alias checks per build, 2,000 cross-build tick hashes and ten repeat traces.
+Log: `artifacts/rematch-verify-final-2026-11-15.log`. Retained initial
+environment failures: sandbox compiler C1902, first approved link LNK1104
+while a source parser check overlapped, and sandboxed editor safe-save error.
+Approved builds and import/export passed without changing the tool pins.
+
+The pinned headless `res://network_lobby_test.gd` passed 77 checks over
+loopback TCP, including delayed consent, fragmented frames, invalid and
+duplicate messages, a fresh round, setup cancellation and disconnect.
+This contract does not reproduce TCP closing during native UDP final
+confirmation; that transition was independently reviewed in source.
+
+The frozen `artifacts/rematch-final-package-2026-11-15/Voidfront.exe`
+passed the accelerated offline player-victory and keyboard restart fixture
+against the economic AI: tick 4,656, winner 0, hash `e8cf6921fb460733`.
+`tools/verify_match_capture.py` matched all ticks in 1 Debug and 10
+Release replays and rejected 13 corruptions. See
+`artifacts/rematch-offline-victory-2026-11-15-audit/summary.json`.
+
+To rerun the two rendered clients and independent replay audit:
+
+```powershell
+python -B tools/run_rematch.py artifacts/my-rematch --package artifacts/package/Voidfront.exe
+python -B tools/verify_rematch.py artifacts/my-rematch --out artifacts/my-rematch-audit
+```
+
+Use fresh output directories. The first paired attempt never reached TCP
+consent; the retry launches the rendered windows hidden, with both peers
+reaching native readiness. The failed attempt remains in
+`artifacts/rematch-pair-2026-11-15` and is not match evidence.
+
+Final rendered clients PIDs 25364/12760 reused UDP ports 59535/59536 and
+TCP port 59535. The guest launched with seed 99 and delay 11; the observed
+offer and both native reports agreed on seed 7/delay 2, then seed 8/delay 3.
+Both maps were Glass Reach with a 12,000 tick cap and different identities.
+Each client captured and archived a recording before rematching. Both
+peers confirmed the first outcome in each match:
+
+| Round | Winner | Confirmed tick | State hash |
+| --- | --- | ---: | --- |
+| 1 | Player 0 | 7,145 | `14de9413d247dd2a` |
+| 2 | Player 0 | 7,088 | `c8e5299259527d3a` |
+
+Raw reports, recordings, offer/terminal PNGs and process logs:
+`artifacts/rematch-final-pair-2026-11-15`. The 725-second wall duration is a
+host diagnostic for the pair. Both games were scripted with a holding
+defender; this does not demonstrate human play, competitive balance,
+network impairment or reference performance.
+
+`artifacts/rematch-final-audit-2026-11-15/summary.json` passed 44 complete
+Debug/Release replays, 262 native prefixes, 80 canonical commands, 140
+phase snapshots and 48 deliberate corruption rejections across the two
+games. Native prefixes show no winner one tick before each confirmed
+endpoint. The audit compared all four archives to the captured replays
+after both games, and checked each process captured the first outcome
+before it started the rematch. An independent reviewer also ran the two
+first-outcome checks directly and inspected actual offer/terminal PNGs.
+See `.voidfront-agent/review-rematch-2026-11-15.md`.
+
 ## 2026-11-08 - fresh-session endpoint isolation
 
 `tools/verify.ps1` passes pinned Godot4.7.2/MSVC Debug and Release12/12

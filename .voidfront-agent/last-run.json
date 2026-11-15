@@ -5,20 +5,20 @@
   "new_movie": false,
   "crowd_report": "C:\\dev\\voidfront\\artifacts\\cooperative-crowd-verified-2026-09-26.json",
   "movement_report": "C:\\dev\\voidfront\\artifacts\\cooperative-movement-verified-2026-09-26.json",
-  "run": "2026-11-08-fresh-session-isolation",
-  "state": "Fresh-session isolation verified; coordinated rematch negotiation remains open",
-  "checkpoint_utc": "2026-11-08T20:18:10.783053+00:00",
-  "source_commit": "2be73fc",
-  "runtime_evidence_date": "2026-11-08",
-  "verification": "C:\\dev\\voidfront\\artifacts\\session-verify-approved-2026-11-08.log",
-  "runtime_report": "C:\\dev\\voidfront\\artifacts\\session-net-match-2026-11-08\\p0.json",
-  "client_report": "C:\\dev\\voidfront\\artifacts\\session-net-audit-2026-11-08\\summary.json",
+  "run": "2026-11-15-negotiated-loopback-rematch",
+  "state": "Two packaged loopback matches negotiated and independently verified; both replay archives preserved",
+  "checkpoint_utc": "2026-11-15T20:31:19.557044+00:00",
+  "source_commit": "1131af8bf94eeebac1f9d63f9ea46f476510bc8d",
+  "runtime_evidence_date": "2026-11-15",
+  "verification": "C:/dev/voidfront/artifacts/rematch-verify-final-2026-11-15.log",
+  "runtime_report": "C:/dev/voidfront/artifacts/rematch-final-pair-2026-11-15/round2/p0.json",
+  "client_report": "C:/dev/voidfront/artifacts/rematch-final-audit-2026-11-15/summary.json",
   "scale_reports": [
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-2026-09-26\\summary.json",
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-client-replays-2026-09-26\\summary.json"
   ],
   "reviews": [
-    "C:\\dev\\voidfront\\.voidfront-agent\\review-session-2026-11-08.md"
+    "C:/dev/voidfront/.voidfront-agent/review-rematch-2026-11-15.md"
   ],
   "profile_reports": [
     "C:/dev/voidfront/artifacts/presentation-ordinary12-final-2026-09-25.json",
@@ -26,15 +26,15 @@
     "C:/dev/voidfront/artifacts/presentation-ordinary500-final-2026-09-25.json"
   ],
   "profile_integrity": "C:/dev/voidfront/.voidfront-agent/presentation-results-2026-09-25.json",
-  "next": "Coordinated setup/rematch, then direct complete-match play and readability fixes. All remaining SPEC gates stay open.",
-  "package_pck_sha256": "1cb6f2b1f089c47e377b5b50459339be50d5890d94fec3800583572cd7d66b7c",
-  "package_bridge_sha256": "0c5d47e9ea97265e8200ee3249af8b439d3a5ff587f5501c78a8a7dc3bab527b",
+  "next": "Exercise full human match/rematch/offline return; add integrated TCP loss during UDP finishing and improve HUD layering. All SPEC gates stand.",
+  "package_pck_sha256": "685a5b9340b2641e83b6653d8000d22275a723587cb0457b28a51945c18827be",
+  "package_bridge_sha256": "cb285a31abab268fa6a50a0007e339b085aaf26cdcd3ea63c491fc1e1c7e3eda",
   "remote_backup": true,
   "crowd_regressions": "C:/dev/voidfront/artifacts/economy-crowds-2026-09-26/summary.json",
   "crowd_experiments": "C:/dev/voidfront/.voidfront-agent/crowd-recovery-results-2026-09-26.json",
   "new_package": true,
   "new_network_suite": false,
-  "current_pass_limits": "Scripted two-process loopback economy match only; no human play, LAN/Internet, latency, performance, balance, production quality or shipping acceptance.",
+  "current_pass_limits": "Scripted two-match loopback with a holding defender; no human, LAN/Internet, balance, representative performance, or shipping acceptance.",
   "presentation_profile_evidence_date": "2026-09-25",
   "cooperative_results": "C:\\dev\\voidfront\\.voidfront-agent\\cooperative-results-2026-09-26.json",
   "scripted_frame_p99_ms": {
@@ -52,7 +52,7 @@
   },
   "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
   "economy_results": "C:/dev/voidfront/.voidfront-agent/economy-results-2026-09-26.json",
-  "next_checkpoint": "Coordinated setup/rematch negotiation and packaged second game; fix clipped defender banner and dense overlays. All SPEC gates stand.",
+  "next_checkpoint": "Exercise full human match/rematch/offline return; add integrated TCP loss during UDP finishing and improve HUD layering. All SPEC gates stand.",
   "previous_scripted_frame_evidence_date": "2026-09-26 cooperative run; not rerun for scale this checkpoint",
   "movie": "C:/dev/voidfront/artifacts/economy-movie-2026-09-26.mp4",
   "recovery_results": "C:/dev/voidfront/.voidfront-agent/recovery-results-2026-10-25.json",
@@ -60,6 +60,7 @@
   "contested_results": "C:/dev/voidfront/.voidfront-agent/contested-results-2026-11-01.json",
   "session_reuse_report": "C:\\dev\\voidfront\\artifacts\\session-reuse-final-2026-11-08\\summary.json",
   "network_report": "C:\\dev\\voidfront\\artifacts\\session-network-final-2026-11-08\\summary.json",
-  "next_step": "Coordinated setup/rematch negotiation and packaged second game; fix clipped defender banner and dense overlays. All SPEC gates stand.",
-  "historical_fields_note": "Retained scale/profile/other evidence fields refer to their explicitly dated prior artifacts."
+  "next_step": "Exercise full human match/rematch/offline return; add integrated TCP loss during UDP finishing and improve HUD layering. All SPEC gates stand.",
+  "historical_fields_note": "Retained scale/profile/other evidence fields refer to their explicitly dated prior artifacts.",
+  "rematch_results": "C:/dev/voidfront/.voidfront-agent/rematch-results-2026-11-15.json"
 }

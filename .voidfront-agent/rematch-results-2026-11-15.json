@@ -1,0 +1,85 @@
+{
+  "source_commit": "1131af8bf94eeebac1f9d63f9ea46f476510bc8d",
+  "utc": "2026-11-15T20:31:19.557044+00:00",
+  "pids": [
+    25364,
+    12760
+  ],
+  "udp_ports": [
+    59535,
+    59536
+  ],
+  "tcp_port": 59535,
+  "package": {
+    "package_sha256": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+    "pck_sha256": "685a5b9340b2641e83b6653d8000d22275a723587cb0457b28a51945c18827be",
+    "bridge_sha256": "cb285a31abab268fa6a50a0007e339b085aaf26cdcd3ea63c491fc1e1c7e3eda"
+  },
+  "frozen_executable": "C:\\dev\\voidfront\\artifacts\\rematch-final-package-2026-11-15\\Voidfront.exe",
+  "audit_summary": "C:/dev/voidfront/artifacts/rematch-final-audit-2026-11-15/summary.json",
+  "rounds": [
+    {
+      "agreed_setup": {
+        "session": "6353869340697622501",
+        "host_port": 59535,
+        "guest_port": 59536,
+        "map_id": 2,
+        "seed": 7,
+        "delay": 2,
+        "ticks": 12000
+      },
+      "first_confirmed_outcome_tick": 7145,
+      "winner": 0,
+      "initial_hash": "ae47e9fb549a24d4",
+      "final_hash": "14de9413d247dd2a",
+      "replay_sha256": "b33bf4c2f6d51a9f318c30116dd8ac5cff577acf9aa935ab61bca4887b37b8df",
+      "full_native_replays": 22,
+      "native_prefixes": 130,
+      "corruptions_rejected": 24,
+      "audit": "C:\\dev\\voidfront\\artifacts\\rematch-final-audit-2026-11-15\\round1\\summary.json",
+      "archives": [
+        {
+          "path": "C:\\dev\\voidfront\\artifacts\\godot-profile\\Godot\\app_userdata\\Voidfront\\network-replays\\6353869340697622501-p0.vfr",
+          "sha256": "b33bf4c2f6d51a9f318c30116dd8ac5cff577acf9aa935ab61bca4887b37b8df"
+        },
+        {
+          "path": "C:\\dev\\voidfront\\artifacts\\godot-profile\\Godot\\app_userdata\\Voidfront\\network-replays\\6353869340697622501-p1.vfr",
+          "sha256": "b33bf4c2f6d51a9f318c30116dd8ac5cff577acf9aa935ab61bca4887b37b8df"
+        }
+      ]
+    },
+    {
+      "agreed_setup": {
+        "session": "1392263392040596593",
+        "host_port": 59535,
+        "guest_port": 59536,
+        "map_id": 2,
+        "seed": 8,
+        "delay": 3,
+        "ticks": 12000
+      },
+      "first_confirmed_outcome_tick": 7088,
+      "winner": 0,
+      "initial_hash": "b8ade65fc55aa48b",
+      "final_hash": "c8e5299259527d3a",
+      "replay_sha256": "6796f0b21e269633ceaed365804b05c53232225f5f201530bda5a9302ee87933",
+      "full_native_replays": 22,
+      "native_prefixes": 132,
+      "corruptions_rejected": 24,
+      "audit": "C:\\dev\\voidfront\\artifacts\\rematch-final-audit-2026-11-15\\round2\\summary.json",
+      "archives": [
+        {
+          "path": "C:\\dev\\voidfront\\artifacts\\godot-profile\\Godot\\app_userdata\\Voidfront\\network-replays\\1392263392040596593-p0.vfr",
+          "sha256": "6796f0b21e269633ceaed365804b05c53232225f5f201530bda5a9302ee87933"
+        },
+        {
+          "path": "C:\\dev\\voidfront\\artifacts\\godot-profile\\Godot\\app_userdata\\Voidfront\\network-replays\\1392263392040596593-p1.vfr",
+          "sha256": "6796f0b21e269633ceaed365804b05c53232225f5f201530bda5a9302ee87933"
+        }
+      ]
+    }
+  ],
+  "offline_victory_audit": "C:/dev/voidfront/artifacts/rematch-offline-victory-2026-11-15-audit/summary.json",
+  "review": "C:/dev/voidfront/.voidfront-agent/review-rematch-2026-11-15.md",
+  "scope": "Scripted two-process loopback economy matches with a holding defender. Human play, LAN/Internet, balance, representative performance, and shipping gates remain open."
+}

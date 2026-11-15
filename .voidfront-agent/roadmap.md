@@ -1,5 +1,21 @@
 # Continuing roadmap
 
+## 2026-11-15 current checkpoint - negotiated loopback rematch
+
+The setup screen now supports a persistent two-window loopback lobby. Host
+offers settings, guest explicitly accepts, and a fresh native session starts
+after each agreement. Both clients archive confirmed replays before allowing
+another match. Outcome text wraps within a centered panel. The native sim and
+UDP protocol/content remain unchanged.
+
+Next exercise full matches with human input and retain recordings, including
+a player-driven rematch and return to offline play. During that pass, add a
+targeted integrated TCP disconnect while a peer is still confirming its native
+terminal tick. Move result graphics above unit overlays, hide action hints
+during setup, and give the guest's rematch settings more space. Keep previous
+AI recovery, finite resource strategy, pathfinding, large battle performance,
+finished content/art/audio, LAN/Internet impairment and shipping gates open.
+
 ## 2026-11-08 current checkpoint - fresh-session transport isolation
 
 Foreign-identity full transport envelopes are now ignored without readiness,
