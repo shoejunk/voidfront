@@ -451,6 +451,7 @@ public:
     }
     Dictionary make_network_report() const {
         Dictionary result = make_network_status();
+        result["session_id"] = String::num_uint64(static_cast<int64_t>(network_options.session));
         result["seed"] = network_options.seed; result["units_per_team"] = network_options.count;
         result["requested_ticks"] = network_options.ticks; result["recorded_ticks"] = recorded_ticks;
         result["evidence_complete"] = network && evidence_complete && recorded_ticks == network->sim().tick() && trace.size() == recorded_ticks;

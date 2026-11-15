@@ -68,12 +68,31 @@ From source, run `./tools/build.ps1 -Configuration Debug`, then `./tools/run.ps1
 Movement verification from source: `./tools/capture.ps1 -Packaged -Movement -Ticks 400 -Name packaged-movement` exercises actual selection/orders, exact oblique arrival, a ridge detour, Stop and live retarget. Add `-Movie` for a recording. Rebuild the package first. Simulation compatibility changed for this movement increment; older recordings and old-build network peers are rejected rather than reinterpreted.
 - Two cyan flux deposits lie on the dark central crossing. Scout them (units reveal fog), then right click one with workers to mine flux; it is banked separately from salvage. Select your Foundry and press G to spend 50 flux on Hardened Plating (200 ticks): every Strider gains +50 hp.
 
-## Experimental two-window economy match (loopback)
+## Two-window economy match and rematch (loopback)
 
 The same lockstep session now carries the 64x48 economy map: each player starts with
 an anchor and three workers, gathers salvage and flux, builds Foundries, trains Striders
 and Lancers, researches Hardened Plating and fights for the opposing anchor. There is no
-AI in this mode. Launch in two terminals (matching `--seed`, `--session`, `--delay`, `--ticks`):
+AI in this mode. Open the game twice on one computer:
+
+1. Press H at skirmish setup in the first window, then J in the second.
+2. In the host window, use [ and ] for the seed and − and = for input delay.
+   Press Enter when the guest connects to offer those settings.
+3. Review the offer in the guest window and press Enter. Both windows then
+   connect to the shared match. Orders become available once the game is ready.
+4. After both windows confirm the outcome, the host can change the seed or delay
+   and offer a rematch with Enter. The guest presses Enter to accept the new
+   offer. Each confirmed game has its own replay under the game's Godot user
+   data folder, in `network-replays`.
+
+Esc closes the lobby while waiting or after a match. Shift+Esc leaves an active
+shared match, while plain Esc still cancels building placement. R returns to
+offline play after a network match ends; M then opens skirmish setup. If the
+default ports are occupied, start both windows with `-- --lobby-port=39002`
+(TCP and UDP on the chosen port, plus UDP on the next port). Both windows must
+be on the same computer.
+
+Direct launch is also available with matching settings:
 
 ```powershell
 ./Voidfront.exe -- --network-economy --player=0 --port=39000 --remote-port=39001 --session=12345 --seed=7 --ticks=36000
@@ -81,11 +100,10 @@ AI in this mode. Launch in two terminals (matching `--seed`, `--session`, `--del
 ```
 
 Controls are the offline economy controls (B build, T/L train, G research, Shift-queued orders).
-Loopback only. An anchor outcome freezes gameplay, but the current session closes
-at its configured tick limit; R returns to offline play after that confirmation.
-An early winner can therefore wait until the remaining limit expires. Outcome-driven
-session closure and paired rematch remain unfinished. Different seeds/maps are
-rejected at the handshake. Not yet verified by human play, LAN/Internet or a 30-minute soak.
+An anchor outcome freezes gameplay and the session ends after both peers confirm
+the final state. R returns to offline play. Direct launches require relaunching
+both windows for another game; use the lobby to rematch in place. LAN/Internet
+play, a 30-minute network soak and human playtesting remain open.
 
 From source, `./tools/run_net_match.ps1 -Out artifacts/my-network-match` runs the
 packaged scripted economy route in two rendered processes using separate local ports.

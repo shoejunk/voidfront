@@ -38,6 +38,7 @@ func _ready() -> void:
 	setup.size = Vector2(760, 330)
 	result = _label(Vector2(590, 350), 34, Color("f0d19b"))
 	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# Static authoritative terrain is submitted once as a canvas batch. Unit dots
 	# and camera-dependent health bars remain dynamic on every rendered frame.
 	minimap_obstacles = MultiMesh.new()
@@ -78,8 +79,6 @@ func _process(_delta: float) -> void:
 		status.text = "SCALE FIELD   /   128 × 128   /   %d STRIDERS     •     %02d:%02d" % [game.current.units.size(), int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
 	if not game.economy: connection.text = ""
 	if not game.economy: tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
-	result.size.x = 700 if game.network or not game.option_error.is_empty() else 500
-	result.position = Vector2((view.x - result.size.x) / 2, view.y / 2 - 30)
 	if game.current.winner == game.local_player:
 		result.text = "SECTOR SECURED\nR  /  deploy again"
 	elif game.current.winner in [0, 1]:
@@ -125,8 +124,6 @@ func _process(_delta: float) -> void:
 		if game.current.winner in [0, 1]:
 			var outcome := "VICTORY / ENEMY ANCHOR DESTROYED" if game.current.winner == game.local_player else "DEFEAT / YOUR ANCHOR DESTROYED"
 			result.text = outcome + ("\nAwaiting session confirmation" if game.network else "\nR  /  new match")
-		result.size.x = 920
-		result.position.x = (view.x - result.size.x) / 2
 		var workers: int = game._selected_workers()
 		var lancers := 0
 		for unit in game.current.units:
@@ -157,19 +154,37 @@ func _process(_delta: float) -> void:
 	if game.network:
 		var state := str(game.network_state.get("state", ""))
 		if state == "complete":
-			result.text = result.text.get_slice("\n", 0) + "\nR  /  return to offline skirmish"
-			tip.text = "Final state confirmed by both peers.\nR returns this client to offline play; launch both clients again for a new network session."
+			result.text = result.text.get_slice("\n", 0)
+			if game.lobby:
+				var can_enter: bool = game.lobby.offer.is_empty() if game.lobby_host else not game.lobby.offer.is_empty() and not game.lobby.accepted
+				result.text += "\nEnter  /  rematch    •    R  /  offline" if can_enter else "\nWaiting for peer    •    R  /  offline"
+			else: result.text += "\nR  /  return to offline skirmish"
+			tip.text = "Final state confirmed by both peers."
+			if game.lobby:
+				tip.text += "\n" + game.lobby_text() + "\nEsc  /  close lobby"
+			elif not game.lobby_notice.is_empty(): tip.text += "\n" + game.lobby_notice
 		elif state == "error":
 			result.text = "NETWORK SESSION ENDED\nR  /  return to offline skirmish"
-			tip.text = "R returns this client to offline play.\nLaunch both clients again for a new network session."
+			tip.text = "R returns this client to offline play.\n" + game.lobby_notice
+		else:
+			tip.text = tip.text.replace("R  restart", "Shift+Esc  leave shared match" if game.lobby else "R  available after session")
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
 	setup.visible = game.setup_open
 	if game.setup_open:
 		setup.position = Vector2((view.x - setup.size.x) / 2, view.y / 2 - 150)
-		setup.text = "V O I D F R O N T   /   SKIRMISH\n\nMAP   THE GLASS REACH  64 x 48  (you: Cairn Compact, south-west)\nOPPONENT   %s      [Tab]\nMATCH SEED   %d      [Left / Right]\n\nEnter  start match\n\nDuring a match:  R  restart with these settings   /   M  return here" % ["ECONOMIC AI" if game.setup_ai else "PASSIVE (no opponent actions)", game.setup_seed]
+		if game.lobby:
+			setup.text = "V O I D F R O N T   /   %s LOBBY\n\n%s\n\nEsc  /  close lobby" % ["HOST" if game.lobby_host else "GUEST", game.lobby_text()]
+		else:
+			setup.text = "V O I D F R O N T   /   SKIRMISH\n\nMAP   THE GLASS REACH  64 x 48  (you: Cairn Compact, south-west)\nOPPONENT   %s      [Tab]\nMATCH SEED   %d      [Left / Right]\n\nEnter  /  play offline     H  /  host 1v1     J  /  join loopback 1v1\n\nDuring offline play:  R  restart   /   M  return here" % ["ECONOMIC AI" if game.setup_ai else "PASSIVE (no opponent actions)", game.setup_seed]
+			if not game.lobby_notice.is_empty(): setup.text += "\n" + game.lobby_notice
 		result.text = ""
+	# Layout the final text once. The label and backdrop share a center even
+	# when the outcome or instructions change length on the same frame.
+	var width := minf(view.x - 32, 740 if game.network or game.economy or not game.option_error.is_empty() else 530)
+	result.size = Vector2(width - 32, 0)
+	result.position = Vector2((view.x - result.size.x) / 2, (view.y - result.size.y) / 2)
 	queue_redraw()
 	if game.presentation_profiler: game.presentation_profiler.record("hud_process", Time.get_ticks_usec() - profile_start)
 
@@ -193,8 +208,7 @@ func _draw() -> void:
 		draw_rect(Rect2((view.x - 800) / 2, view.y / 2 - 170, 3, 330), Color("61c9c6"))
 		return
 	if not result.text.is_empty():
-		var result_width := 740 if network_panel else 530
-		draw_rect(Rect2((view.x - result_width) / 2, view.y / 2 - 48, result_width, 128), Color(0.025, 0.047, 0.055, 0.94))
+		draw_rect(Rect2(result.position, result.size).grow(16), Color(0.025, 0.047, 0.055, 0.94))
 	_draw_order_paths()
 	var map_rect := minimap_rect()
 	var map_scale := map_rect.size / Vector2(game.map_size)

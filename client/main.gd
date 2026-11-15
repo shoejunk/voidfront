@@ -130,6 +130,19 @@ var exploration_fixture: RefCounted
 var setup_open := false
 var setup_ai := true
 var setup_seed := 1
+const NetworkLobby = preload("res://network_lobby.gd")
+var lobby: NetworkLobby
+var lobby_host := false
+var lobby_port := 39000
+var lobby_seed := 1
+var lobby_delay := 2
+var lobby_notice := ""
+var lobby_round: Dictionary = {}
+var lobby_archive_path := ""
+var lobby_archive_attempted := false
+var lobby_start_usec := 0
+var rematch_smoke := false
+var rematch_fixture: RefCounted
 
 func _ready() -> void:
 	var ticks_specified := false
@@ -212,6 +225,8 @@ func _ready() -> void:
 			network_economy_smoke = true
 			network_contested_smoke = true
 		elif argument == "--net-success-return-smoke": network_success_return_smoke = true
+		elif argument == "--net-rematch-smoke": rematch_smoke = true
+		elif argument.begins_with("--lobby-port="): lobby_port = _integer_option(argument, 1024, 65534)
 		elif argument.begins_with("--seed="): setup_seed = _integer_option(argument, 1, 999999)
 		elif argument == "--network-smoke":
 			network = true
@@ -267,6 +282,8 @@ func _ready() -> void:
 	if profile_tick_specified and not controlled_profile: option_error = "Profile tick requires --profile-controlled."
 	if profile_camera_specified and not controlled_profile: option_error = "Profile camera requires --profile-controlled."
 	if profile_presentation and report_path.is_empty(): option_error = "Presentation profiling requires --report=<path>."
+	if rematch_smoke and (legacy_mode or network or queue_smoke or economy_smoke or production_smoke or match_smoke or exploration_smoke or report_path.is_empty()):
+		option_error = "Rematch smoke requires its own lobby fixture and report path."
 	if (profile_presentation or profile_options) and not option_error.is_empty():
 		push_error(option_error)
 		get_tree().quit(2)
@@ -296,6 +313,9 @@ func _ready() -> void:
 	_reset()
 	# Only bare interactive launches show the skirmish setup; every fixture starts directly.
 	setup_open = economy and not (economy_smoke or production_smoke or match_smoke or exploration_smoke or queue_smoke or network)
+	if rematch_smoke:
+		rematch_fixture = preload("res://net_rematch_smoke.gd").new(self)
+		rematch_fixture.run.call_deferred()
 	if queue_smoke:
 		queue_fixture = preload("res://queue_smoke.gd").new(self)
 		queue_fixture.run.call_deferred()
@@ -551,19 +571,10 @@ func _reset() -> void:
 		local_player = 0
 		network_notice = ""
 		option_error = ""
+		_close_lobby("")
+		lobby_round.clear()
 	elif not current.is_empty() and not option_error.is_empty():
 		option_error = ""
-	for entry in actors.values(): entry.root.queue_free()
-	actors.clear()
-	for entry in economy_actors.values(): entry.root.queue_free()
-	economy_actors.clear()
-	selected_entity.clear()
-	build_pending = false
-	if build_preview: build_preview.visible = false
-	economy_notice = ""
-	economy_result_sequence = -1
-	selected.clear()
-	control_groups.clear()
 	if scale128:
 		if not bridge.reset_scale(1, scale_count, not scale_smoke):
 			push_error("Scale reset rejected")
@@ -575,6 +586,21 @@ func _reset() -> void:
 		if not bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick, network_economy, setup_seed):
 			network_notice = "Network session could not start."
 		_update_network_status()
+	_refresh_match()
+
+func _refresh_match() -> void:
+	for entry in actors.values(): entry.root.queue_free()
+	actors.clear()
+	for entry in economy_actors.values(): entry.root.queue_free()
+	economy_actors.clear()
+	selected_entity.clear()
+	build_pending = false
+	if build_preview: build_preview.visible = false
+	economy_notice = ""
+	economy_result_sequence = -1
+	selected.clear()
+	control_groups.clear()
+	hud.dragging = false
 	current = bridge.snapshot()
 	fog_tick = -1
 	camera_dragging = false
@@ -596,6 +622,79 @@ func _reset() -> void:
 		initial_positions[unit.id] = Vector2(unit.x, unit.z)
 	if economy: _present_economy()
 	print("VOIDFRONT_MATCH tick=0 hash=", initial_hash, " units=", actors.size())
+
+func _open_lobby(as_host: bool) -> void:
+	lobby = NetworkLobby.new()
+	lobby_host = as_host
+	lobby_seed = setup_seed
+	lobby_delay = input_delay
+	lobby_notice = ""
+	if lobby.open(as_host, lobby_port):
+		print("VOIDFRONT_LOBBY role=", "host" if as_host else "guest", " tcp=", lobby_port)
+	else: _close_lobby(lobby.error)
+
+func _close_lobby(message: String) -> void:
+	if lobby: lobby.cancel()
+	lobby = null
+	lobby_notice = message
+	if not message.is_empty(): print("VOIDFRONT_LOBBY ", message)
+
+func _cancel_lobby(message: String) -> void:
+	_close_lobby(message)
+	if network and str(network_state.get("state", "")) not in ["complete", "error"]:
+		bridge.network_cancel()
+		_update_network_status()
+
+func _poll_lobby() -> void:
+	if not lobby: return
+	var agreed := lobby.poll()
+	if not lobby.error.is_empty():
+		# TCP can close when one peer has already confirmed and left. Keep the
+		# finishing UDP session alive long enough to confirm or time out itself.
+		if network_state.get("state", "") == "finishing": _close_lobby(lobby.error)
+		else: _cancel_lobby(lobby.error)
+	elif not agreed.is_empty():
+		network = true
+		network_economy = true
+		setup_open = false
+		local_player = 0 if lobby_host else 1
+		local_port = lobby_port + local_player
+		remote_port = lobby_port + (1 - local_player)
+		session_id = agreed.id
+		input_delay = agreed.delay
+		finish_tick = agreed.ticks
+		lobby_round = {"session": str(session_id), "host_port": lobby_port, "guest_port": lobby_port + 1,
+			"seed": agreed.seed, "delay": input_delay, "ticks": finish_tick}
+		lobby_archive_path = ""
+		lobby_archive_attempted = false
+		lobby_start_usec = Time.get_ticks_usec()
+		status_history.clear()
+		network_finish_requested = false
+		var started: bool = bridge.network_start(local_player, local_port, remote_port, session_id, input_delay, finish_tick, true, agreed.seed)
+		_update_network_status()
+		_refresh_match()
+		lobby_round["map_id"] = current.map_id
+		if not started: _cancel_lobby("Could not start the agreed UDP match.")
+		if rematch_fixture: rematch_fixture.match_started()
+
+func _archive_lobby_match() -> void:
+	lobby_archive_attempted = true
+	var report: Dictionary = bridge.network_report()
+	if not report.get("evidence_complete", false):
+		_close_lobby("Replay evidence is incomplete. Rematch unavailable.")
+		return
+	var folder := "user://network-replays"
+	var path := folder.path_join("%s-p%d.vfr" % [lobby_round.session, local_player])
+	if DirAccess.make_dir_recursive_absolute(folder) != OK or FileAccess.file_exists(path):
+		_close_lobby("Could not create a new replay archive. Rematch unavailable.")
+		return
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null or not file.store_buffer(report.replay):
+		_close_lobby("Could not save the confirmed replay. Rematch unavailable.")
+		return
+	file.close()
+	lobby_archive_path = ProjectSettings.globalize_path(path)
+	if lobby: lobby.match_finished()
 
 func _spawn_actor(unit: Dictionary) -> void:
 	var root := Node3D.new()
@@ -780,6 +879,7 @@ func _subdue_corpse(node: Node) -> void:
 	for child in node.get_children(): _subdue_corpse(child)
 
 func _process(delta: float) -> void:
+	_poll_lobby()
 	if current.is_empty() or completed or setup_open: return
 	if not option_error.is_empty(): return
 	var profile_start := Time.get_ticks_usec() if presentation_profiler else 0
@@ -802,6 +902,10 @@ func _process(delta: float) -> void:
 			if network_smoke:
 				for execution in network_state.get("executed_inputs", []): pending_execution_display.append(execution)
 		else: accumulator = minf(accumulator + delta, STEP)
+		if not lobby_round.is_empty() and not lobby_archive_attempted and network_state.state == "complete":
+			_archive_lobby_match()
+		elif lobby and network_state.state == "error":
+			_close_lobby("Shared match failed. Reopen the lobby from skirmish setup.")
 		if network_smoke and network_state.get("ready", false) and str(network_state.get("state", "")) in ["running", "stalled"]:
 			_network_smoke_tick()
 	else:
@@ -896,18 +1000,25 @@ func _finish_network_economy_smoke() -> void:
 			report["replay_path"] = replay_path
 	if not capture_path.is_empty():
 		report["capture_error"] = get_viewport().get_texture().get_image().save_png(capture_path)
+	if rematch_fixture:
+		report.merge({"pid": OS.get_process_id(), "lobby": lobby_round.duplicate(),
+			"archive_path": lobby_archive_path, "start_usec": lobby_start_usec, "finish_usec": Time.get_ticks_usec()})
+		report.ok = ok and not lobby_archive_path.is_empty() and report.get("capture_error", FAILED) == OK
 	if network_success_return_smoke and ok:
 		network_success_return_fixture = preload("res://network_success_return_smoke.gd").new(self)
 		report["offline_return"] = await network_success_return_fixture.run()
 		ok = ok and report.offline_return.ok
 		report.ok = ok
-	completed = true
+	completed = not rematch_fixture
 	if not report_path.is_empty():
 		var report_file := FileAccess.open(report_path, FileAccess.WRITE)
 		if report_file:
 			report_file.store_string(JSON.stringify(report, "	"))
 			report_file.close()
 	print("VOIDFRONT_NETECON ok=", ok, " player=", report.player, " tick=", report.final_tick, " errors=", fixture_report.get("errors", []))
+	if rematch_fixture:
+		rematch_fixture.round_finished(report)
+		return
 	get_tree().quit(0 if ok else 1)
 
 func _update_network_status() -> void:
@@ -1015,7 +1126,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if presentation_profiler and presentation_profiler.is_controlled(): return
 	event_usec = int(event.get_meta("voidfront_input_usec", Time.get_ticks_usec()))
 	if current.is_empty(): return
+	if lobby and event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode == KEY_ESCAPE and (event.shift_pressed or not lobby.active):
+			_cancel_lobby("Lobby closed.")
+			return
+		if not lobby.active and _lobby_input(event.physical_keycode): return
 	if event is InputEventKey and event.pressed and event.physical_keycode == KEY_R:
+		if setup_open and lobby: return
 		_reset()
 		return
 	if not option_error.is_empty(): return
@@ -1106,11 +1223,45 @@ func _setup_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo): return
 	match event.physical_keycode:
 		KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
+			if lobby: return
 			setup_open = false
 			_reset()
+		KEY_H:
+			if not lobby: _open_lobby(true)
+		KEY_J:
+			if not lobby: _open_lobby(false)
 		KEY_TAB, KEY_O: setup_ai = not setup_ai
 		KEY_RIGHT, KEY_EQUAL, KEY_KP_ADD: setup_seed = mini(setup_seed + 1, 999999)
 		KEY_LEFT, KEY_MINUS, KEY_KP_SUBTRACT: setup_seed = maxi(setup_seed - 1, 1)
+
+func _lobby_input(key: Key) -> bool:
+	match key:
+		KEY_ENTER, KEY_KP_ENTER:
+			if lobby_host: lobby.offer_match(lobby_seed, lobby_delay, 12000 if rematch_smoke else 36000)
+			else: lobby.accept_match()
+		KEY_BRACKETLEFT:
+			if lobby_host and lobby.offer.is_empty(): lobby_seed = maxi(1, lobby_seed - 1)
+		KEY_BRACKETRIGHT:
+			if lobby_host and lobby.offer.is_empty(): lobby_seed = mini(999999, lobby_seed + 1)
+		KEY_MINUS:
+			if lobby_host and lobby.offer.is_empty(): lobby_delay = maxi(1, lobby_delay - 1)
+		KEY_EQUAL:
+			if lobby_host and lobby.offer.is_empty(): lobby_delay = mini(16, lobby_delay + 1)
+		_: return false
+	return true
+
+func lobby_text() -> String:
+	if not lobby: return lobby_notice
+	if not lobby.connected:
+		return "Waiting for guest on loopback TCP %d" % lobby_port if lobby_host else "Connecting to loopback TCP %d" % lobby_port
+	if not lobby.offer.is_empty():
+		var settings := "Glass Reach  •  Seed %d  •  Delay %d ticks  •  Limit %d ticks" % [lobby.offer.seed, lobby.offer.delay, lobby.offer.ticks]
+		var action := "Waiting for peer to accept" if lobby_host else "Enter  /  accept match settings"
+		if not lobby_host and lobby.accepted: action = "Waiting for match start"
+		return settings + "\n" + action
+	if lobby_host:
+		return "Glass Reach  •  Seed %d  [ / ]    •    Delay %d ticks  − / =\nEnter  /  offer match" % [lobby_seed, lobby_delay]
+	return "Connected to host. Waiting for match offer."
 
 func _live_own_ids(ids: Array) -> Array[int]:
 	var result: Array[int] = []
