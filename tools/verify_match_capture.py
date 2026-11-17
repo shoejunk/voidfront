@@ -31,7 +31,7 @@ def commands_from_replay(raw, report):
         tick, seq, player, order, x, z, count = struct.unpack_from('<IIBBIII', frame, 4)
         require(count in range(1, 257) and size == 26 + 4*count, 'command ids size')
         ids = list(struct.unpack_from('<'+'I'*count, frame, 26))
-        require(ids == sorted(set(ids)) and ids[0] > 0 and player in (0, 1) and order in range(13), 'command canonical fields')
+        require(ids == sorted(set(ids)) and ids[0] > 0 and player in (0, 1) and order in range(14 if protocol >= 13 else 13), 'command canonical fields')
         require(0 <= tick < ticks and 0 <= x < initial['width']*256 and 0 <= z < initial['height']*256, 'command bounds')
         require(seq > sequences[player], 'player sequence')
         sequences[player] = seq
@@ -39,8 +39,9 @@ def commands_from_replay(raw, report):
             prior = commands[-1]
             require((tick, player, seq) > (prior['tick'], prior['player'], prior['sequence']), 'canonical replay ordering')
         state = report['snapshots'][tick]
-        actors = state['structures'] if 7 <= order <= 10 else state['units']
-        if 7 <= order <= 10:
+        structure_order = order in (7, 8, 9, 10, 13)
+        actors = state['structures'] if structure_order else state['units']
+        if structure_order:
             require(count == 1 and x == z == 0, 'production/research canonical fields')
         require(all(any(a['id'] == uid and a['player'] == player for a in actors) for uid in ids), 'actor ownership')
         commands.append(dict(tick=tick, sequence=seq, player=player, order=order, x=x, z=z, units=ids))
@@ -92,7 +93,7 @@ def queue_investment(site, skip=0):
     return [50 * (count - skip - lancers) + 75 * lancers, 25 * lancers]
 
 
-def resource_inventory(row, forfeited=(0, 0)):
+def resource_inventory(row, starting_units, forfeited=(0, 0)):
     result = [sum(row['salvage']) + forfeited[0], sum(row['flux']) + forfeited[1]]
     for deposit in row['deposits']:
         require(deposit['kind'] in (0, 1) and deposit['remaining'] >= 0, 'deposit bounds')
@@ -100,7 +101,7 @@ def resource_inventory(row, forfeited=(0, 0)):
     for unit in row['units']:
         require(unit['kind'] in (0, 1, 2) and unit['cargo_kind'] in (0, 1), 'unit/resource kind')
         result[unit['cargo_kind']] += unit['cargo']
-        if unit['kind'] == 0: result[0] += 50
+        if unit['kind'] == 0 or (unit['kind'] == 1 and unit['id'] > starting_units): result[0] += 50
         elif unit['kind'] == 2:
             result[0] += 75
             result[1] += 25
@@ -160,7 +161,8 @@ def audit(report, commands):
         unit = state['units'][event['unit']-1]
         require(unit['target_structure'] == event['target_structure'] and unit['cooldown'] == event['cooldown']
                 and 'attack' in event['clip'].lower(), 'rendered attack request binding')
-    total = resource_inventory(initial)
+    starting_units = len(initial['units'])
+    total = resource_inventory(initial, starting_units)
     prior, forfeited, unit_rows, damage_ticks = initial, [0, 0], 0, 0
     damaged, dead = set(), set()
     for row, hash_row in zip(rows, trace, strict=True):
@@ -194,7 +196,7 @@ def audit(report, commands):
                     damage_ticks += 1
                 if old['hp'] > 0 and s['hp'] == 0:
                     dead.add(s['id'])
-                    require(not any(c['tick'] == tick-1 and c['order'] in (7, 8, 10) and c['units'] == [s['id']] for c in commands),
+                    require(not any(c['tick'] == tick-1 and c['order'] in (7, 8, 10, 13) and c['units'] == [s['id']] for c in commands),
                             'fixture has simultaneous purchase/destruction requiring richer queue audit')
                     births = sum(u['player'] == s['player'] and max(abs(u['x']-s['x']), abs(u['z']-s['z'])) == 352
                                  for u in row['units'][len(prior['units']):])
@@ -202,7 +204,7 @@ def audit(report, commands):
                     for resource in (0, 1): forfeited[resource] += costs[resource]
             if s['hp'] == 0:
                 require(s['production_queue'] == s['production_ticks'] == 0 and not s['spawn_blocked'], 'dead producer retains paid queue')
-        require(resource_inventory(row, forfeited) == total, f'tick {tick}: resource conservation with tombstones and lost queues')
+        require(resource_inventory(row, starting_units, forfeited) == total, f'tick {tick}: resource conservation with tombstones and lost queues')
         # Production/movement precede end-of-tick damage: a structure destroyed
         # this tick still blocks movement, and a newly purchased one already does.
         movement_structures = prior['structures'] + row['structures'][len(prior['structures']):]

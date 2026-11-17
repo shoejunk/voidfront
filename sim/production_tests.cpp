@@ -70,6 +70,43 @@ void paid_queue_and_cancel() {
     check(s.submit({s.tick(),16,0,Order::Move,{7},unit.x-200,unit.z}),"produced unit not commandable"); steps(s,20);
     check(s.units().back().x==unit.x-200 && s.units().back().z==unit.z,"produced unit move failed");
 }
+void anchor_workers() {
+    // Anchor 2 belongs to player 1, while unit 2 belongs to player 0.
+    Lockstep pair(42,3,Map::Economy);
+    Command guest{0,1,1,Order::TrainWorker,{2},0,0};
+    TickFrame received;
+    check(deserialize_frame(serialize_frame({0,1,{guest}}),received),"worker frame round trip");
+    auto malformed=guest; malformed.z=1;
+    check(serialize_command(malformed).empty(),"worker order accepted coordinates");
+    malformed=guest; malformed.units={1,2};
+    check(serialize_command(malformed).empty(),"worker order accepted multiple structures");
+    malformed=guest; malformed.units={1};
+    check(pair.receive({0,1,{malformed}})==ReceiveResult::Invalid,"foreign anchor admitted");
+    check(pair.receive(received)==ReceiveResult::Accepted && pair.receive({0,0,{}})==ReceiveResult::Accepted &&
+        pair.advance()==AdvanceResult::Advanced && pair.sim().command_result(1)==CommandResult::InsufficientSalvage,
+        "guest worker order did not reach its own anchor");
+
+    auto s=factory(300);
+    const int bank=s.salvage(0);
+    issue(s,3,Order::TrainWorker,3);
+    check(s.command_result(0)==CommandResult::InvalidStructure && s.salvage(0)==bank,"Foundry trained worker");
+    issue(s,4,Order::TrainWorker,1);
+    issue(s,5,Order::TrainWorker,1);
+    check(s.population_reserved(0)==2 && s.salvage(0)==bank-2*kWorkerCost,"anchor queue debit/reservation");
+    issue(s,6,Order::CancelProduction,1);
+    check(s.structures()[0].production_ticks==3 && s.salvage(0)==bank-kWorkerCost && s.population_reserved(0)==1,
+        "anchor tail cancellation disturbed front or refund");
+    steps(s,kProductionTicks-4);
+    check(s.units().size()==6,"worker spawned early");
+    s.step();
+    const auto worker=s.units().back();
+    check(s.units().size()==7 && worker.kind==UnitKind::Worker && worker.player==0 && worker.cargo==0 &&
+        worker.hp==s.units()[0].hp && s.population_used(0)==4 && !s.population_reserved(0),"anchor spawn state");
+    const auto deposit=s.deposits()[0];
+    check(s.submit({s.tick(),7,0,Order::Gather,{worker.id},deposit.x,deposit.z}),"new worker rejected gather");
+    steps(s,400);
+    check(s.salvage(0)>bank-kWorkerCost,"trained worker did not deliver salvage");
+}
 void population_and_lifetime() {
     auto s=factory();
     // Two factories share the same player's reservation budget.
@@ -135,6 +172,6 @@ void arrival_replay() {
 }
 }
 int main() {
-    try { canonical_and_results(); paid_queue_and_cancel(); population_and_lifetime(); blocked_spawn_and_hash(); arrival_replay(); std::cout<<"production tests passed\n"; }
+    try { canonical_and_results(); paid_queue_and_cancel(); anchor_workers(); population_and_lifetime(); blocked_spawn_and_hash(); arrival_replay(); std::cout<<"production tests passed\n"; }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }

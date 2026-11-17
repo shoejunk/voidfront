@@ -73,12 +73,14 @@ func _process(_delta: float) -> bool:
 		phase = 2
 	elif phase == 2 and sa.ready and sb.ready:
 		check(a.network_issue(0, PackedInt32Array([1]), 0, 0, Time.get_ticks_usec()) == 1, "second player zero sequence resets")
-		check(b.network_issue(0, PackedInt32Array([4]), 0, 0, Time.get_ticks_usec()) == 1, "second player one sequence resets")
+		check(b.network_issue(13, PackedInt32Array([1]), 0, 0, Time.get_ticks_usec()) == -1, "guest cannot train at the host anchor")
+		check(b.network_issue(13, PackedInt32Array([2]), 0, 0, Time.get_ticks_usec()) == 1, "guest worker order uses its own anchor and fresh sequence")
 		phase = 3
 	elif phase == 3 and sa.state == "complete" and sb.state == "complete":
 		var second_a: Dictionary = a.network_report()
 		var second_b: Dictionary = b.network_report()
 		check(second_a.hash == second_b.hash and second_a.trace == second_b.trace and second_a.replay == second_b.replay, "second match has identical state trace and canonical replay")
+		check(a.snapshot().command_results[1] == 3 and b.snapshot().command_results[1] == 3, "both peers execute the unfunded guest worker order")
 		for next_report in [second_a, second_b]:
 			check(next_report.tick == 12 and next_report.confirmed_ticks == 12 and next_report.recorded_ticks == 12 and next_report.evidence_complete, "second match confirms complete recorded prefix")
 			check(next_report.inputs.size() == 1 and next_report.replay_command_count == 2 and next_report.queued_inputs == 0, "second match contains only fresh commands")

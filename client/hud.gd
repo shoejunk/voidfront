@@ -144,12 +144,15 @@ func _process(_delta: float) -> void:
 		if not game.selected_entity.is_empty():
 			var entity: Dictionary = game.selected_entity
 			if entity.category == "deposit": selection.text = "%s DEPOSIT   /   %d REMAINING" % ["FLUX (CONTESTED)" if int(entity.get("kind", 0)) == 1 else "SALVAGE", entity.remaining]
-			elif entity.kind == 0: selection.text = "COMMAND ANCHOR   /   %d HP" % entity.hp
 			else:
-				selection.text = "FOUNDRY   /   %s" % ("READY" if entity.build_ticks >= game.current.build_duration else "CONSTRUCTING %d%%" % int(float(entity.build_ticks) / game.current.build_duration * 100))
+				if entity.kind == 0: selection.text = "COMMAND ANCHOR   /   %d HP" % entity.hp
+				else: selection.text = "FOUNDRY   /   %s" % ("READY" if entity.build_ticks >= game.current.build_duration else "CONSTRUCTING %d%%" % int(float(entity.build_ticks) / game.current.build_duration * 100))
 				if entity.build_ticks >= game.current.build_duration:
 					selection.text += "   /   QUEUE %d/%d" % [entity.production_queue, game.current.production_queue_limit]
-					if entity.production_queue > 0: selection.text += "   /   %s %d%%" % ["LANCER" if int(entity.get("queue_lancers", 0)) & 1 else "STRIDER", int(float(entity.production_ticks) / game.current.train_ticks * 100)]
+					if entity.production_queue > 0:
+						var unit_name := "LANCER" if int(entity.get("queue_lancers", 0)) & 1 else "STRIDER"
+						if entity.kind == 0: unit_name = "WORKER"
+						selection.text += "   /   %s %d%%" % [unit_name, int(float(entity.production_ticks) / game.current.train_ticks * 100)]
 					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
 		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building    Shift+RMB queue (4)\nB + click  Foundry (%d)    T  Strider (%d)    L  Lancer (%d+%d flux, needs plating)    X  refund last    G  Hardened Plating (%d flux)    A + click  attack-move    S  stop    H  hold\nCtrl+0-9  save / 0-9  recall    Arrows  pan (Shift fast)    MMB / minimap  pan    Home  base    Wheel  zoom    R  restart\n" % [cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost, game.current.research_cost] + game.economy_notice
 	var paths: Array[Dictionary] = game._order_paths()

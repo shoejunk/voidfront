@@ -9,18 +9,22 @@ namespace vf {
 inline constexpr int kScale = 256, kTicksPerSecond = 20;
 inline constexpr int kMapWidth = 32, kMapHeight = 24;
 inline constexpr int kMaxMapSize = 128;
-inline constexpr uint32_t kProtocolVersion = 12;
+inline constexpr uint32_t kProtocolVersion = 13;
 enum class Map : uint32_t { Foundry = 0, Scale128 = 1, Economy = 2 };
 int map_width(Map map);
 int map_height(Map map);
 const std::vector<nav::Rect>& map_terrain(Map map);
-enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build, TrainStrider, CancelProduction, Research, TrainLancer, QueueMove, QueueAttackMove };
+enum class Order : uint8_t { Stop, Move, AttackMove, Hold, Gather, ReturnCargo, Build, TrainStrider, CancelProduction, Research, TrainLancer, QueueMove, QueueAttackMove, TrainWorker };
+constexpr bool is_structure_order(Order order) {
+    return order==Order::TrainWorker || order==Order::TrainStrider || order==Order::TrainLancer ||
+        order==Order::CancelProduction || order==Order::Research;
+}
 enum class UnitKind : uint8_t { Strider, Worker, Lancer };
 enum class StructureKind : uint8_t { Anchor, Foundry };
 enum class CommandResult : uint8_t { None, Accepted, InvalidTarget, InsufficientSalvage, InvalidPlacement, InvalidWorker,
     InvalidStructure, NotReady, QueueFull, PopulationFull, RosterFull, EmptyQueue, InsufficientFlux, AlreadyResearched, NotResearched };
 inline constexpr int kFoundryCost=100, kBuildTicks=100, kCargoCapacity=10, kGatherTicks=10;
-inline constexpr int kStriderCost=50, kResearchFluxCost=50, kHardenedBonusHp=50;
+inline constexpr int kWorkerCost=50, kStriderCost=50, kResearchFluxCost=50, kHardenedBonusHp=50;
 // Lancer: ranged tier-two unit, gated behind Hardened Plating. Fragile, longer reach.
 inline constexpr int kLancerCost=75, kLancerFluxCost=25, kLancerHp=70, kLancerDamage=6, kLancerCooldown=10;
 inline constexpr int kLancerRangeTiles=5, kLancerAcquireTiles=7;

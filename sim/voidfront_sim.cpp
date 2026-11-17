@@ -38,8 +38,8 @@ int64_t distance2(const Unit& a, const Unit& b) {
     return dx * dx + dz * dz;
 }
 bool canonical(const Command& c) {
-    return c.player < 2 && c.sequence > 0 && static_cast<uint8_t>(c.order) <= 12 &&
-        (static_cast<uint8_t>(c.order)<7 || static_cast<uint8_t>(c.order)>=11 || (c.units.size()==1 && c.x==0 && c.z==0)) &&
+    return c.player < 2 && c.sequence > 0 && c.order <= Order::TrainWorker &&
+        (!is_structure_order(c.order) || (c.units.size()==1 && c.x==0 && c.z==0)) &&
         !c.units.empty() && c.units.size() <= 256 && c.x >= 0 && c.z >= 0 &&
         c.x < kMaxMapSize * kScale && c.z < kMaxMapSize * kScale &&
         std::is_sorted(c.units.begin(), c.units.end()) &&
@@ -166,7 +166,7 @@ bool Sim::submit(Command command) {
     for (const auto& c : pending_)
         if (c.player == command.player && ((c.sequence < command.sequence && c.tick > command.tick) ||
             (c.sequence > command.sequence && c.tick < command.tick))) return false;
-    if (command.order==Order::TrainStrider || command.order==Order::TrainLancer || command.order==Order::CancelProduction || command.order==Order::Research) {
+    if (is_structure_order(command.order)) {
         const auto id=command.units.front();
         if (map_!=Map::Economy || id>structures_.size() || structures_[id-1].player!=command.player) return false;
     } else for (const auto id : command.units)

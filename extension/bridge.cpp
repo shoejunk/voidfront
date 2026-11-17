@@ -81,12 +81,11 @@ class VoidfrontBridge : public RefCounted {
     static bool command_from_input(vf::Command& command, const vf::Sim& state, uint8_t player,
             int64_t order, const PackedInt32Array& ids, int64_t x, int64_t z) {
         const bool economy = state.map() == vf::Map::Economy;
-        if (order < 0 || order > (economy ? 12 : 3) || ids.size() == 0 || ids.size() > 256 ||
+        if (order < 0 || order > static_cast<int>(economy ? vf::Order::TrainWorker : vf::Order::Hold) || ids.size() == 0 || ids.size() > 256 ||
             x < 0 || z < 0 || x >= state.width() * vf::kScale || z >= state.height() * vf::kScale) return false;
         command.player = player; command.order = static_cast<vf::Order>(order);
         command.x = static_cast<int32_t>(x); command.z = static_cast<int32_t>(z);
-        // Foundry commands (train/cancel/research) carry exactly one structure ID.
-        const bool structure_order = order >= 7 && order <= 10;
+        const bool structure_order = vf::is_structure_order(command.order);
         if (structure_order && (ids.size() != 1 || x != 0 || z != 0)) return false;
         for (int64_t i = 0; i < ids.size(); ++i) {
             const int32_t id = ids[i];
@@ -249,7 +248,7 @@ public:
     }
     bool issue(int64_t order, PackedInt32Array ids, int64_t x, int64_t z) {
         if (network || (simulation.map() == vf::Map::Economy && simulation.winner() != -1)) return false;
-        if (order < 0 || order > 12 || ids.size() == 0 || ids.size() > 256 ||
+        if (order < 0 || order > static_cast<int>(vf::Order::TrainWorker) || ids.size() == 0 || ids.size() > 256 ||
             x < 0 || z < 0 || x >= simulation.width() * vf::kScale || z >= simulation.height() * vf::kScale) return false;
         if (human_sequence == UINT32_MAX) return false;
         vf::Command command{};
@@ -329,7 +328,8 @@ public:
         result["researched"] = researched;
         result["research_cost"] = vf::kResearchFluxCost; result["research_total_ticks"] = vf::kResearchTicks; result["foundry_cost"] = vf::kFoundryCost;
         result["build_duration"] = vf::kBuildTicks;
-        result["strider_cost"] = vf::kStriderCost; result["lancer_cost"] = vf::kLancerCost; result["lancer_flux_cost"] = vf::kLancerFluxCost;
+        result["worker_cost"] = vf::kWorkerCost; result["strider_cost"] = vf::kStriderCost;
+        result["lancer_cost"] = vf::kLancerCost; result["lancer_flux_cost"] = vf::kLancerFluxCost;
         result["train_ticks"] = vf::kProductionTicks;
         result["production_queue_limit"] = vf::kProductionQueueLimit;
         result["population_cap"] = vf::kPopulationCap;

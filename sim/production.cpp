@@ -23,7 +23,9 @@ void Sim::apply_production(const Command& c) {
     result=CommandResult::InvalidStructure;
     if (map_!=Map::Economy || c.units.size()!=1 || c.units.front()>structures_.size()) return;
     auto& b=structures_[c.units.front()-1];
-    if (b.player!=c.player || b.hp<=0 || b.kind!=StructureKind::Foundry) return;
+    if (b.player!=c.player || b.hp<=0) return;
+    const bool anchor=b.kind==StructureKind::Anchor;
+    if (c.order!=Order::CancelProduction && anchor!=(c.order==Order::TrainWorker)) return;
     if (b.build_ticks<kBuildTicks) { result=CommandResult::NotReady; return; }
     if (c.order==Order::Research) {
         // One player-wide upgrade. Paid flux is committed even if the Foundry
@@ -43,7 +45,7 @@ void Sim::apply_production(const Command& c) {
         if (b.queue_lancers>>b.production_queue&1u) {
             b.queue_lancers&=~(1u<<b.production_queue);
             salvage_[c.player]+=kLancerCost; flux_[c.player]+=kLancerFluxCost;
-        } else salvage_[c.player]+=kStriderCost;
+        } else salvage_[c.player]+=anchor?kWorkerCost:kStriderCost;
         if (!b.production_queue) { b.production_ticks=0; b.spawn_blocked=false; }
     } else {
         if (b.production_queue>=kProductionQueueLimit) { result=CommandResult::QueueFull; return; }
@@ -51,9 +53,10 @@ void Sim::apply_production(const Command& c) {
         if (units_.size()+population_reserved(0)+population_reserved(1)>=kLifetimeUnitLimit) { result=CommandResult::RosterFull; return; }
         const bool lancer=c.order==Order::TrainLancer;
         if (lancer && !researched_[c.player]) { result=CommandResult::NotResearched; return; }
-        if (salvage_[c.player]<(lancer?kLancerCost:kStriderCost)) { result=CommandResult::InsufficientSalvage; return; }
+        const int salvage_cost=anchor?kWorkerCost:(lancer?kLancerCost:kStriderCost);
+        if (salvage_[c.player]<salvage_cost) { result=CommandResult::InsufficientSalvage; return; }
         if (lancer && flux_[c.player]<kLancerFluxCost) { result=CommandResult::InsufficientFlux; return; }
-        salvage_[c.player]-=lancer?kLancerCost:kStriderCost;
+        salvage_[c.player]-=salvage_cost;
         if (lancer) { flux_[c.player]-=kLancerFluxCost; b.queue_lancers|=1u<<b.production_queue; }
         ++b.production_queue;
     }
@@ -72,7 +75,7 @@ void Sim::production_step() {
     constexpr int exit_distance=kScale+64+32;
     constexpr std::array<nav::Point,8> offsets{{{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,1}}};
     for (auto& b:structures_) {
-        if (b.hp<=0 || b.kind!=StructureKind::Foundry || b.build_ticks<kBuildTicks || !b.production_queue) continue;
+        if (b.hp<=0 || b.build_ticks<kBuildTicks || !b.production_queue) continue;
         if (b.production_ticks<kProductionTicks) ++b.production_ticks;
         if (b.production_ticks<kProductionTicks) continue;
         b.spawn_blocked=true;
@@ -87,7 +90,8 @@ void Sim::production_step() {
             });
             if (occupied) continue;
             Unit u;
-            if (b.queue_lancers&1u) { u.kind=UnitKind::Lancer; u.hp=kLancerHp; }
+            if (b.kind==StructureKind::Anchor) u.kind=UnitKind::Worker;
+            else if (b.queue_lancers&1u) { u.kind=UnitKind::Lancer; u.hp=kLancerHp; }
             else if (researched_[b.player]) u.hp+=kHardenedBonusHp;
             // Dead entries remain as tombstones: IDs are never reused, and the
             // admission cap reserves lifetime space for all paid queue items.

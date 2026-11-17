@@ -1,5 +1,19 @@
 # Voidfront progress
 
+## 2026-11-17 - worker production at the command anchor
+
+The anchor trains a worker for 50 salvage in 100 ticks. It shares the team's
+population budget with Foundries. Its queue supports cancellation, refunds
+and blocked exits. Click Train Worker or press W with the anchor selected.
+Simulation protocol 13 and the new content fingerprint distinguish this build.
+
+In the rendered package, the fourth worker mined salvage and the Foundry
+subsequently produced two Striders. All 1,934 ticks matched one Debug replay
+and ten Release replays. Both builds passed 12/12 native tests. The two-peer
+adapter test also checked guest anchor ownership and insufficient funds.
+See `artifacts/train-worker-final-training-worker.png` and
+`artifacts/train-worker-replay-audit/summary.json`.
+
 ## 2026-11-17 - clickable command cards
 
 Selecting a friendly unit, command anchor or Foundry opens its action buttons.

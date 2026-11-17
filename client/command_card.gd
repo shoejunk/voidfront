@@ -2,8 +2,8 @@ extends PanelContainer
 
 signal command_pressed(action: int)
 
-# The first eleven values match the bridge's canonical orders.
-enum Action { STOP, MOVE, ATTACK, HOLD, GATHER, RETURN_CARGO, BUILD, STRIDER, CANCEL_UNIT, PLATING, LANCER, SELECT_WORKERS = 13, CANCEL_TARGET }
+# Order 11 and 12 are the queued movement variants sent by Shift-click.
+enum Action { STOP, MOVE, ATTACK, HOLD, GATHER, RETURN_CARGO, BUILD, STRIDER, CANCEL_UNIT, PLATING, LANCER, WORKER = 13, SELECT_WORKERS, CANCEL_TARGET }
 
 const LABELS := {
 	Action.MOVE: "Move", Action.ATTACK: "Attack-move  [A]",
@@ -11,7 +11,8 @@ const LABELS := {
 	Action.GATHER: "Gather", Action.RETURN_CARGO: "Return cargo",
 	Action.BUILD: "Build Foundry  [B]", Action.STRIDER: "Train Strider  [T]",
 	Action.LANCER: "Train Lancer  [L]", Action.PLATING: "Hardened Plating  [G]",
-	Action.CANCEL_UNIT: "Cancel last unit  [X]", Action.SELECT_WORKERS: "Select workers  [F1]",
+	Action.WORKER: "Train Worker  [W]", Action.CANCEL_UNIT: "Cancel last unit  [X]",
+	Action.SELECT_WORKERS: "Select workers  [F1]",
 	Action.CANCEL_TARGET: "Cancel  [Esc]",
 }
 
@@ -97,11 +98,11 @@ func refresh(game, title: String, workers: int, cargo: int) -> void:
 			Action.BUILD: hint = "Click a clear site near your anchor, or an unfinished Foundry to resume."
 	elif structure:
 		if entity.kind == 0:
-			actions = [Action.SELECT_WORKERS]
-			hint = "Workers deliver salvage and flux here."
+			actions = [Action.WORKER, Action.SELECT_WORKERS, Action.CANCEL_UNIT]
+			if hint.is_empty(): hint = "Workers deliver salvage and flux here."
 		else:
 			actions = [Action.STRIDER, Action.LANCER, Action.PLATING, Action.CANCEL_UNIT]
-			_update_foundry(game.current, game.local_player, entity)
+		_update_production(game.current, game.local_player, entity)
 	else:
 		actions = [Action.MOVE, Action.STOP, Action.HOLD]
 		if game.selected.size() > workers: actions.append(Action.ATTACK)
@@ -117,13 +118,19 @@ func refresh(game, title: String, workers: int, cargo: int) -> void:
 	feedback.visible = not hint.is_empty()
 	offset_top = offset_bottom - get_combined_minimum_size().y
 
-func _update_foundry(state: Dictionary, player: int, foundry: Dictionary) -> void:
-	var unfinished := "Finish construction first." if foundry.build_ticks < state.build_duration else ""
+func _update_production(state: Dictionary, player: int, site: Dictionary) -> void:
+	var unfinished := "Finish construction first." if site.build_ticks < state.build_duration else ""
 	var train_reason := unfinished
 	if train_reason.is_empty():
-		if foundry.production_queue >= state.production_queue_limit: train_reason = "Production queue is full."
+		if site.production_queue >= state.production_queue_limit: train_reason = "Production queue is full."
 		elif state.population_used[player] + state.population_reserved[player] >= state.population_cap: train_reason = "Population limit reached."
 	var salvage: int = state.salvage[player]
+	var cancel_reason := "Production queue is empty." if site.production_queue == 0 else ""
+	_set_button(Action.CANCEL_UNIT, "Refund cost", cancel_reason, "Cancel the last queued unit for a full refund.")
+	if site.kind == 0:
+		if train_reason.is_empty() and salvage < state.worker_cost: train_reason = "Gather more salvage."
+		_set_button(Action.WORKER, "%d salvage" % state.worker_cost, train_reason, "Train a worker at this command anchor.")
+		return
 	var flux: int = state.flux[player]
 	var reason := train_reason
 	if reason.is_empty() and salvage < state.strider_cost: reason = "Gather more salvage."
@@ -143,8 +150,6 @@ func _update_foundry(state: Dictionary, player: int, foundry: Dictionary) -> voi
 		detail = "Researching"
 	elif reason.is_empty() and flux < state.research_cost: reason = "Gather more flux."
 	_set_button(Action.PLATING, detail, reason, "Upgrade Striders and unlock Lancers.")
-	reason = "Production queue is empty." if foundry.production_queue == 0 else ""
-	_set_button(Action.CANCEL_UNIT, "Refund cost", reason, "Cancel the last queued unit for a full refund.")
 
 func _set_button(action: int, detail: String, reason: String, help: String) -> void:
 	var button: Button = buttons[action]

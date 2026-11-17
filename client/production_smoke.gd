@@ -101,14 +101,34 @@ func run() -> void:
 	await mouse(MOUSE_BUTTON_LEFT, Vector3(worker.x / 256.0, 0.5, worker.z / 256.0))
 	check(game.selected == [worker.id] and game.hud.command_card.buttons[CardAction.GATHER].is_visible_in_tree(), "Clicking a worker opens its gathering commands")
 	await mouse(MOUSE_BUTTON_LEFT, Vector3(anchor.x / 256.0, 0.5, anchor.z / 256.0))
+	check(game.hud.command_card.buttons[CardAction.WORKER].disabled, "Anchor shows unaffordable worker training at match start")
 	await click_command(CardAction.SELECT_WORKERS)
 	check(game.selected == [1, 2, 3], "Anchor card selects its workers")
 	await click_command(CardAction.MOVE)
 	await click_command(CardAction.CANCEL_TARGET)
 	check(game.target_order == -1 and inputs.is_empty(), "Cancel targeting consumes the card click without issuing a world order")
+	label = "gather_for_worker"
+	await click_command(CardAction.GATHER)
+	var deposit_point := Vector3(deposit.x / 256.0, 0.5, deposit.z / 256.0)
+	await mouse(MOUSE_BUTTON_LEFT, deposit_point)
+	check(await until(func(): return game.current.salvage[0] >= game.current.worker_cost, 800), "Workers fund their first recruit")
+	await click_command(CardAction.STOP)
+	await advance_ticks(3)
+	await mouse(MOUSE_BUTTON_LEFT, Vector3(anchor.x / 256.0, 0.5, anchor.z / 256.0))
+	var worker_bank: int = game.current.salvage[0]
+	label = "train_worker"
+	await click_command(CardAction.WORKER)
+	await advance_ticks(2)
+	check(game.current.structures[0].production_queue == 1 and game.current.population_reserved[0] == 1 and game.current.salvage[0] == worker_bank - game.current.worker_cost, "Train Worker charges salvage and reserves one slot at the anchor")
+	await capture("training-worker")
+	check(await until(func(): return game.current.units.size() > initial.units.size(), game.current.tick + 150), "A trained unit emerges beside the anchor")
+	var recruit_id: int = initial.units.size() + 1
+	await click_command(CardAction.SELECT_WORKERS)
+	check(game.selected == [1, 2, 3, recruit_id] and game.current.population_reserved[0] == 0, "The anchor selects the new worker with the original three")
 	label = "gather_for_production"
 	await click_command(CardAction.GATHER)
-	await mouse(MOUSE_BUTTON_LEFT, Vector3(deposit.x / 256.0, 0.5, deposit.z / 256.0))
+	await mouse(MOUSE_BUTTON_LEFT, deposit_point)
+	check(await until(func(): return game.current.units.size() >= recruit_id and game.current.units[recruit_id - 1].cargo > 0, game.current.tick + 350), "The trained worker mines salvage")
 	check(await until(func(): return int(game.current.salvage[0]) >= 200, game.finish_tick - 450), "Gathering funds Foundry and two Striders")
 	await capture("workers")
 	label = "stop_workers"
@@ -157,7 +177,7 @@ func run() -> void:
 	check(game.economy_notice.begins_with("Not enough salvage"), "Purchase rejection is visible in HUD")
 	await capture("purchase-rejected")
 	check(await until(func(): return striders().size() >= 2, game.finish_tick - 50), "Paid queue produces two live Striders")
-	check(game.current.population_reserved[0] == 0 and game.current.population_used[0] == 5, "Spawning transfers reserved population to five live units")
+	check(game.current.population_reserved[0] == 0 and game.current.population_used[0] == 6, "Spawning transfers reserved population to four workers and two Striders")
 	await capture("produced")
 	if not striders().is_empty():
 		var unit: Dictionary = striders()[0]
@@ -191,7 +211,7 @@ func run() -> void:
 	var report := {"ok": errors.is_empty(), "mode": "production", "setup": {"map_id": initial.map_id, "width": initial.width, "height": initial.height, "protocol": initial.protocol, "content_id": initial.content_id},
 		"initial_snapshot": initial, "final_snapshot": final_snapshot, "snapshots": samples, "trace": trace, "inputs": inputs,
 		"checks": checks, "errors": errors, "captures": captures, "replay_path": replay_path,
-		"note": "Packaged software InputEvents: gather, build, queue, cancel/refund, purchase rejection, two spawned units, selection/movement and restart. No full match, human usability, balance or performance acceptance."}
+		"note": "Packaged input events cover an anchor-trained worker mining salvage, Foundry construction, two Strider spawns, cancellation, purchase rejection, movement and restart."}
 	var output := FileAccess.open(game.report_path, FileAccess.WRITE)
 	if output: output.store_string(JSON.stringify(report, "\t"))
 	else: errors.append("Cannot save report")

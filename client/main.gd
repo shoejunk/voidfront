@@ -776,10 +776,10 @@ func _present_economy() -> void:
 		match int(current.get("command_results", [0, 0])[local_player]):
 			1: economy_notice = "Order accepted by simulation"
 			2: economy_notice = "Invalid target: select a salvage deposit or your command anchor"
-			3: economy_notice = "Not enough salvage: Foundry %d / Strider %d" % [current.foundry_cost, current.strider_cost]
+			3: economy_notice = "Not enough salvage for this order."
 			4: economy_notice = "Placement blocked: requires clear space away from structures, deposits and workers"
 			5: economy_notice = "Select a living worker to gather or construct"
-			6: economy_notice = "Select your living Foundry to produce units"
+			6: economy_notice = "Train workers at your command anchor. Train combat units and research at your Foundry."
 			7: economy_notice = "Finish construction before training units"
 			8: economy_notice = "Production queue full (%d slots)" % current.production_queue_limit
 			9: economy_notice = "Population limit reached (%d including queued units)" % current.population_cap
@@ -844,9 +844,10 @@ func _present_economy() -> void:
 				entry.label.text += "  %d HP" % entity.hp
 				if not anchor:
 					entry.body.scale.y = 0.2 + 0.8 * fraction
-					if fraction >= 1.0 and int(entity.get("production_queue", 0)) > 0:
-						entry.label.text = "FOUNDRY  %d QUEUED / %d%%" % [entity.production_queue, int(float(entity.production_ticks) / current.train_ticks * 100)]
-						if entity.get("spawn_blocked", false): entry.label.text = "FOUNDRY / EXIT BLOCKED"
+				if fraction >= 1.0 and int(entity.get("production_queue", 0)) > 0:
+					var producer := "COMMAND ANCHOR" if anchor else "FOUNDRY"
+					entry.label.text = "%s  %d QUEUED / %d%%" % [producer, entity.production_queue, int(float(entity.production_ticks) / current.train_ticks * 100)]
+					if entity.get("spawn_blocked", false): entry.label.text = producer + " / EXIT BLOCKED"
 
 func _apply_team(node: Node, color: Color) -> void:
 	if node is MeshInstance3D:
@@ -1156,7 +1157,7 @@ func _activate_command(action: int) -> void:
 					target_order = -1
 					_issue(action, Vector3(structure.x / SCALE, 0, structure.z / SCALE))
 					return
-		Action.STRIDER, Action.LANCER, Action.CANCEL_UNIT, Action.PLATING:
+		Action.WORKER, Action.STRIDER, Action.LANCER, Action.CANCEL_UNIT, Action.PLATING:
 			if economy: _issue(action, Vector3.ZERO)
 		Action.STOP, Action.HOLD:
 			target_order = -1
@@ -1205,6 +1206,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_B: _activate_command(Action.BUILD)
 			KEY_ESCAPE: _activate_command(Action.CANCEL_TARGET)
 			KEY_T: _activate_command(Action.STRIDER)
+			KEY_W: _activate_command(Action.WORKER)
 			KEY_X: _activate_command(Action.CANCEL_UNIT)
 			KEY_G: _activate_command(Action.PLATING)
 			KEY_L: _activate_command(Action.LANCER)
@@ -1354,9 +1356,10 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 
 func _issue(order: int, at: Vector3) -> void:
 	var command_actors: Array[int] = selected.duplicate()
-	if order in [7, 8, 9, 10]:
+	var structure_order := order in [Action.WORKER, Action.STRIDER, Action.LANCER, Action.CANCEL_UNIT, Action.PLATING]
+	if structure_order:
 		if selected_entity.get("category", "") != "structure" or selected_entity.get("player", -1) != local_player:
-			economy_notice = "Select your Foundry to train, cancel or research"
+			economy_notice = "Select your command anchor or Foundry to use production commands."
 			return
 		command_actors = [int(selected_entity.id)]
 		at = Vector3.ZERO
@@ -1389,6 +1392,7 @@ func _issue(order: int, at: Vector3) -> void:
 	if economy:
 		economy_notice = "Order submitted" if accepted else "Order rejected"
 		if accepted and order == 7: economy_notice = "Training order submitted: %d salvage" % current.strider_cost
+		elif accepted and order == Action.WORKER: economy_notice = "Worker training submitted for %d salvage." % current.worker_cost
 		elif accepted and order == 8: economy_notice = "Cancel last queued unit; awaiting refund"
 		elif accepted and order == 10: economy_notice = "Lancer training submitted: %d salvage + %d flux" % [current.lancer_cost, current.lancer_flux_cost]
 		elif accepted and order == 9: economy_notice = "Hardened Plating research submitted: %d flux" % current.research_cost
@@ -1397,7 +1401,7 @@ func _issue(order: int, at: Vector3) -> void:
 	if accepted:
 		if order not in accepted_orders: accepted_orders.append(order)
 		var feedback_at := Vector3(at.x, 0.05, at.z)
-		if order in [7, 8, 9, 10]: feedback_at = Vector3(selected_entity.x / SCALE, 0.05, selected_entity.z / SCALE)
+		if structure_order: feedback_at = Vector3(selected_entity.x / SCALE, 0.05, selected_entity.z / SCALE)
 		if order == 0 or order == 3:
 			var center := Vector3.ZERO
 			var count := 0

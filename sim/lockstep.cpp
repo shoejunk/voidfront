@@ -74,7 +74,7 @@ ReceiveResult Lockstep::receive(const TickFrame& frame) {
     if (frame.tick - sim_.tick() > kMaxFutureTicks) return ReceiveResult::TooFar;
     for (const auto& c : frame.commands) {
         if (c.x>=sim_.width()*kScale || c.z>=sim_.height()*kScale) return ReceiveResult::Invalid;
-        const bool production=c.order==Order::TrainStrider || c.order==Order::TrainLancer || c.order==Order::CancelProduction || c.order==Order::Research;
+        const bool production=is_structure_order(c.order);
         if (sim_.map()==Map::Economy) {
             // IDs the receiver can already resolve must be owned by the sender. Larger
             // IDs (spawned/built before execution) are bounded here and fully checked

@@ -32,13 +32,13 @@ def replay_commands(raw, report):
         require(size == 26+4*ids_count, 'invalid command size')
         ids = list(struct.unpack_from('<'+'I'*ids_count, frame, 26))
         require(ids and ids == sorted(set(ids)), 'invalid canonical ids')
-        require(player == 0 and 0 <= tick < ticks and order in range(9), 'invalid command')
+        require(player == 0 and 0 <= tick < ticks and (order in range(9) or (protocol >= 13 and order == 13)), 'invalid command')
         if commands:
             require(seq > commands[-1]['sequence'] and tick >= commands[-1]['tick'], 'noncanonical command order')
         state = report['snapshots'][tick]
-        actors = state['structures'] if order in (7, 8) else state['units']
+        actors = state['structures'] if order in (7, 8, 13) else state['units']
         require(all(any(a['id'] == uid and a['player'] == player for a in actors) for uid in ids), 'invalid actor ownership')
-        if order in (7, 8):
+        if order in (7, 8, 13):
             require(len(ids) == 1 and x == z == 0, 'production operand encoding')
         commands.append(dict(tick=tick, sequence=seq, player=player, order=order, x=x, z=z, units=ids))
     require(pos == len(raw), 'trailing replay data')
@@ -81,7 +81,7 @@ def audit(report, commands):
         require([s['id'] for s in row['structures']] == list(range(1, len(row['structures'])+1)), 'unstable structure ids')
         require([d['id'] for d in row['deposits']] == [1, 2, 3, 4], 'deposit roster changed')
         foundries = [s for s in row['structures'] if s['kind'] == 1]
-        bought = sum(u['kind'] == 0 for u in row['units'])
+        bought = len(row['units']) - len(initial['units'])
         queued = sum(s['production_queue'] for s in row['structures'])
         observed = sum(row['salvage']) + sum(row.get('flux', [0, 0])) + 50*sum(bool(r) or bool(t) for r, t in zip(row.get('researched', [0, 0]), row.get('research_ticks', [0, 0]))) + sum(d['remaining'] for d in row['deposits'])
         observed += sum(u['cargo'] for u in row['units']) + 100*len(foundries) + 50*(bought+queued)
@@ -127,13 +127,14 @@ def audit(report, commands):
             q, progress = (old['production_queue'], old['production_ticks']) if old else (0, 0)
             require(0 <= site['production_queue'] <= 5 and 0 <= site['production_ticks'] <= 100, 'queue bounds')
             for c in economy_commands:
-                if c['order'] not in (7, 8) or c['units'] != [site['id']]:
+                if c['order'] not in (7, 8, 13) or c['units'] != [site['id']]:
                     continue
                 p = c['player']
                 require(row['result_sequences'][p] == c['sequence'], 'unbound application result')
                 result = row['command_results'][p]
-                if c['order'] == 7:
-                    expected = (6 if site['kind'] != 1 else 7 if before < 100 else
+                if c['order'] in (7, 13):
+                    expected_kind = 0 if c['order'] == 13 else 1
+                    expected = (6 if site['kind'] != expected_kind else 7 if before < 100 else
                                 8 if q >= 5 else 9 if sum((prior['population_used'][p], prior['population_reserved'][p])) >= 12 else
                                 3 if prior['salvage'][p] < 50 else 1)
                     require(result == expected, 'wrong train result')
@@ -142,7 +143,7 @@ def audit(report, commands):
                         purchases += 1
                     insufficient |= result == 3
                 else:
-                    expected = 6 if site['kind'] != 1 else 11 if q == 0 else 1
+                    expected = 11 if q == 0 else 1
                     require(result == expected, 'wrong cancel result')
                     if result == 1:
                         q -= 1
@@ -152,14 +153,15 @@ def audit(report, commands):
                 # This fixture stops harvesting before construction/production:
                 # isolate the buyer's exact debit/refund, not just global funds.
                 require(all(u['order'] not in (4, 5) for u in prior['units']), 'production debit audit needs stopped harvesters')
-                expected_delta = (-50 if c['order'] == 7 else 50) if result == 1 else 0
+                expected_delta = (50 if c['order'] == 8 else -50) if result == 1 else 0
                 require(row['salvage'][p]-prior['salvage'][p] == expected_delta, 'wrong production debit/refund')
-            if tick and site['kind'] == 1 and site['build_ticks'] == 100 and q:
+            if tick and site['build_ticks'] == 100 and q:
                 next_progress = min(progress+1, 100)
                 if site['production_queue'] == q-1:
                     require(next_progress == 100 and site['production_ticks'] == 0 and not site['spawn_blocked'], 'premature/invalid spawn')
                     require(births < len(added), 'missing produced unit')
                     new = added[births]
+                    require(new['kind'] == (1 if site['kind'] == 0 else 0) and new['cargo'] == 0, 'incorrect unit produced')
                     dx, dz = abs(new['x']-site['x']), abs(new['z']-site['z'])
                     require(new['player'] == site['player'] and max(dx, dz) == 352 and min(dx, dz) in (0, 352), 'spawn source/owner mismatch')
                     births += 1
@@ -181,10 +183,13 @@ def audit(report, commands):
             else:
                 require(site['production_queue'] == q and site['production_ticks'] == progress == 0 and not site['spawn_blocked'], 'idle production changed')
         require(births == len(added), 'spawn count does not match queue consumption')
-        require(all(u['kind'] == 0 and u['cargo'] == 0 for u in added), 'invalid produced unit')
         spawns += births
         prior = row
     require(purchases >= 3 and refunds >= 1 and spawns >= 2 and insufficient, 'missing purchase/refund/spawn/rejection coverage')
+    if initial['protocol'] >= 13:
+        require(initial['worker_cost'] == 50 and any(c['order'] == 13 for c in commands), 'missing anchor worker purchase')
+        require(any(u['kind'] == 1 and u['cargo'] > 0 for row in ledger for u in row['units'][len(initial['units']):]),
+                'trained worker never mined resources')
     require(construction_ticks >= 100, 'missing constructed Foundry')
     require(any(u['id'] > 6 and (u['x'], u['z']) != (next(r for r in ledger if len(r['units']) >= u['id'])['units'][u['id']-1]['x'],
                 next(r for r in ledger if len(r['units']) >= u['id'])['units'][u['id']-1]['z']) for u in final['units']), 'produced unit never moved')

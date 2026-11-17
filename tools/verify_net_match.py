@@ -89,7 +89,7 @@ def parse_replay(raw, report):
     require((protocol, seed, count, ticks, content, map_id) ==
             (initial['protocol'], network['seed'], 3, network['recorded_ticks'],
              hash_value(initial['content_id']), 2), 'replay setup mismatch')
-    require(protocol == 12 and 0 < ticks <= 10000000 and n <= 100000, 'unsupported replay bounds/protocol')
+    require(protocol in (12, 13) and 0 < ticks <= 10000000 and n <= 100000, 'unsupported replay bounds/protocol')
     pos, commands, sequences = 36, [], [0, 0]
     for _ in range(n):
         require(pos + 4 <= len(raw), 'truncated frame length')
@@ -102,11 +102,11 @@ def parse_replay(raw, report):
         require(1 <= ids_count <= 256 and size == 26 + 4 * ids_count, 'invalid command size/actor count')
         ids = list(struct.unpack_from('<' + 'I' * ids_count, frame, 26))
         require(ids == sorted(set(ids)) and ids[0] > 0, 'noncanonical actor ids')
-        require(player in (0, 1) and order in range(13) and tick < ticks, 'invalid command identity')
+        require(player in (0, 1) and order in range(14 if protocol >= 13 else 13) and tick < ticks, 'invalid command identity')
         require(x < initial['width'] * 256 and z < initial['height'] * 256, 'command coordinates out of bounds')
         require(sequence == sequences[player] + 1, 'per-player command sequence gap')
         sequences[player] = sequence
-        if 7 <= order <= 10:
+        if order in (7, 8, 9, 10, 13):
             require(ids_count == 1 and x == z == 0, 'structure operand encoding')
         command = dict(tick=tick, sequence=sequence, player=player, order=order, x=x, z=z, units=ids)
         if commands:
@@ -264,15 +264,15 @@ def own(snapshot, player, category, kind=None):
 
 
 def audit_semantics(reports, commands, states):
-    purchased = [dict(build=0, strider=0, lancer=0, cancel=0, research=0) for _ in (0, 1)]
+    purchased = [dict(build=0, worker=0, strider=0, lancer=0, cancel=0, research=0) for _ in (0, 1)]
     spending = []
     initial = reports[0]['fixture']['initial_snapshot']
     for c in commands:
         p, tick = c['player'], c['tick']
         before, after = states[tick], states[tick + 1]
-        actors = before['structures'] if 7 <= c['order'] <= 10 else before['units']
+        actors = before['structures'] if c['order'] in (7, 8, 9, 10, 13) else before['units']
         require(all(any(u['id'] == uid and u['player'] == p and u['hp'] > 0 for u in actors) for uid in c['units']), 'canonical actor ownership/aliveness')
-        if c['order'] not in (6, 7, 8, 9, 10):
+        if c['order'] not in (6, 7, 8, 9, 10, 13):
             continue
         require(len([other for other in commands if other['tick'] == tick and other['player'] == p]) == 1, 'semantic audit needs one local economic command per tick')
         require(after['result_sequences'][p] == c['sequence'] and after['command_results'][p] == 1, 'economic command result not Accepted/bound')
@@ -289,18 +289,18 @@ def audit_semantics(reports, commands, states):
         else:
             site = next(s for s in before['structures'] if s['id'] == c['units'][0])
             new = next(s for s in after['structures'] if s['id'] == site['id'])
-            require(site['kind'] == 1 and site['build_ticks'] == 100, 'unready/nonfoundry economic actor')
+            require(site['build_ticks'] == 100 and (c['order'] == 8 or site['kind'] == (0 if c['order'] == 13 else 1)), 'wrong production structure')
             q, mask = site['production_queue'], site['queue_lancers']
             births = [u for u in after['units'] if u['id'] > len(before['units']) and u['player'] == p]
             require(len(births) <= 1, 'more than one spawn at one local Foundry')
-            if c['order'] in (7, 10):
+            if c['order'] in (7, 10, 13):
                 lancer = c['order'] == 10
                 require(q < 5 and (not lancer or before['researched'][p]), 'purchase missing capacity/research gate')
                 expected_mask = mask | ((1 << q) if lancer else 0)
                 require(new['production_queue'] == q + 1 - len(births) and
                         new['queue_lancers'] == expected_mask >> len(births), 'purchase queue kind/length mismatch')
                 spent_s, spent_f = (75, 25) if lancer else (50, 0)
-                purchased[p]['lancer' if lancer else 'strider'] += 1
+                purchased[p][{7: 'strider', 10: 'lancer', 13: 'worker'}[c['order']]] += 1
             elif c['order'] == 8:
                 require(q > 0, 'cancel empty queue')
                 lancer = bool(mask & (1 << (q - 1)))
@@ -320,14 +320,14 @@ def audit_semantics(reports, commands, states):
             expected_progress = (min(site['production_ticks'] + 1, 100)
                                  if new['production_queue'] and not births else 0)
             require(new['production_ticks'] == expected_progress, 'buy/cancel/research changed elapsed front work')
-            if q == 0 and c['order'] in (7, 10):
+            if q == 0 and c['order'] in (7, 10, 13):
                 early, complete = states[tick + 99], states[tick + 100]
                 early_site = next(s for s in early['structures'] if s['id'] == site['id'])
                 completed_site = next(s for s in complete['structures'] if s['id'] == site['id'])
                 require(early_site['production_ticks'] == 99 and not any(u['id'] > len(before['units']) and
                         u['player'] == p for u in early['units']), 'unit spawned before 100 training ticks')
                 newborn = [u for u in complete['units'] if u['id'] > len(before['units']) and u['player'] == p]
-                require(len(newborn) == 1 and newborn[0]['kind'] == (2 if c['order'] == 10 else 0) and
+                require(len(newborn) == 1 and newborn[0]['kind'] == {7: 0, 10: 2, 13: 1}[c['order']] and
                         newborn[0]['hp'] == (70 if c['order'] == 10 else 100) and completed_site['production_ticks'] == 0,
                         'unobstructed first item did not spawn with configured type/HP at tick100')
         require((ds, df) == (-spent_s, -spent_f), f'p{p} sequence {c["sequence"]}: exact debit/refund differs')
@@ -565,7 +565,7 @@ def main():
     for c in commands:
         if c['order'] == 9:
             ticks.update((c['tick'] + 198, c['tick'] + 199))
-        if c['order'] in (7, 10):
+        if c['order'] in (7, 10, 13):
             ticks.update((c['tick'] + 99, c['tick'] + 100))
     states = {0: reports[0]['fixture']['initial_snapshot']}
     for tick in sorted(ticks - {0}):
