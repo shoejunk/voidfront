@@ -51,7 +51,7 @@ func run() -> void:
 	check(game.selected_entity.get("kind", -1) == 1, "Foundry selected for research")
 	var flux_before_research: int = game.current.flux[0]
 	label = "research"
-	await key(KEY_G)
+	await click_command(CardAction.PLATING)
 	await advance_ticks(3)
 	check(game.current.command_results[0] == 1 and int(game.current.research_ticks[0]) > 0, "Research begins")
 	check(game.current.flux[0] <= flux_before_research - game.current.research_cost + 15, "Research charges displayed flux cost")
@@ -76,7 +76,7 @@ func run() -> void:
 	var salvage_pre: int = game.current.salvage[0]
 	var flux_pre: int = game.current.flux[0]
 	label = "train_lancer"
-	await key(KEY_L)
+	await click_command(CardAction.LANCER)
 	await advance_ticks(3)
 	check(game.current.command_results[0] == 1 and own_foundries()[0].queue_lancers == 1, "Lancer queued behind research gate")
 	check(game.current.salvage[0] <= salvage_pre - game.current.lancer_cost + 20 and game.current.flux[0] <= flux_pre - game.current.lancer_flux_cost + 10, "Lancer charges salvage and flux")

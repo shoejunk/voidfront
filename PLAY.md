@@ -4,6 +4,7 @@ Launch `Voidfront.exe` beside its .pck and DLL. The default offline mode uses a 
 
 - A skirmish setup screen opens first: Tab toggles the Economic AI or a passive opponent, Left/Right change the match seed, Enter starts. R restarts with the chosen settings; M returns to setup (offline only).
 - Left click selects a worker, anchor, deposit or Foundry. Drag selects units. F1 selects your living workers; F2 selects your living army, so army orders leave miners working.
+- Select a friendly unit or structure to open its command card in the lower left. Click Gather and then a deposit, or Build Foundry and then a site near your anchor. Select a completed Foundry to train units, research Hardened Plating or cancel the last queued unit for a refund. Hover over a dimmed button to see what it needs. Cancel or Esc leaves targeting mode.
 - Select workers and right click a salvage deposit. They mine, carry up to 10 salvage each, return it to your anchor, and repeat until the deposit is depleted.
 - Right click your anchor to return carried salvage immediately and stop.
 - With workers selected, press B and click a valid site to construct a Foundry for 100 salvage. Green preview means affordable and geometrically valid; red means blocked or unaffordable. Sites must be within eight world units of your anchor and leave clearance around structures, deposits and terrain. Construction takes five seconds of worker activity after arrival.

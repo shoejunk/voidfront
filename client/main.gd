@@ -4,6 +4,7 @@ const STEP := 1.0 / 20.0
 const SCALE := 256.0
 const WALKER = preload("res://assets/cairn_walker.glb")
 const HUD = preload("res://hud.gd")
+const Action = preload("res://command_card.gd").Action
 var bridge: RefCounted
 var camera: Camera3D
 var hud: Control
@@ -15,7 +16,9 @@ var control_groups: Dictionary = {}
 var obstacle_cells: Array[Vector2i] = []
 var accumulator := 0.0
 var max_hp := 100.0
-var attack_pending := false
+var target_order := -1
+var attack_pending: bool:
+	get: return target_order == Action.ATTACK
 var drag_start := Vector2.ZERO
 var camera_target := Vector3(16, 0, 12)
 var order_mark: MeshInstance3D
@@ -114,7 +117,8 @@ var match_smoke := false
 var victory_smoke := false
 var match_realtime := false
 var match_fixture: RefCounted
-var build_pending := false
+var build_pending: bool:
+	get: return target_order == Action.BUILD
 var economy_actors: Dictionary = {}
 var selected_entity: Dictionary = {}
 var economy_notice := ""
@@ -594,7 +598,7 @@ func _refresh_match() -> void:
 	for entry in economy_actors.values(): entry.root.queue_free()
 	economy_actors.clear()
 	selected_entity.clear()
-	build_pending = false
+	target_order = -1
 	if build_preview: build_preview.visible = false
 	economy_notice = ""
 	economy_result_sequence = -1
@@ -612,7 +616,6 @@ func _refresh_match() -> void:
 	previous = current.duplicate(true)
 	initial_hash = current.hash
 	accumulator = 0
-	attack_pending = false
 	order_age = 99.0
 	order_mark.visible = false
 	initial_positions.clear()
@@ -765,9 +768,8 @@ func _present_economy() -> void:
 				selected_entity.clear()
 				break
 	if not selected_entity.is_empty() and not _entity_visible(selected_entity): selected_entity.clear()
-	if current.winner != -1:
-		build_pending = false
-		attack_pending = false
+	if target_order in [Action.BUILD, Action.GATHER] and _selected_workers() == 0:
+		target_order = -1
 	var sequence: int = current.get("result_sequences", [-1, -1])[local_player]
 	if sequence != economy_result_sequence:
 		economy_result_sequence = sequence
@@ -936,6 +938,7 @@ func _process(delta: float) -> void:
 	var present_start := Time.get_ticks_usec() if presentation_profiler else 0
 	if economy: _update_fog()
 	_present(clampf(accumulator / STEP, 0, 1), delta)
+	if selected.is_empty() or current.winner != -1: target_order = -1
 	if presentation_profiler: presentation_profiler.record("present", Time.get_ticks_usec() - present_start)
 	# The first positive interpolation includes the new authoritative state.
 	if network_smoke and accumulator > 0 and current.tick != presented_tick:
@@ -1120,7 +1123,55 @@ func _world_at(point: Vector2) -> Vector3:
 	return origin + direction * (-origin.y / direction.y)
 
 func _input(event: InputEvent) -> void:
-	event.set_meta("voidfront_input_usec", Time.get_ticks_usec())
+	event_usec = Time.get_ticks_usec()
+	event.set_meta("voidfront_input_usec", event_usec)
+	# A drag can start on the map and end over a Control, which consumes its release.
+	if event is InputEventMouseButton and not event.pressed and hud and hud.command_card.visible and hud.command_card.get_global_rect().has_point(event.position):
+		if event.button_index == MOUSE_BUTTON_LEFT and (hud.dragging or minimap_dragging):
+			if hud.dragging: _select(drag_start, event.position, event.shift_pressed)
+			hud.dragging = false
+			minimap_dragging = false
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_MIDDLE:
+			camera_dragging = false
+
+func commands_available() -> bool:
+	if current.is_empty() or setup_open or not option_error.is_empty() or current.winner != -1: return false
+	if presentation_profiler and presentation_profiler.is_controlled(): return false
+	return not network or (network_state.get("ready", false) and str(network_state.get("state", "")) in ["running", "stalled"])
+
+func _activate_command(action: int) -> void:
+	if not commands_available(): return
+	match action:
+		Action.CANCEL_TARGET: target_order = -1
+		Action.SELECT_WORKERS: _select_role(true)
+		Action.MOVE, Action.ATTACK:
+			if not selected.is_empty(): target_order = action
+		Action.BUILD, Action.GATHER:
+			if economy and _selected_workers() > 0: target_order = action
+		Action.RETURN_CARGO:
+			if not economy or _selected_workers() == 0: return
+			for structure in current.structures:
+				if structure.player == local_player and structure.kind == 0 and structure.hp > 0:
+					target_order = -1
+					_issue(action, Vector3(structure.x / SCALE, 0, structure.z / SCALE))
+					return
+		Action.STRIDER, Action.LANCER, Action.CANCEL_UNIT, Action.PLATING:
+			if economy: _issue(action, Vector3.ZERO)
+		Action.STOP, Action.HOLD:
+			target_order = -1
+			_issue(action, Vector3.ZERO)
+
+func _select_role(workers: bool) -> void:
+	target_order = -1
+	selected_entity.clear()
+	selected.clear()
+	for unit in current.units:
+		if unit.player == local_player and unit.hp > 0 and (int(unit.get("kind", 0)) == 1) == workers: selected.append(unit.id)
+	if network_smoke:
+		own_selection_passed = not selected.is_empty()
+		for unit in current.units:
+			if unit.id in selected and unit.player != local_player: own_selection_passed = false
 
 func _unhandled_input(event: InputEvent) -> void:
 	if presentation_profiler and presentation_profiler.is_controlled(): return
@@ -1143,49 +1194,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		setup_open = true
 		return
 	if _camera_input(event): return
-	if economy and current.winner != -1: return
-	if network and (not network_state.get("ready", false) or str(network_state.get("state", "")) not in ["running", "stalled"]): return
+	if not commands_available(): return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode >= KEY_0 and event.physical_keycode <= KEY_9:
 			_control_group(event.physical_keycode - KEY_0, event.ctrl_pressed, event.shift_pressed)
 			return
 		match event.physical_keycode:
-			KEY_F1, KEY_F2:
-				attack_pending = false
-				build_pending = false
-				selected_entity.clear()
-				selected.clear()
-				for unit in current.units:
-					if unit.player == local_player and unit.hp > 0 and (int(unit.get("kind", 0)) == 1) == (event.physical_keycode == KEY_F1): selected.append(unit.id)
-				if network_smoke:
-					own_selection_passed = not selected.is_empty()
-					for unit in current.units:
-						if unit.id in selected and unit.player != local_player: own_selection_passed = false
-			KEY_A:
-				attack_pending = true
-				build_pending = false
-			KEY_B:
-				if economy and _selected_workers() > 0:
-					build_pending = true
-					attack_pending = false
-			KEY_ESCAPE:
-				attack_pending = false
-				build_pending = false
-			KEY_T:
-				if economy: _issue(7, Vector3.ZERO)
-			KEY_X:
-				if economy: _issue(8, Vector3.ZERO)
-			KEY_G:
-				if economy: _issue(9, Vector3.ZERO)
-			KEY_L:
-				if economy: _issue(10, Vector3.ZERO)
-			KEY_S: _issue(0, Vector3(0, 0, 0))
-			KEY_H: _issue(3, Vector3(0, 0, 0))
+			KEY_F1, KEY_F2: _select_role(event.physical_keycode == KEY_F1)
+			KEY_A: _activate_command(Action.ATTACK)
+			KEY_B: _activate_command(Action.BUILD)
+			KEY_ESCAPE: _activate_command(Action.CANCEL_TARGET)
+			KEY_T: _activate_command(Action.STRIDER)
+			KEY_X: _activate_command(Action.CANCEL_UNIT)
+			KEY_G: _activate_command(Action.PLATING)
+			KEY_L: _activate_command(Action.LANCER)
+			KEY_S: _activate_command(Action.STOP)
+			KEY_H: _activate_command(Action.HOLD)
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-			if build_pending:
-				build_pending = false
-			else:
+			if target_order not in [Action.BUILD, Action.MOVE, Action.GATHER]:
 				var destination := _world_at(event.position)
 				var entity := _economy_entity_at(event.position) if economy else {}
 				var order := 1
@@ -1199,15 +1226,22 @@ func _unhandled_input(event: InputEvent) -> void:
 					if order != 1: destination = Vector3(entity.x / SCALE, 0, entity.z / SCALE)
 				if event.shift_pressed and order == 1: order = 11
 				_issue(order, destination)
-			attack_pending = false
+			target_order = -1
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			if build_pending and event.pressed:
-				_issue(6, _world_at(event.position))
-				build_pending = false
-				return
-			if attack_pending and event.pressed:
-				_issue(12 if event.shift_pressed else 2, _world_at(event.position))
-				attack_pending = false
+			if target_order != -1 and event.pressed:
+				var destination := _world_at(event.position)
+				var order := target_order
+				if order == Action.GATHER or order == Action.BUILD:
+					var entity := _economy_entity_at(event.position)
+					if order == Action.GATHER:
+						if entity.get("category", "") != "deposit" or entity.remaining <= 0: return
+						destination = Vector3(entity.x / SCALE, 0, entity.z / SCALE)
+					elif entity.get("category", "") == "structure" and entity.player == local_player and entity.build_ticks < current.build_duration:
+						destination = Vector3(entity.x / SCALE, 0, entity.z / SCALE)
+				if event.shift_pressed and order == Action.MOVE: order = 11
+				if event.shift_pressed and order == Action.ATTACK: order = 12
+				target_order = -1
+				_issue(order, destination)
 				return
 			if event.pressed:
 				drag_start = event.position
@@ -1288,6 +1322,7 @@ func _control_group(number: int, store_group: bool, additive: bool) -> void:
 	if additive: members.append_array(selected)
 	selected = _live_own_ids(members)
 	selected_entity.clear()
+	target_order = -1
 
 func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 	selected_entity.clear()
@@ -1308,6 +1343,7 @@ func _select(from: Vector2, to: Vector2, additive: bool) -> void:
 		else: selected.append(nearest)
 	elif economy and from.distance_to(to) <= 7:
 		selected_entity = _economy_entity_at(to)
+		if not selected_entity.is_empty(): selected.clear()
 	if movement_smoke and from.distance_to(to) <= 7:
 		movement_selected = selected.size() == 1 and selected[0] == 1
 	if smoke:

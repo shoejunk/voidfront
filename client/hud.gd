@@ -12,6 +12,7 @@ var result: Label
 var connection: Label
 var setup: Label
 var minimap_obstacles: MultiMesh
+var command_card := preload("res://command_card.gd").new()
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -39,6 +40,8 @@ func _ready() -> void:
 	result = _label(Vector2(590, 350), 34, Color("f0d19b"))
 	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	add_child(command_card)
+	command_card.command_pressed.connect(game._activate_command)
 	# Static authoritative terrain is submitted once as a canvas batch. Unit dots
 	# and camera-dependent health bars remain dynamic on every rendered frame.
 	minimap_obstacles = MultiMesh.new()
@@ -68,12 +71,12 @@ func _process(_delta: float) -> void:
 		return
 	var profile_start := Time.get_ticks_usec() if game.presentation_profiler else 0
 	var view := get_viewport_rect().size
+	var workers := 0
+	var cargo := 0
 	selection.position.y = view.y - (144 if game.economy else 112)
 	tip.position.y = view.y - (120 if game.economy else 88)
 	if not game.economy:
 		selection.text = "%02d  /  CAIRN STRIDERS" % game.selected.size()
-		if game.attack_pending:
-			selection.text += "     —     SELECT ATTACK DESTINATION"
 		status.text = "THE GLASS REACH   /   FIELD TRIAL 01     •     %02d:%02d" % [int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
 	if game.scale128:
 		status.text = "SCALE FIELD   /   128 × 128   /   %d STRIDERS     •     %02d:%02d" % [game.current.units.size(), int(game.current.tick / 1200), int(game.current.tick / 20) % 60]
@@ -124,16 +127,20 @@ func _process(_delta: float) -> void:
 		if game.current.winner in [0, 1]:
 			var outcome := "VICTORY / ENEMY ANCHOR DESTROYED" if game.current.winner == game.local_player else "DEFEAT / YOUR ANCHOR DESTROYED"
 			result.text = outcome + ("\nAwaiting session confirmation" if game.network else "\nR  /  new match")
-		var workers: int = game._selected_workers()
+		workers = game._selected_workers()
 		var lancers := 0
 		for unit in game.current.units:
 			if unit.id in game.selected and int(unit.get("kind", 0)) == 2: lancers += 1
-		selection.text = "%02d WORKERS / %02d STRIDERS / %02d LANCERS" % [workers, game.selected.size() - workers - lancers, lancers]
+		var roster := PackedStringArray()
+		var striders: int = game.selected.size() - workers - lancers
+		if workers > 0: roster.append("Worker" if workers == 1 else "%d Workers" % workers)
+		if striders > 0: roster.append("Strider" if striders == 1 else "%d Striders" % striders)
+		if lancers > 0: roster.append("Lancer" if lancers == 1 else "%d Lancers" % lancers)
+		selection.text = "Select a unit or structure" if roster.is_empty() else "  /  ".join(roster)
 		if workers > 0:
-			var cargo := 0
 			for unit in game.current.units:
 				if unit.id in game.selected: cargo += int(unit.get("cargo", 0))
-			selection.text += "   /   CARRYING %d" % cargo
+			selection.text += "   ·   Carrying %d" % cargo
 		if not game.selected_entity.is_empty():
 			var entity: Dictionary = game.selected_entity
 			if entity.category == "deposit": selection.text = "%s DEPOSIT   /   %d REMAINING" % ["FLUX (CONTESTED)" if int(entity.get("kind", 0)) == 1 else "SALVAGE", entity.remaining]
@@ -144,7 +151,6 @@ func _process(_delta: float) -> void:
 					selection.text += "   /   QUEUE %d/%d" % [entity.production_queue, game.current.production_queue_limit]
 					if entity.production_queue > 0: selection.text += "   /   %s %d%%" % ["LANCER" if int(entity.get("queue_lancers", 0)) & 1 else "STRIDER", int(float(entity.production_ticks) / game.current.train_ticks * 100)]
 					if entity.spawn_blocked: selection.text += "   /   EXIT BLOCKED: MOVE UNITS"
-		if game.build_pending: selection.text = "PLACE FOUNDRY   /   %d SALVAGE   /   GREEN VALID • RED BLOCKED OR UNAFFORDABLE" % cost
 		tip.text = "F1  workers    F2  army    LMB / drag  select    RMB  move / gather / work / attack building    Shift+RMB queue (4)\nB + click  Foundry (%d)    T  Strider (%d)    L  Lancer (%d+%d flux, needs plating)    X  refund last    G  Hardened Plating (%d flux)    A + click  attack-move    S  stop    H  hold\nCtrl+0-9  save / 0-9  recall    Arrows  pan (Shift fast)    MMB / minimap  pan    Home  base    Wheel  zoom    R  restart\n" % [cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost, game.current.research_cost] + game.economy_notice
 	var paths: Array[Dictionary] = game._order_paths()
 	if not paths.is_empty():
@@ -171,6 +177,9 @@ func _process(_delta: float) -> void:
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
+	command_card.refresh(game, selection.text, workers, cargo)
+	selection.visible = not command_card.visible and not game.setup_open
+	tip.visible = selection.visible
 	setup.visible = game.setup_open
 	if game.setup_open:
 		setup.position = Vector2((view.x - setup.size.x) / 2, view.y / 2 - 150)
@@ -198,8 +207,9 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2(16, 12), panel_size), Color(0.025, 0.047, 0.055, 0.94))
 	draw_rect(Rect2(16, 12, 3, panel_size.y), Color("61c9c6"))
 	var extra_help_height := 32 if is_instance_valid(game) and game.economy else 0
-	draw_rect(Rect2(16, view.y - 131 - extra_help_height, 965, 114 + extra_help_height), Color(0.025, 0.047, 0.055, 0.96))
-	draw_line(Vector2(16, view.y - 131 - extra_help_height), Vector2(981, view.y - 131 - extra_help_height), Color("4b777b"), 1)
+	if selection.visible:
+		draw_rect(Rect2(16, view.y - 131 - extra_help_height, 965, 114 + extra_help_height), Color(0.025, 0.047, 0.055, 0.96))
+		draw_line(Vector2(16, view.y - 131 - extra_help_height), Vector2(981, view.y - 131 - extra_help_height), Color("4b777b"), 1)
 	if not is_instance_valid(game) or game.current.is_empty():
 		return
 	if game.setup_open:

@@ -1,5 +1,6 @@
 extends RefCounted
 # Uses the ordinary UI InputEvent path. All recorded state comes from the bridge.
+const CardAction = preload("res://command_card.gd").Action
 var game
 var initial: Dictionary
 var samples: Array[Dictionary] = []
@@ -37,6 +38,15 @@ func frames() -> void:
 
 func key(code: Key) -> void:
 	game._smoke_key(code)
+	await frames()
+
+func click_command(action: int) -> void:
+	var button: Button = game.hud.command_card.buttons[action]
+	check(button.is_visible_in_tree(), "Command card shows " + button.text.get_slice("\n", 0))
+	if not button.is_visible_in_tree(): return
+	var center := button.get_global_rect().get_center()
+	game._smoke_mouse(MOUSE_BUTTON_LEFT, center, true)
+	game._smoke_mouse(MOUSE_BUTTON_LEFT, center, false)
 	await frames()
 
 func mouse(button: MouseButton, point: Vector3) -> void:
@@ -86,35 +96,46 @@ func run() -> void:
 	await frames()
 	check(initial.map_id == 2 and initial.units.size() == 6, "Production starts from economy workers")
 	var deposit: Dictionary = initial.deposits[0]
-	await key(KEY_F1)
+	var anchor: Dictionary = initial.structures[0]
+	var worker: Dictionary = initial.units[0]
+	await mouse(MOUSE_BUTTON_LEFT, Vector3(worker.x / 256.0, 0.5, worker.z / 256.0))
+	check(game.selected == [worker.id] and game.hud.command_card.buttons[CardAction.GATHER].is_visible_in_tree(), "Clicking a worker opens its gathering commands")
+	await mouse(MOUSE_BUTTON_LEFT, Vector3(anchor.x / 256.0, 0.5, anchor.z / 256.0))
+	await click_command(CardAction.SELECT_WORKERS)
+	check(game.selected == [1, 2, 3], "Anchor card selects its workers")
+	await click_command(CardAction.MOVE)
+	await click_command(CardAction.CANCEL_TARGET)
+	check(game.target_order == -1 and inputs.is_empty(), "Cancel targeting consumes the card click without issuing a world order")
 	label = "gather_for_production"
-	await mouse(MOUSE_BUTTON_RIGHT, Vector3(deposit.x / 256.0, 0.5, deposit.z / 256.0))
+	await click_command(CardAction.GATHER)
+	await mouse(MOUSE_BUTTON_LEFT, Vector3(deposit.x / 256.0, 0.5, deposit.z / 256.0))
 	check(await until(func(): return int(game.current.salvage[0]) >= 200, game.finish_tick - 450), "Gathering funds Foundry and two Striders")
+	await capture("workers")
 	label = "stop_workers"
-	await key(KEY_S)
+	await click_command(CardAction.STOP)
 	await advance_ticks(3)
 	var balance: int = game.current.salvage[0]
 	var site := Vector3(9.5, 0, 12.5)
 	label = "build_foundry"
-	await key(KEY_B)
+	await click_command(CardAction.BUILD)
 	await mouse(MOUSE_BUTTON_LEFT, site)
 	check(await until(func(): return own_foundries().size() == 1 and own_foundries()[0].build_ticks == game.current.build_duration, game.finish_tick - 240), "Worker completes purchased Foundry")
 	check(game.current.salvage[0] == balance - game.current.foundry_cost, "Foundry charges displayed salvage cost")
 	await mouse(MOUSE_BUTTON_LEFT, site + Vector3(0, 0.5, 0))
 	check(game.selected.is_empty() and game.selected_entity.get("kind", -1) == 1, "Foundry selects without pretending it is a worker")
 	label = "train_first"
-	await key(KEY_T)
+	await click_command(CardAction.STRIDER)
 	await advance_ticks(2)
 	label = "train_second"
 	await key(KEY_T)
 	await advance_ticks(5)
-	check(own_foundries().size() == 1 and own_foundries()[0].production_queue == 2, "Train hotkey queues two Striders")
+	check(own_foundries().size() == 1 and own_foundries()[0].production_queue == 2, "Train button and hotkey each queue one Strider")
 	check(game.current.salvage[0] == balance - game.current.foundry_cost - 2 * game.current.strider_cost, "Training charges two displayed unit costs")
 	check(game.current.population_reserved[0] == 2, "Queued units reserve population")
 	await capture("queued")
 	var before_cancel: Dictionary = game.current.duplicate(true)
 	label = "cancel_tail"
-	await key(KEY_X)
+	await click_command(CardAction.CANCEL_UNIT)
 	await advance_ticks(2)
 	check(own_foundries().size() == 1 and own_foundries()[0].production_queue == 1, "Cancel removes last queued unit")
 	check(game.current.salvage[0] == before_cancel.salvage[0] + game.current.strider_cost, "Cancel refunds full unit cost")
@@ -126,6 +147,9 @@ func run() -> void:
 	await key(KEY_T)
 	await advance_ticks(2)
 	var before_failure: int = game.current.salvage[0]
+	var before_disabled := inputs.size()
+	await click_command(CardAction.STRIDER)
+	check(game.hud.command_card.buttons[CardAction.STRIDER].disabled and inputs.size() == before_disabled and game.selected_entity.get("kind", -1) == 1, "Unaffordable card click preserves selection and submits no order")
 	label = "unaffordable_train"
 	await key(KEY_T)
 	await advance_ticks(2)
@@ -140,7 +164,8 @@ func run() -> void:
 		await mouse(MOUSE_BUTTON_LEFT, Vector3(unit.x / 256.0, 0.5, unit.z / 256.0))
 		check(game.selected == [unit.id] and game.selected_entity.is_empty(), "Produced unit can be selected")
 		label = "move_produced"
-		await mouse(MOUSE_BUTTON_RIGHT, Vector3(12.5, 0, 14.5))
+		await click_command(CardAction.MOVE)
+		await mouse(MOUSE_BUTTON_LEFT, Vector3(12.5, 0, 14.5))
 		check(await until(func():
 			for moved in striders():
 				if moved.id == unit.id and Vector2(moved.x - unit.x, moved.z - unit.z).length() > 256: return true

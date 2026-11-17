@@ -1,5 +1,18 @@
 # Voidfront progress
 
+## 2026-11-17 - clickable command cards
+
+Selecting a friendly unit, command anchor or Foundry opens its action buttons.
+The card supports worker targeting, unit orders, production, refunds and plating
+research through the existing offline and network command paths.
+
+The rendered offline production and flux fixtures exercised the buttons at
+1280×720. The production replay reached tick 1,813 with two Strider spawns
+and one refund. The flux replay reached tick 3,891 with a researched Lancer.
+Both matched their captured hash traces in Debug and Release. Each native build
+passed 12/12 tests. Screenshots and replay audits are under `artifacts` with
+the `command-card-` prefix. Human play and network button verification remain open.
+
 ## 2026-11-15 America/Los_Angeles - loopback lobby and rematch
 
 Baseline: clean `dev` at `705a373`, STOP/COMPLETE/previous run marker absent.
