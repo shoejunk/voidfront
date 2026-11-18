@@ -1,24 +1,24 @@
 {
   "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
-  "simulation_commit": "e721d488cb36a3001f32199bc6d248cf589aa5c6",
+  "simulation_commit": "6a0148c24abdc96bc23008bf5c0bab971554277f",
   "branch": "dev",
-  "new_movie": false,
+  "new_movie": true,
   "crowd_report": "C:\\dev\\voidfront\\artifacts\\cooperative-crowd-verified-2026-09-26.json",
   "movement_report": "C:\\dev\\voidfront\\artifacts\\cooperative-movement-verified-2026-09-26.json",
-  "run": "2026-11-15-negotiated-loopback-rematch",
-  "state": "Two packaged loopback matches negotiated and independently verified; both replay archives preserved",
-  "checkpoint_utc": "2026-11-15T20:31:19.557044+00:00",
-  "source_commit": "1131af8bf94eeebac1f9d63f9ea46f476510bc8d",
-  "runtime_evidence_date": "2026-11-15",
-  "verification": "C:/dev/voidfront/artifacts/rematch-verify-final-2026-11-15.log",
-  "runtime_report": "C:/dev/voidfront/artifacts/rematch-final-pair-2026-11-15/round2/p0.json",
-  "client_report": "C:/dev/voidfront/artifacts/rematch-final-audit-2026-11-15/summary.json",
+  "run": "2026-11-17-terminal-loss-and-command-cards",
+  "state": "Verified terminal lobby loss with a final UDP checksum outstanding, replay archives, contested Foundry card purchases and offline victory/restart.",
+  "checkpoint_utc": "2026-11-18T05:24:51.521906+00:00",
+  "source_commit": "5cbd1c488a9fb0f3902095e4bc054f1d548eca0c",
+  "runtime_evidence_date": "2026-11-17",
+  "verification": "C:/dev/voidfront/artifacts/outcome-verify-approved-2026-11-17.log",
+  "runtime_report": "C:/dev/voidfront/artifacts/outcome-contested-2026-11-17/p0.json",
+  "client_report": "C:/dev/voidfront/artifacts/outcome-contested-audit-2026-11-17/summary.json",
   "scale_reports": [
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-2026-09-26\\summary.json",
     "C:\\dev\\voidfront\\artifacts\\cooperative-scale-client-replays-2026-09-26\\summary.json"
   ],
   "reviews": [
-    "C:/dev/voidfront/.voidfront-agent/review-rematch-2026-11-15.md"
+    "C:/dev/voidfront/TESTING.md"
   ],
   "profile_reports": [
     "C:/dev/voidfront/artifacts/presentation-ordinary12-final-2026-09-25.json",
@@ -26,15 +26,15 @@
     "C:/dev/voidfront/artifacts/presentation-ordinary500-final-2026-09-25.json"
   ],
   "profile_integrity": "C:/dev/voidfront/.voidfront-agent/presentation-results-2026-09-25.json",
-  "next": "Exercise full human match/rematch/offline return; add integrated TCP loss during UDP finishing and improve HUD layering. All SPEC gates stand.",
-  "package_pck_sha256": "685a5b9340b2641e83b6653d8000d22275a723587cb0457b28a51945c18827be",
-  "package_bridge_sha256": "cb285a31abab268fa6a50a0007e339b085aaf26cdcd3ea63c491fc1e1c7e3eda",
+  "next": "Funded AI worker replacement after a raid, with canonical replay checks. Two-person match and rematch playtesting remain open.",
+  "package_pck_sha256": "a225a2ddab352a6519b460cf7698c77c5f7638da1f54cf2129f9282583c8929c",
+  "package_bridge_sha256": "8a8c3de495ab31dc6e275844653dcbed9300a83ec30e9c4cb60906b47a8f3dbc",
   "remote_backup": true,
   "crowd_regressions": "C:/dev/voidfront/artifacts/economy-crowds-2026-09-26/summary.json",
   "crowd_experiments": "C:/dev/voidfront/.voidfront-agent/crowd-recovery-results-2026-09-26.json",
   "new_package": true,
   "new_network_suite": false,
-  "current_pass_limits": "Scripted two-match loopback with a holding defender; no human, LAN/Internet, balance, representative performance, or shipping acceptance.",
+  "current_pass_limits": "Packaged scripted loopback and accelerated offline inputs. Contested pair used the frozen preceding HUD wording. Human, reference performance, physical network, balance and production gates remain open.",
   "presentation_profile_evidence_date": "2026-09-25",
   "cooperative_results": "C:\\dev\\voidfront\\.voidfront-agent\\cooperative-results-2026-09-26.json",
   "scripted_frame_p99_ms": {
@@ -52,15 +52,18 @@
   },
   "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
   "economy_results": "C:/dev/voidfront/.voidfront-agent/economy-results-2026-09-26.json",
-  "next_checkpoint": "Exercise full human match/rematch/offline return; add integrated TCP loss during UDP finishing and improve HUD layering. All SPEC gates stand.",
+  "next_checkpoint": "Funded AI worker replacement after a raid, with canonical replay checks. Two-person match and rematch playtesting remain open.",
   "previous_scripted_frame_evidence_date": "2026-09-26 cooperative run; not rerun for scale this checkpoint",
-  "movie": "C:/dev/voidfront/artifacts/economy-movie-2026-09-26.mp4",
+  "movie": "C:/dev/voidfront/artifacts/outcome-offline-movie-2026-11-17.mp4",
   "recovery_results": "C:/dev/voidfront/.voidfront-agent/recovery-results-2026-10-25.json",
   "new_paired_network_match": true,
   "contested_results": "C:/dev/voidfront/.voidfront-agent/contested-results-2026-11-01.json",
   "session_reuse_report": "C:\\dev\\voidfront\\artifacts\\session-reuse-final-2026-11-08\\summary.json",
   "network_report": "C:\\dev\\voidfront\\artifacts\\session-network-final-2026-11-08\\summary.json",
-  "next_step": "Exercise full human match/rematch/offline return; add integrated TCP loss during UDP finishing and improve HUD layering. All SPEC gates stand.",
+  "next_step": "Funded AI worker replacement after a raid, with canonical replay checks. Two-person match and rematch playtesting remain open.",
   "historical_fields_note": "Retained scale/profile/other evidence fields refer to their explicitly dated prior artifacts.",
-  "rematch_results": "C:/dev/voidfront/.voidfront-agent/rematch-results-2026-11-15.json"
+  "rematch_results": "C:/dev/voidfront/.voidfront-agent/rematch-results-2026-11-15.json",
+  "terminal_loss_report": "C:/dev/voidfront/artifacts/outcome-final-terminal-2026-11-17/summary.json",
+  "offline_report": "C:/dev/voidfront/artifacts/outcome-offline-audit-2026-11-17/summary.json",
+  "frozen_package": "C:/dev/voidfront/artifacts/outcome-final-package-2026-11-17/Voidfront.exe"
 }

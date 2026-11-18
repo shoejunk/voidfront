@@ -1,5 +1,41 @@
 # Voidfront progress
 
+## 2026-11-17 21:05 America/Los_Angeles - lobby and match outcome
+
+Baseline `dev` at `6a0148c` includes the new command card and anchor worker
+production. The checkout was clean, two commits ahead of its tracking branch.
+The stop switch, completion file and prior marker were absent. This run will
+exercise TCP lobby loss while two real clients finish a UDP match, improve
+setup and outcome readability, and check the current card in a packaged
+two-player match. Human play and the remaining SPEC gates stay open.
+
+The guest now sees the map, seed, input delay, tick cap and acceptance key
+together on the rematch panel. Setup hides in-game hints. An opaque panel
+keeps health bars and paths outside the result text. When a detached lobby
+match confirms, both roles see that the replay was saved and how to reopen
+setup. The first review caught the previous connection error still showing
+after the successful archive. Both final terminal PNGs show the corrected text.
+
+In two rendered processes, the guest saw TCP close at tick 64 with just 63
+confirmed. UDP subsequently confirmed 64 on both peers. Both archives
+matched every live tick in Debug and Release. The complete contested match
+used the new Foundry buttons, ended at tick 7,152 with player 0 victorious,
+and returned both clients to offline worker control. The final package also
+won and restarted a separate economic-AI match at tick 4,656. Both builds
+passed 12/12 native tests. TESTING.md lists commands, package identities,
+replay and image audits, and the independent review findings.
+Source checkpoints are `8dffef2` and `5cbd1c4`.
+
+Play `artifacts/package/Voidfront.exe`. The frozen final export is
+`artifacts/outcome-final-package-2026-11-17`; its offline victory and restart
+are visible in `artifacts/outcome-offline-movie-2026-11-17.mp4`. The earlier
+contested run used the same native library and the preceding HUD wording.
+Group waypoints and the resource strip still overlap in crowds. Human play,
+balance, production art, reference performance and shipping remain open.
+Next automated increment: have the economic AI replace lost workers through
+the funded anchor command and verify their return to mining. The two-person
+match/rematch playtest remains pending.
+
 ## 2026-11-17 - worker production at the command anchor
 
 The anchor trains a worker for 50 salvage in 100 ticks. It shares the team's

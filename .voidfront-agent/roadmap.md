@@ -1,5 +1,26 @@
 # Continuing roadmap
 
+## 2026-11-17 evening — packaged match and lobby checkpoint
+
+Two clients now exercise the exact TCP disconnect while UDP still has a
+checksum outstanding, save both confirmed archives and display the next
+setup action. The full contested input fixture now buys, refunds and
+researches through the visible Foundry card. See the dated TESTING entry.
+
+Next automated gameplay increment: use the newly available TrainWorker
+anchor command for funded AI worker replacement after a raid. The current
+economic policy counts surviving workers but issues no TrainWorker order.
+Exercise both players with zero or one surviving worker, a paid queue and
+insufficient funds. Check that reservations prevent repeated purchases,
+that the recruit resumes gathering, and that native replays agree. Recheck
+the complete packaged economic-AI match after any policy change.
+
+The human gate still needs two players to run the lobby, contest a match,
+rematch with changed settings and return offline. Record input and camera
+feedback, mouse/keyboard accessibility of terminal actions, and visibility
+of the resource strip and waypoints over crowded units. Reference-hardware
+performance, physical-network play/soak and all production gates remain open.
+
 ## 2026-11-15 current checkpoint - negotiated loopback rematch
 
 The setup screen now supports a persistent two-window loopback lobby. Host

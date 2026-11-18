@@ -1,5 +1,96 @@
 # Verification ledger
 
+## 2026-11-17 evening — lobby loss, command cards and match outcomes
+
+Pinned Godot 4.7.2, templates and godot-cpp passed verification. Both MSVC
+configurations passed 12/12 CTest cases, 15 malformed recording checks and
+seven output-alias checks. The 2,000-tick traces matched across builds and
+ten repeated Release replays. The TCP contract passed 77 checks. Logs are
+`artifacts/outcome-verify-approved-2026-11-17.log` and
+`artifacts/outcome-lobby-contract-2026-11-17.log`. The first sandbox build
+hit MSVC C1902 and the first editor import reported a safe-save error.
+The same pinned tools passed outside the sandbox.
+
+The following command starts two separate rendered clients. Use a fresh output
+directory. The host offers short limits through the lobby and the guest accepts
+with Enter. Each player selects three workers and clicks the Stop button.
+
+```powershell
+python -B tools/run_terminal_loss.py artifacts/my-terminal-loss --resolution 1920x1080 --package artifacts/package/Voidfront.exe
+```
+
+The first round archives at 32 ticks. The second changes seed 7 to 8 and delay
+2 to 3. The fixture holds the host's next poll after tick 64, closes its real
+TCP socket and resumes polling after the guest observes EOF. At that instant
+the guest is still finishing at 64, with 63 confirmed ticks and no archive.
+Both processes subsequently confirm 64 and archive matching recordings. Eight
+native runs per pair replay all four archives and match both live traces.
+These two short rounds each end without a winner. They isolate an outstanding
+final checksum while the host process and UDP endpoint remain available.
+
+The first export passed this check at 1280×720 and 1920×1080 in
+`artifacts/outcome-terminal-2026-11-17` and `artifacts/outcome-terminal-1080p-2026-11-17`.
+An independent review caught a generic connection failure displayed after a
+successful save. The final export passed the revised on-screen save and setup
+checks at 1920×1080 in `artifacts/outcome-final-terminal-2026-11-17`,
+PIDs 38908/46680, ports 56490/56491, final hash `131117b24e23f73a`.
+Its package and replay fingerprints, paired reports, four screenshots, and
+individual replay traces are indexed in that directory's `summary.json`.
+
+The final package also won the offline economic-AI fixture at tick 4,656,
+hash `20cd1c4ff342bba2`, then restarted and resumed AI gathering. The audit
+matched all ticks in one Debug and ten Release replays and rejected 13 altered
+reports. See `artifacts/outcome-offline-audit-2026-11-17/summary.json`.
+The silent `artifacts/outcome-offline-movie-2026-11-17.mp4` contains 596
+frames at 1600×900, 30 fps. The fixture advances eight simulation ticks per
+rendered frame. The inspected end sequence shows the anchor under fire,
+the victory panel and the restored starting base. Encoding and concurrent
+process timings cannot establish frame stability or input latency.
+
+The contested pair used the first export, before the detached-lobby wording
+change. Its direct-launch route exercises the Foundry card for Strider training,
+cancel/refund, plating and Lancer training on both players. The fixture checks
+each button is visible and enabled, clicks its center through Godot input,
+then checks canonical execution, exact resource changes and Foundry feedback.
+It also checks the visible mixed-army heading. The old fixture expected a
+roster string retired by the command-card change.
+
+```powershell
+./tools/run_net_match.ps1 -Out artifacts/my-contested -PackagePath artifacts/outcome-package-2026-11-17/Voidfront.exe -Contested -SuccessReturn
+python -B tools/verify_net_match.py artifacts/my-contested --out artifacts/my-contested-audit
+```
+
+PIDs 8104/28772 confirmed player 0 at tick 7,152, hash `9742de7328f6f34b`.
+Both clients then used R, F1 and a right click to move three workers offline.
+The two retained recordings contain 44 commands and match byte for byte.
+Raw evidence is in `artifacts/outcome-contested-2026-11-17`. The host measured
+365.88 seconds and peak working sets of 251,793,408 and 231,755,776 bytes.
+Other verification workloads overlapped. These process measurements carry
+no representative battle or reference-hardware performance verdict.
+
+The independent replay audit passed 22 complete Debug/Release match replays,
+152 native prefixes, 82 phase snapshots, ten offline-return replay runs and
+35 deliberate corruption rejections. The preceding native tick (7,151) has
+no winner. The shared recording SHA256 is
+`8c4be1ef019b51bb76738f3358106bf38c8906e7f6e49067953e67babfdb28b0`.
+See `artifacts/outcome-contested-audit-2026-11-17/summary.json`.
+
+Independent review compared the old and new offer/outcome PNGs, both
+short-pair reports, recording bytes, native traces, and eight altered
+terminal event sequences. Previously visible health bars now stop at the
+victory panel. The guest can read and accept the new settings on the same
+panel. The review still found health bars crossing the resource strip and
+anchor label in ordinary play, and overlapping numbered group waypoints.
+
+In the published SC2 victory capture, the battlefield dims behind a distinct
+faction emblem and separately framed actions. Voidfront's static panel
+makes the result readable, but restart receives the same emphasis as victory.
+The terminal actions use keys and the active objective remains bright.
+The comparison covers still-image presentation. Human play, input latency,
+animation quality, competitive balance, impairment/soak, production art
+and shipping gates remain open.
+[StarCraft II victory reference](https://interfaceingame.com/screenshots/starcraft-ii-legacy-of-the-void-victory-2/)
+
 ## 2026-11-15 - loopback setup and rematch
 
 `tools/verify.ps1` passed pinned Godot 4.7.2, the recorded godot-cpp SHA,
