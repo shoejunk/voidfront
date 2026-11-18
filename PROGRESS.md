@@ -25,6 +25,10 @@ won and restarted a separate economic-AI match at tick 4,656. Both builds
 passed 12/12 native tests. TESTING.md lists commands, package identities,
 replay and image audits, and the independent review findings.
 Source checkpoints are `8dffef2` and `5cbd1c4`.
+The first reached origin/dev. Automatic approval review rejected the final
+push because authorization to publish the remaining source and evidence to
+the external GitHub repository was unconfirmed. The final source and
+evidence handoff are committed locally, pending explicit publication approval.
 
 Play `artifacts/package/Voidfront.exe`. The frozen final export is
 `artifacts/outcome-final-package-2026-11-17`; its offline victory and restart
