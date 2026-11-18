@@ -38,20 +38,9 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("out", type=Path)
-    parser.add_argument("--package", type=Path, required=True)
-    args = parser.parse_args()
+def run_pair(package, out, flag, timeout, resolution="1280x720"):
+    """Launch the two rendered windows, returning their process IDs and port pair."""
     check_stop()
-    out, package = args.out.resolve(), args.package.resolve(strict=True)
-    fingerprints = dict(package_path=str(package), package_sha256=digest(package),
-                        pck_sha256=digest(package.with_suffix(".pck")),
-                        bridge_sha256=digest(package.with_name("voidfront_bridge.dll")))
-    out.mkdir(parents=True)
-    rounds = [out / "round1", out / "round2"]
-    for folder in rounds:
-        folder.mkdir()
     host = choose_port()
     env = dict(os.environ, APPDATA=str(REPO / "artifacts/godot-profile"))
     start = time.monotonic()
@@ -67,7 +56,7 @@ def main():
                 # Guest deliberately launches with different local values.
                 child = subprocess.Popen(
                     [str(package), "--log-file", str(out / f"p{player}-engine.log"),
-                     "--resolution", "1280x720", "--", "--net-rematch-smoke", f"--player={player}",
+                     "--resolution", resolution, "--", flag, f"--player={player}",
                      f"--lobby-port={host}", f"--report={out}", f"--seed={7 if player == 0 else 99}",
                      f"--delay={2 if player == 0 else 11}"],
                     env=env, stdout=stdout, stderr=stderr, startupinfo=window,
@@ -76,7 +65,7 @@ def main():
                 print(f"Player {player}: PID {child.pid}, UDP {host + player}", flush=True)
             while any(child.poll() is None for child in children):
                 check_stop()
-                if time.monotonic() - start > 1350:
+                if time.monotonic() - start > timeout:
                     raise RuntimeError("Pair exceeded watchdog; logs retained")
                 failed = [child.returncode for child in children if child.returncode not in (None, 0)]
                 if failed:
@@ -89,22 +78,40 @@ def main():
                 if any(line.startswith(("SCRIPT ERROR:", "ERROR:")) and
                        not line.startswith("ERROR: Failed to read the root certificate store.") for line in errors):
                     raise RuntimeError(f"Player {player} engine error; logs retained")
-            for i, folder in enumerate(rounds):
-                reports = [json.loads((folder / f"p{p}.json").read_text(encoding="utf-8")) for p in range(2)]
-                lobby = reports[0]["lobby"]
-                assert all(rep["ok"] and rep["lobby"] == lobby for rep in reports)
-                assert (lobby["seed"], lobby["delay"]) == (7 + i, 2 + i)
-                manifest = dict(fingerprints, pids=[x.pid for x in children], ports=[host, host + 1],
-                                **{k: lobby[k] for k in ("session", "seed", "delay", "ticks")},
-                                contested=False, success_return=False)
-                (folder / "host.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-                print(f"Round {i + 1}: winner {reports[0]['winner']}, tick {reports[0]['final_tick']}", flush=True)
-            print(f"Pair finished in {time.monotonic() - start:.2f}s", flush=True)
+            return [child.pid for child in children], [host, host + 1], time.monotonic() - start
         finally:
             for child in children:
                 if child.poll() is None:
                     child.terminate()
                 child.wait()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("out", type=Path)
+    parser.add_argument("--package", type=Path, required=True)
+    args = parser.parse_args()
+    check_stop()
+    out, package = args.out.resolve(), args.package.resolve(strict=True)
+    fingerprints = dict(package_path=str(package), package_sha256=digest(package),
+                        pck_sha256=digest(package.with_suffix(".pck")),
+                        bridge_sha256=digest(package.with_name("voidfront_bridge.dll")))
+    out.mkdir(parents=True)
+    rounds = [out / "round1", out / "round2"]
+    for folder in rounds:
+        folder.mkdir()
+    pids, ports, elapsed = run_pair(package, out, "--net-rematch-smoke", 1350)
+    for i, folder in enumerate(rounds):
+        reports = [json.loads((folder / f"p{p}.json").read_text(encoding="utf-8")) for p in range(2)]
+        lobby = reports[0]["lobby"]
+        assert all(rep["ok"] and rep["lobby"] == lobby for rep in reports)
+        assert (lobby["seed"], lobby["delay"]) == (7 + i, 2 + i)
+        manifest = dict(fingerprints, pids=pids, ports=ports,
+                        **{k: lobby[k] for k in ("session", "seed", "delay", "ticks")},
+                        contested=False, success_return=False)
+        (folder / "host.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        print(f"Round {i + 1}: winner {reports[0]['winner']}, tick {reports[0]['final_tick']}", flush=True)
+    print(f"Pair finished in {elapsed:.2f}s", flush=True)
 
 
 if __name__ == "__main__":

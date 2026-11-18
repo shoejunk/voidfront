@@ -11,6 +11,10 @@ var tip: RichTextLabel
 var result: Label
 var connection: Label
 var setup: Label
+var message_center := CenterContainer.new()
+var message_panel := PanelContainer.new()
+var message_detail: Label
+var message_actions: Label
 var minimap_obstacles: MultiMesh
 var command_card := preload("res://command_card.gd").new()
 
@@ -34,14 +38,34 @@ func _ready() -> void:
 	tip.add_theme_color_override("default_color", Color("a4b9b6"))
 	add_child(tip)
 	tip.text = "LMB / drag  select    RMB  move    A + click  attack-move    S  stop    H  hold\nCtrl + 0-9  save group    0-9  recall    Ctrl+Shift+number  add to group    Shift+number  add to selection\nF2  select army    arrows  camera    wheel  zoom    R  restart"
-	setup = _label(Vector2(0, 0), 20, Color("eaf1e9"))
-	setup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	setup.size = Vector2(760, 330)
-	result = _label(Vector2(590, 350), 34, Color("f0d19b"))
-	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(command_card)
 	command_card.command_pressed.connect(game._activate_command)
+	# A separate canvas item keeps the opaque panel and its text together above
+	# paths, health bars and all other HUD elements at every window size.
+	add_child(message_center)
+	message_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	message_center.z_index = 1
+	message_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	message_center.hide()
+	message_center.add_child(message_panel)
+	message_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var frame := StyleBoxFlat.new()
+	frame.bg_color = Color("0d1b20")
+	frame.border_color = Color("61c9c6")
+	frame.border_width_top = 2
+	frame.content_margin_left = 24
+	frame.content_margin_right = 24
+	frame.content_margin_top = 22
+	frame.content_margin_bottom = 22
+	message_panel.add_theme_stylebox_override("panel", frame)
+	var lines := VBoxContainer.new()
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_theme_constant_override("separation", 14)
+	message_panel.add_child(lines)
+	setup = _message_label(lines, 30, Color("eaf1e9"))
+	result = _message_label(lines, 34, Color("f0d19b"))
+	message_detail = _message_label(lines, 24, Color("eaf1e9"))
+	message_actions = _message_label(lines, 20, Color("aad9d1"))
 	# Static authoritative terrain is submitted once as a canvas batch. Unit dots
 	# and camera-dependent health bars remain dynamic on every rendered frame.
 	minimap_obstacles = MultiMesh.new()
@@ -66,6 +90,16 @@ func _label(at: Vector2, font_size: int, color: Color) -> Label:
 	add_child(label)
 	return label
 
+func _message_label(parent: VBoxContainer, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(label)
+	return label
+
 func _process(_delta: float) -> void:
 	if not is_instance_valid(game) or game.current.is_empty():
 		return
@@ -73,6 +107,8 @@ func _process(_delta: float) -> void:
 	var view := get_viewport_rect().size
 	var workers := 0
 	var cargo := 0
+	var detail := ""
+	var actions := ""
 	selection.position.y = view.y - (144 if game.economy else 112)
 	tip.position.y = view.y - (120 if game.economy else 88)
 	if not game.economy:
@@ -104,13 +140,7 @@ func _process(_delta: float) -> void:
 			connection.text += "\nWaiting for peer data — simulation paused"
 		elif state == "finishing":
 			connection.text += "\nConfirming final state with peer"
-		elif state == "complete":
-			if game.current.winner == -1: result.text = "SESSION LIMIT REACHED"
-			else: result.text = result.text.get_slice("\n", 0)
-			result.text += "\nR  /  return to offline skirmish"
-			tip.text = "Final state confirmed by both peers.\nR  returns this client to offline play; launch both clients again for a new network session."
 		elif state == "error":
-			result.text = "NETWORK SESSION ENDED\nR  /  return to offline skirmish"
 			connection.text += "\n" + str(game.network_state.get("error", "Unknown network failure"))
 		if not game.network_notice.is_empty(): connection.text += "\n" + game.network_notice
 	if game.economy:
@@ -163,46 +193,57 @@ func _process(_delta: float) -> void:
 	if game.network:
 		var state := str(game.network_state.get("state", ""))
 		if state == "complete":
-			result.text = result.text.get_slice("\n", 0)
+			result.text = "SESSION LIMIT REACHED" if game.current.winner == -1 else result.text.get_slice("\n", 0)
 			if game.lobby:
-				var can_enter: bool = game.lobby.offer.is_empty() if game.lobby_host else not game.lobby.offer.is_empty() and not game.lobby.accepted
-				result.text += "\nEnter  /  rematch    •    R  /  offline" if can_enter else "\nWaiting for peer    •    R  /  offline"
-			else: result.text += "\nR  /  return to offline skirmish"
-			tip.text = "Final state confirmed by both peers."
-			if game.lobby:
-				tip.text += "\n" + game.lobby_text() + "\nEsc  /  close lobby"
-			elif not game.lobby_notice.is_empty(): tip.text += "\n" + game.lobby_notice
+				detail = "Rematch   •   " + game.lobby_text()
+				actions = "Esc  /  close lobby     •     R  /  return to offline skirmish"
+			else:
+				result.text += "\nR  /  return to offline skirmish"
+				detail = game.lobby_notice
 		elif state == "error":
 			result.text = "NETWORK SESSION ENDED\nR  /  return to offline skirmish"
-			tip.text = "R returns this client to offline play.\n" + game.lobby_notice
+			detail = game.lobby_notice
 		else:
 			tip.text = tip.text.replace("R  restart", "Shift+Esc  leave shared match" if game.lobby else "R  available after session")
+	elif game.economy:
+		tip.text = tip.text.replace("R  restart", "R  restart    M  setup")
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
 	command_card.refresh(game, selection.text, workers, cargo)
-	selection.visible = not command_card.visible and not game.setup_open
-	tip.visible = selection.visible
 	setup.visible = game.setup_open
 	if game.setup_open:
-		setup.position = Vector2((view.x - setup.size.x) / 2, view.y / 2 - 150)
 		if game.lobby:
-			setup.text = "V O I D F R O N T   /   %s LOBBY\n\n%s\n\nEsc  /  close lobby" % ["HOST" if game.lobby_host else "GUEST", game.lobby_text()]
+			setup.text = "V O I D F R O N T   /   %s LOBBY" % ("HOST" if game.lobby_host else "GUEST")
+			detail = game.lobby_text()
+			actions = "Esc  /  close lobby"
 		else:
-			setup.text = "V O I D F R O N T   /   SKIRMISH\n\nMAP   THE GLASS REACH  64 x 48  (you: Cairn Compact, south-west)\nOPPONENT   %s      [Tab]\nMATCH SEED   %d      [Left / Right]\n\nEnter  /  play offline     H  /  host 1v1     J  /  join loopback 1v1\n\nDuring offline play:  R  restart   /   M  return here" % ["ECONOMIC AI" if game.setup_ai else "PASSIVE (no opponent actions)", game.setup_seed]
-			if not game.lobby_notice.is_empty(): setup.text += "\n" + game.lobby_notice
+			setup.text = "V O I D F R O N T   /   SKIRMISH"
+			detail = "The Glass Reach   •   64 × 48   •   Cairn Compact, northwest\nOpponent   %s   [Tab]\nMatch seed   %d   [Left / Right]" % ["Economic AI" if game.setup_ai else "Passive", game.setup_seed]
+			actions = "Enter  /  play offline     H  /  host 1v1     J  /  join loopback 1v1"
+			if not game.lobby_notice.is_empty(): actions += "\n" + game.lobby_notice
 		result.text = ""
-	# Layout the final text once. The label and backdrop share a center even
-	# when the outcome or instructions change length on the same frame.
-	var width := minf(view.x - 32, 740 if game.network or game.economy or not game.option_error.is_empty() else 530)
-	result.size = Vector2(width - 32, 0)
-	result.position = Vector2((view.x - result.size.x) / 2, (view.y - result.size.y) / 2)
+	title.visible = not game.setup_open
+	status.visible = not game.setup_open
+	connection.visible = not game.setup_open
+	result.visible = not result.text.is_empty()
+	message_center.visible = setup.visible or result.visible
+	message_detail.text = detail
+	message_detail.visible = not detail.is_empty()
+	message_actions.text = actions
+	message_actions.visible = not actions.is_empty()
+	message_panel.custom_minimum_size.x = minf(view.x - 32, 840)
+	selection.visible = not command_card.visible and not message_center.visible
+	tip.visible = selection.visible
 	queue_redraw()
 	if game.presentation_profiler: game.presentation_profiler.record("hud_process", Time.get_ticks_usec() - profile_start)
 
 func _draw() -> void:
 	var profile_start := Time.get_ticks_usec() if is_instance_valid(game) and game.presentation_profiler else 0
 	var view := get_viewport_rect().size
+	if is_instance_valid(game) and game.setup_open:
+		draw_rect(Rect2(Vector2.ZERO, view), Color(0.01, 0.02, 0.025, 0.72))
+		return
 	var network_panel: bool = is_instance_valid(game) and (game.network or game.economy or not game.option_error.is_empty())
 	var panel_size := Vector2(920, 128) if network_panel else Vector2(548, 80)
 	if is_instance_valid(game) and game.network:
@@ -215,13 +256,6 @@ func _draw() -> void:
 		draw_line(Vector2(16, view.y - 131 - extra_help_height), Vector2(981, view.y - 131 - extra_help_height), Color("4b777b"), 1)
 	if not is_instance_valid(game) or game.current.is_empty():
 		return
-	if game.setup_open:
-		draw_rect(Rect2(Vector2.ZERO, view), Color(0.01, 0.02, 0.025, 0.72))
-		draw_rect(Rect2(Vector2((view.x - 800) / 2, view.y / 2 - 170), Vector2(800, 330)), Color(0.025, 0.047, 0.055, 0.97))
-		draw_rect(Rect2((view.x - 800) / 2, view.y / 2 - 170, 3, 330), Color("61c9c6"))
-		return
-	if not result.text.is_empty():
-		draw_rect(Rect2(result.position, result.size).grow(16), Color(0.025, 0.047, 0.055, 0.94))
 	_draw_order_paths()
 	var map_rect := minimap_rect()
 	var map_scale := map_rect.size / Vector2(game.map_size)

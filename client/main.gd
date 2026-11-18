@@ -147,6 +147,8 @@ var lobby_archive_attempted := false
 var lobby_start_usec := 0
 var rematch_smoke := false
 var rematch_fixture: RefCounted
+var terminal_loss_smoke := false
+var terminal_loss_fixture: RefCounted
 
 func _ready() -> void:
 	var ticks_specified := false
@@ -230,6 +232,7 @@ func _ready() -> void:
 			network_contested_smoke = true
 		elif argument == "--net-success-return-smoke": network_success_return_smoke = true
 		elif argument == "--net-rematch-smoke": rematch_smoke = true
+		elif argument == "--net-terminal-loss-smoke": terminal_loss_smoke = true
 		elif argument.begins_with("--lobby-port="): lobby_port = _integer_option(argument, 1024, 65534)
 		elif argument.begins_with("--seed="): setup_seed = _integer_option(argument, 1, 999999)
 		elif argument == "--network-smoke":
@@ -286,9 +289,10 @@ func _ready() -> void:
 	if profile_tick_specified and not controlled_profile: option_error = "Profile tick requires --profile-controlled."
 	if profile_camera_specified and not controlled_profile: option_error = "Profile camera requires --profile-controlled."
 	if profile_presentation and report_path.is_empty(): option_error = "Presentation profiling requires --report=<path>."
-	if rematch_smoke and (legacy_mode or network or queue_smoke or economy_smoke or production_smoke or match_smoke or exploration_smoke or report_path.is_empty()):
-		option_error = "Rematch smoke requires its own lobby fixture and report path."
-	if (profile_presentation or profile_options) and not option_error.is_empty():
+	var lobby_smoke := rematch_smoke or terminal_loss_smoke
+	if lobby_smoke and (rematch_smoke and terminal_loss_smoke or legacy_mode or network or queue_smoke or economy_smoke or production_smoke or match_smoke or exploration_smoke or report_path.is_empty()):
+		option_error = "Choose one standalone lobby fixture and supply its report directory."
+	if (profile_presentation or profile_options or lobby_smoke) and not option_error.is_empty():
 		push_error(option_error)
 		get_tree().quit(2)
 		return
@@ -320,6 +324,9 @@ func _ready() -> void:
 	if rematch_smoke:
 		rematch_fixture = preload("res://net_rematch_smoke.gd").new(self)
 		rematch_fixture.run.call_deferred()
+	if terminal_loss_smoke:
+		terminal_loss_fixture = preload("res://net_terminal_loss_smoke.gd").new(self)
+		terminal_loss_fixture.run.call_deferred()
 	if queue_smoke:
 		queue_fixture = preload("res://queue_smoke.gd").new(self)
 		queue_fixture.run.call_deferred()

@@ -80,11 +80,11 @@ AI in this mode. Open the game twice on one computer:
 1. Press H at skirmish setup in the first window, then J in the second.
 2. In the host window, use [ and ] for the seed and − and = for input delay.
    Press Enter when the guest connects to offer those settings.
-3. Review the offer in the guest window and press Enter. Both windows then
+3. Review the map, seed, input delay and tick limit in the guest window and press Enter. Both windows then
    connect to the shared match. Orders become available once the game is ready.
 4. After both windows confirm the outcome, the host can change the seed or delay
-   and offer a rematch with Enter. The guest presses Enter to accept the new
-   offer. Each confirmed game has its own replay under the game's Godot user
+   and offer a rematch with Enter. The new settings appear on the guest's
+   outcome panel. Press Enter there to accept. Each confirmed game has its own replay under the game's Godot user
    data folder, in `network-replays`.
 
 Esc closes the lobby while waiting or after a match. Shift+Esc leaves an active
@@ -92,7 +92,9 @@ shared match, while plain Esc still cancels building placement. R returns to
 offline play after a network match ends; M then opens skirmish setup. If the
 default ports are occupied, start both windows with `-- --lobby-port=39002`
 (TCP and UDP on the chosen port, plus UDP on the next port). Both windows must
-be on the same computer.
+be on the same computer. If the lobby disconnects during final confirmation,
+keep the windows open while the shared match finishes. A confirmed session
+saves its replay. Return to skirmish setup to open a new lobby.
 
 Direct launch is also available with matching settings:
 
