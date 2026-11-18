@@ -1,4 +1,5 @@
 extends RefCounted
+const CardAction = preload("res://command_card.gd").Action
 # Ordinary InputEvents in two real clients. Player 0 attacks; player 1 techs and
 # holds a bounded army. All authoritative observations come from bridge snapshots.
 var game
@@ -46,7 +47,8 @@ func phase(name: String) -> void:
 		"paths": game._order_paths().duplicate(true), "hud": hud_state()})
 
 func hud_state() -> Dictionary:
-	return {"selection": game.hud.selection.text, "status": game.hud.status.text,
+	var card = game.hud.command_card
+	return {"selection": card.heading.text if card.is_visible_in_tree() else game.hud.selection.text, "status": game.hud.status.text,
 		"result": game.hud.result.text, "connection": game.hud.connection.text,
 		"tip": game.hud.tip.text, "order_mark_visible": game.order_mark.visible,
 		"order_mark": {"x": game.order_mark.position.x, "z": game.order_mark.position.z}}
@@ -188,13 +190,18 @@ func select_foundry() -> bool:
 	await mouse(MOUSE_BUTTON_LEFT, point_of(foundry()))
 	return check(game.selected_entity.get("kind", -1) == 1 and game.selected_entity.get("player", -1) == player and game.selected.is_empty(), "Click selects the own Foundry")
 
-func economic_key(name: String, code: Key, predicate: Callable, salvage_delta: int, flux_delta: int) -> bool:
+func economic_purchase(name: String, action: int, predicate: Callable, salvage_delta: int, flux_delta: int) -> bool:
+	var button: Button = game.hud.command_card.buttons[action]
+	if not check(button.is_visible_in_tree() and not button.disabled, name + " is available on the Foundry card"): return false
 	phase(name + "_before")
 	var salvage_pre: int = game.current.salvage[player]
 	var flux_pre: int = game.current.flux[player]
 	var sequence_pre: int = game.current.result_sequences[player]
 	label = name
-	await key(code)
+	var center := button.get_global_rect().get_center()
+	game._smoke_mouse(MOUSE_BUTTON_LEFT, center, true)
+	game._smoke_mouse(MOUSE_BUTTON_LEFT, center, false)
+	await frames()
 	if not check(await until(func(): return game.current.result_sequences[player] > sequence_pre and predicate.call(), game.current.tick + 200), name + " executes through lockstep"): return false
 	phase(name + "_after")
 	if not check(game.current.command_results[player] == 1 and int(game.current.salvage[player]) == salvage_pre + salvage_delta and int(game.current.flux[player]) == flux_pre + flux_delta, name + " has exact authoritative resource delta"): return false
@@ -246,10 +253,10 @@ func exercise() -> bool:
 	phase("completed")
 	await capture("completed")
 	if not await select_foundry(): return false
-	if not await economic_key("train", KEY_T, func(): return foundry().production_queue == 1, -int(game.current.strider_cost), 0): return false
-	if not await economic_key("train_second", KEY_T, func(): return foundry().production_queue == 2, -int(game.current.strider_cost), 0): return false
+	if not await economic_purchase("train", CardAction.STRIDER, func(): return foundry().production_queue == 1, -int(game.current.strider_cost), 0): return false
+	if not await economic_purchase("train_second", CardAction.STRIDER, func(): return foundry().production_queue == 2, -int(game.current.strider_cost), 0): return false
 	await capture("production-queued")
-	if not await economic_key("cancel", KEY_X, func(): return foundry().production_queue == 1, int(game.current.strider_cost), 0): return false
+	if not await economic_purchase("cancel", CardAction.CANCEL_UNIT, func(): return foundry().production_queue == 1, int(game.current.strider_cost), 0): return false
 	await capture("refunded")
 	if not check(await until(func(): return own_units(0).size() == 1 and foundry().production_queue == 0, game.current.tick + 300), "Uncancelled Strider spawns"): return false
 	phase("strider_spawned")
@@ -270,17 +277,17 @@ func exercise() -> bool:
 	await capture("flux-mined")
 	if not await stop_workers("miners_stopped_flux"): return false
 	if not await select_foundry(): return false
-	if not await economic_key("research", KEY_G, func(): return int(game.current.research_ticks[player]) > 0, 0, -int(game.current.research_cost)): return false
+	if not await economic_purchase("research", CardAction.PLATING, func(): return int(game.current.research_ticks[player]) > 0, 0, -int(game.current.research_cost)): return false
 	await capture("researching")
 	if not check(await until(func(): return game.current.researched[player], game.current.tick + int(game.current.research_total_ticks) + 100), "Hardened Plating completes"): return false
 	phase("researched")
-	if not await economic_key("lancer", KEY_L, func(): return foundry().production_queue == 1 and foundry().queue_lancers == 1, -int(game.current.lancer_cost), -int(game.current.lancer_flux_cost)): return false
+	if not await economic_purchase("lancer", CardAction.LANCER, func(): return foundry().production_queue == 1 and foundry().queue_lancers == 1, -int(game.current.lancer_cost), -int(game.current.lancer_flux_cost)): return false
 	await capture("lancer-queued")
-	if not check("LANCER" in game.hud.selection.text, "Foundry HUD identifies the front queued Lancer"): return false
+	if not check(game.hud.command_card.is_visible_in_tree() and "LANCER" in game.hud.command_card.heading.text, "Foundry card identifies the front queued Lancer"): return false
 	# Queue reinforcements while the selected building is still unobscured.
 	for n in range(extra_striders):
 		var queue_size: int = foundry().production_queue
-		if not await economic_key("reinforcement_" + str(n), KEY_T, func(): return foundry().production_queue == queue_size + 1, -int(game.current.strider_cost), 0): return false
+		if not await economic_purchase("reinforcement_" + str(n), CardAction.STRIDER, func(): return foundry().production_queue == queue_size + 1, -int(game.current.strider_cost), 0): return false
 	if not check(await until(func(): return own_units(2).size() == 1, game.current.tick + 300), "Lancer spawns through researched production"): return false
 	phase("lancer_spawned")
 	await capture("lancer")
@@ -289,7 +296,8 @@ func exercise() -> bool:
 	await key(KEY_F2)
 	if not check(game.selected.size() == army().size() and army().all(func(u): return u.id in game.selected), "F2 selects all own combat units without workers"): return false
 	await frames()
-	if not check(game.hud.selection.text.begins_with("00 WORKERS / %02d STRIDERS / 01 LANCERS" % (1 + extra_striders)), "HUD reports the selected mixed army roles"): return false
+	var roster := "Strider" if extra_striders == 0 else "%d Striders" % (1 + extra_striders)
+	if not check(game.hud.command_card.is_visible_in_tree() and game.hud.command_card.heading.text.begins_with(roster + "  /  Lancer"), "Visible command card reports the selected mixed army roles"): return false
 	phase("group_queue_before")
 	# Stay clear of the ridges while exercising formation/FIFO semantics; the later
 	# anchor attack crosses the map through the ordinary pathfinding implementation.

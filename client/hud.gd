@@ -199,7 +199,10 @@ func _process(_delta: float) -> void:
 				actions = "Esc  /  close lobby     •     R  /  return to offline skirmish"
 			else:
 				result.text += "\nR  /  return to offline skirmish"
-				detail = game.lobby_notice
+				if not game.lobby_round.is_empty() and not game.lobby_archive_path.is_empty():
+					detail = "Replay saved. The lobby is closed.\nPress M after returning offline to set up another match."
+				else:
+					detail = game.lobby_notice
 		elif state == "error":
 			result.text = "NETWORK SESSION ENDED\nR  /  return to offline skirmish"
 			detail = game.lobby_notice

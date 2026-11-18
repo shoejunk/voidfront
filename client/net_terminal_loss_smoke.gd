@@ -103,7 +103,11 @@ func run_round(index: int, seed: int, delay: int, cap: int) -> bool:
 	if not await until(func(): return not game.lobby_archive_path.is_empty(), "Production archive never appeared"):
 		return false
 	witness("archived-%d" % index)
-	if index == 2 and not await capture("p%d-terminal.png" % player): return false
+	if index == 2:
+		if not await capture("p%d-terminal.png" % player): return false
+		var detail: Label = game.hud.message_detail
+		if not detail.is_visible_in_tree() or not detail.text.contains("Replay saved") or not detail.text.contains("Press M"):
+			return fail("Confirmed match did not show its saved replay and new setup action")
 	var native: Dictionary = game.bridge.network_report()
 	var replay := FileAccess.open(folder.path_join("r%d-p%d.vfr" % [index, player]), FileAccess.WRITE)
 	if not replay or not replay.store_buffer(native.replay): return fail("Cannot retain replay")
