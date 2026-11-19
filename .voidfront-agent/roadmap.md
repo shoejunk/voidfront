@@ -1,5 +1,23 @@
 # Continuing roadmap
 
+## 2026-11-18 — income after a raid
+
+The economic AI now restores its opening workforce with paid anchor orders.
+The packaged counterattack killed a worker, and the AI's replacement mined
+and delivered salvage before the next assault. See the dated TESTING entry.
+
+Next, play out the same decision when the home deposit is exhausted.
+Measure what the AI actually knows about alternate salvage through fog,
+how it uses its last 50 salvage, and whether the surviving or recruited
+worker can reach a fresh deposit. Exercise mirrored positions, depleted
+and reachable sites, and a map with no salvage left before choosing the
+spending or scouting change. Recheck the ordinary offline match and replay.
+
+Two-human lobby, rematch and return-to-offline play still need direct
+observation. At the map edge, the current counterattack capture also shows
+substantial space outside the battlefield. Check camera framing at both
+spawns and zoom limits when returning to presentation work.
+
 ## 2026-11-17 evening — packaged match and lobby checkpoint
 
 Two clients now exercise the exact TCP disconnect while UDP still has a

@@ -1,5 +1,105 @@
 # Verification ledger
 
+## 2026-11-18 — economic AI replaces workers after a raid
+
+The prior Release simulation library fails the new casualty test with
+`funded AI failed to restore three workers through the anchor queue`.
+The preceding packaged victory replay contains zero AI worker orders, even
+though the opponent had two workers and 50 salvage at tick 3,920.
+The prior library, replayer and failure logs are in
+`artifacts/worker-recovery-baseline-2026-11-18`.
+
+MSVC Debug and Release each passed all 12 CTest cases, 15 malformed-replay
+cases and seven output-alias checks. The 2,000-tick traces agreed across
+builds and ten further Release replays. Godot reported
+`4.7.2.stable.official.ed1daf0bf`. The pinned templates and godot-cpp
+`05057de73de4b99f114d36c40d84ca46926c0e25` passed the toolchain checks.
+The initial sandbox build hit C1902 and the first sandboxed import reported
+a safe-save failure. Both operations passed on scoped retries. See
+`artifacts/worker-recovery-verify-approved-2026-11-18.log` and
+`artifacts/worker-recovery-{import,export}-approved-2026-11-18.log`.
+
+The mirrored native test mines the starting bank, applies controlled
+casualties, and runs both players through canonical commands. Each step is
+compared to a second simulation executing wire-decoded orders from the same
+post-casualty state. The funded cases require three living workers per side
+and a recruit delivering salvage. The bank below refers to earned salvage
+before prepayment. The log files are `artifacts/worker-recovery-cases-{debug,release}-2026-11-18.log`.
+
+| Survivors per side | Already paid | Starting bank | Additional worker purchases per side | Final tick |
+| ---: | ---: | ---: | ---: | ---: |
+| 0 | 0 | 50 | 3 | 2,940 |
+| 1 | 1 | 150 | 1 | 3,371 |
+| 1 | 0 | 40 | 2 | 1,720 |
+| 0 | 0 | 40 | 0 | 1,002 |
+
+Both builds produced identical hashes in all four cases. With one survivor
+and 40 salvage, income paid for the first recruit. With no survivors and 40,
+the fixture observed 200 further ticks with no income or orders to buy a
+worker. The army-wipe regression now requires a new living combat unit.
+The lone-miner regression requires each side to produce an additional
+combat unit beyond the original paid Foundry queue.
+
+The following commands exercise the normal packaged victory inputs and
+audit the resulting recording. Use a new audit directory.
+
+```powershell
+./tools/capture.ps1 -Packaged -Victory -Movie -Ticks 10000 -Name ai-recruit
+python -B tools/verify_match_capture.py artifacts/ai-recruit.json --require-ai-recruit --out artifacts/ai-recruit-audit
+```
+
+The retained run used the frozen executable at 1600×900, a 30 fps movie
+clock and eight simulation ticks per rendered frame. Player 1 lost its
+first worker at 3,887, paid 50 salvage at 3,920, and spawned worker 21 at
+4,020. Its Gather order targeted the home deposit. On tick 4,095 the
+deposit dropped by one and the worker gained its first salvage. On tick
+4,233 the worker delivered ten at the anchor and the AI bank rose from
+19 to 29. The raid killed that recruit at 4,278. Player 0 won at 4,512
+with hash `34cab95c7f5d34b3` and restarted. The 44-command replay matched
+every tick in one Debug and ten Release runs. The verifier rejected 13
+altered reports. The independent reviewer also rejected nine targeted
+mutations of the recruit evidence, including debiting the wrong player,
+miscrediting the return, omitting a reservation, and shifting the mine or
+spawn positions by one simulation unit. Those checks caught and corrected
+two weaknesses in the initial verifier.
+
+See `artifacts/worker-recovery-final-audit-2026-11-18/summary.json` and
+`artifacts/worker-recovery-victory-2026-11-18.{json,vfr,mp4}`. The silent
+578-frame movie shows the counterattack and return to base. The snapshot
+and replay identify worker 21. The 22.1-second movie run peaked at
+1,394,348,032 bytes sampled working set while retaining every snapshot and
+encoding video. This measurement is specific to the capture harness.
+
+The second packaged match used `./tools/capture.ps1 -Packaged -Match -MatchRealtime -Ticks 6000 -Name worker-recovery-defeat-2026-11-18`.
+With the normal 20 Hz clock, the AI defeated the single-defender player
+at tick 3,228, hash `af1391df1910ebb6`. Restart restored the opening state
+and AI gathering resumed. All 3,228 ticks of the 21-command recording
+matched one Debug and ten Release replays. Eleven altered reports failed.
+See `artifacts/worker-recovery-defeat-audit-2026-11-18/summary.json`. The
+169.7-second instrumented capture sampled a 963,096,576-byte peak working
+set. The defeat PNG shows the result over an almost entirely fogged view.
+
+Protocol 13 remains in use. The source-derived content ID changed from
+`f6e4114c7278dc98` to `6e815ce77f1ce3af`. Each Release replayer rejected the
+other version's victory VFR with `incompatible replay content`. The previous
+package and replayer are retained. The five playable files in
+`artifacts/package` match `artifacts/worker-recovery-package-2026-11-18`.
+The latter contains Release DLL SHA256
+`6d262700019a2838029ed2731ff26763245773d0c4503543257dad3f4e3b4c11`.
+
+Two separate rendered clients using that export confirmed 32- and 64-tick
+loopback rounds. The guest saw lobby EOF with tick 63 confirmed, then
+confirmed tick 64 and saved its recording. Eight native archive replays
+matched. See `artifacts/worker-recovery-peer-2026-11-18/summary.json`.
+
+Primary and independent inspection found the result text readable, with
+the bright in-match objective still visible. The counterattack camera
+showed fog and a wide strip outside the map while the command card reported
+five selected Striders. The retained SC2 result reference gives the
+outcome and subsequent actions distinct visual treatments. Human
+responsiveness, physical networking, balance and reference frame-time
+budgets remain open.
+
 ## 2026-11-17 evening — lobby loss, command cards and match outcomes
 
 Pinned Godot 4.7.2, templates and godot-cpp passed verification. Both MSVC

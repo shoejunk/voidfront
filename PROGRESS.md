@@ -1,5 +1,44 @@
 # Voidfront progress
 
+## 2026-11-18 21:00 America/Los_Angeles — AI worker replacement
+
+Started from clean `dev` at `1e3e631`, three local commits ahead of `origin/dev`.
+The economic AI can assign a surviving worker back to salvage, but has no order
+to recruit one after casualties. This run will exercise funded and unfunded
+losses on both sides, check anchor reservations and new income, and replay a
+complete packaged match against the revised opponent.
+
+Source checkpoint `49d6974` puts worker replacement ahead of discretionary
+spending. The AI counts living workers and paid anchor jobs toward its
+opening workforce of three. It uses the remaining salvage and capacity when
+issuing same-turn construction and military orders.
+
+The old simulation failed the new regression. Both current builds passed
+12/12 tests. All four mirrored recovery fixtures produced identical Debug
+and Release hashes. With zero survivors and exactly 50 salvage, a recruit
+earned enough to rebuild the workforce. With 40 and no survivor, the bank
+stayed at 40. The paid-queue and underfunded-survivor cases also passed.
+
+In the packaged counterattack, player 1 paid 50 salvage for worker 21.
+The recruit delivered ten salvage to its own anchor at tick 4,233 before
+dying at 4,278. Player 0 won at tick 4,512 and restarted. Eleven native
+replays matched the full recording. Independent review caught missing
+bank-ownership and service-position checks in the first verifier. The
+corrected verifier rejected all nine targeted alterations. In a second
+packaged match on the normal 20 Hz clock, the AI won at tick 3,228,
+restarted and resumed gathering. Its eleven native replays also matched.
+
+Play `artifacts/package/Voidfront.exe`. The tested export is frozen in
+`artifacts/worker-recovery-package-2026-11-18`. The dated TESTING entry
+lists the replay audit, movie and 32/64-tick two-client compatibility
+check. Next, measure the AI's spending and scouting decisions when home
+salvage runs out. Direct human matches, reference-hardware budgets and
+the remaining production gates are open.
+
+The remote branch still pointed to `8dffef2` when checked this run.
+The local branch includes the three earlier commits that were awaiting
+publication approval.
+
 ## 2026-11-17 21:05 America/Los_Angeles - lobby and match outcome
 
 Baseline `dev` at `6a0148c` includes the new command card and anchor worker
