@@ -93,6 +93,84 @@ def queue_investment(site, skip=0):
     return [50 * (count - skip - lancers) + 75 * lancers, 25 * lancers]
 
 
+def audit_ai_recruits(rows, commands):
+    """Follow the opponent's paid anchor queue from each order to the individual worker."""
+    anchor = next(s for s in rows[0]['structures'] if s['player'] == 1 and s['kind'] == 0)
+    anchor_index = anchor['id'] - 1
+    def at_service_point(unit, site, distance):
+        dx, dz = abs(unit['x'] - site['x']), abs(unit['z'] - site['z'])
+        return dx in (0, distance) and dz in (0, distance) and max(dx, dz) == distance
+
+    def returned_cargo(before, after, kind):
+        return sum(u['cargo'] for u in before['units'] if u['player'] == 1 and u['hp'] > 0 and
+                   u['returning'] and u['cargo_kind'] == kind and after['units'][u['id']-1]['cargo'] == 0)
+
+    target = sum(u['player'] == 1 and u['kind'] == 1 for u in rows[0]['units'])
+    by_tick = {}
+    for command in commands:
+        if command['player'] == 1:
+            by_tick.setdefault(command['tick'], []).append(command)
+    orders, pending, recruits = [], [], {}
+    for before, after in zip(rows, rows[1:]):
+        tick = before['tick']
+        site = before['structures'][anchor_index]
+        turn = by_tick.get(tick, [])
+        purchases = sum(c['order'] in (6, 7, 8, 9, 10, 13) for c in turn)
+        for command in turn:
+            if command['order'] == 13:
+                living = sum(u['player'] == 1 and u['kind'] == 1 and u['hp'] > 0 for u in before['units'])
+                require(command['units'] == [anchor['id']] and site['hp'] > 0, 'AI recruited at wrong structure')
+                require(living + len(pending) < target and before['salvage'][1] >= before['worker_cost'],
+                        'AI recruit already covered or unaffordable')
+                job = dict(order_tick=tick, living=living, already_paid=len(pending), salvage=before['salvage'][1])
+                if purchases == 1:
+                    require(after['salvage'][1] == before['salvage'][1] + returned_cargo(before, after, 0) - before['worker_cost'],
+                            'AI worker purchase did not debit owner')
+                    job['paid_salvage'] = before['worker_cost']
+                pending.append(job)
+                orders.append(job)
+            elif command['order'] == 4:
+                for uid in command['units']:
+                    if uid in recruits:
+                        u = after['units'][uid-1]
+                        if before['units'][uid-1]['hp'] > 0 and u['order'] == 4 and u['resource_id'] > 0:
+                            deposit = after['deposits'][u['resource_id']-1]
+                            require((command['x'], command['z']) == (deposit['x'], deposit['z']), 'AI gather deposit')
+                            recruits[uid].setdefault('gather_tick', tick)
+        for u in after['units'][len(before['units']):]:
+            if u['player'] == 1 and u['kind'] == 1:
+                require(pending and site['production_queue'] > 0 and at_service_point(u, site, 352),
+                        'AI worker birth without paid anchor exit')
+                job = pending.pop(0)
+                job.update(unit=u['id'], birth_tick=after['tick'])
+                recruits[u['id']] = job
+        current_site = after['structures'][anchor_index]
+        if not current_site['hp']:
+            pending.clear()
+        require(len(pending) == current_site['production_queue'], 'AI worker reservation and replay disagree')
+        for uid, job in recruits.items():
+            if uid > len(before['units']) or 'gather_tick' not in job:
+                continue
+            old, new = before['units'][uid-1], after['units'][uid-1]
+            if old['hp'] > 0 and new['cargo'] > old['cargo'] and new['order'] == 4:
+                deposit_index = new['resource_id']-1
+                require(0 <= deposit_index < len(before['deposits']), 'AI miner has no deposit')
+                deposit = after['deposits'][deposit_index]
+                require(at_service_point(old, deposit, 224) and new['cargo'] == old['cargo']+1 and new['cargo_kind'] == deposit['kind'] and
+                        deposit['remaining'] < before['deposits'][deposit_index]['remaining'], 'AI miner extraction')
+                job.setdefault('mined_tick', after['tick'])
+            if ('mined_tick' in job and old['hp'] > 0 and old['returning'] and old['cargo'] > 0 and new['cargo'] == 0
+                    and not purchases):
+                require(site['hp'] > 0 and at_service_point(old, site, 352), 'AI worker delivery outside anchor')
+                bank = ('salvage', 'flux')[old['cargo_kind']]
+                delivered = returned_cargo(before, after, old['cargo_kind'])
+                require(after[bank][1] - before[bank][1] == delivered, 'AI worker delivery credited to wrong bank')
+                job.setdefault('delivery', dict(tick=after['tick'], kind=old['cargo_kind'], amount=old['cargo']))
+    require(any('paid_salvage' in job and 'delivery' in job for job in orders),
+            'missing recruited AI worker with a verified debit and delivery')
+    return orders
+
+
 def resource_inventory(row, starting_units, forfeited=(0, 0)):
     result = [sum(row['salvage']) + forfeited[0], sum(row['flux']) + forfeited[1]]
     for deposit in row['deposits']:
@@ -247,12 +325,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('report', type=Path)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--require-ai-recruit', action='store_true',
+                        help='Require a funded AI worker who gathers and delivers a load after a casualty.')
     args = parser.parse_args()
     require(not (ROOT/'.voidfront-agent/STOP').exists(), 'STOP')
     report = json.loads(args.report.read_text(encoding='utf-8'))
     raw = Path(report['replay_path']).read_bytes()
     commands = commands_from_replay(raw, report)
     summary = audit(report, commands)
+    if args.require_ai_recruit:
+        summary['ai_worker_recovery'] = audit_ai_recruits(report['snapshots'], commands)
     summary['tier_two_regressions'] = tier_two_regressions()
     if report['mode'] == 'victory': summary['role_selection_events'] = audit_roles(report, commands)
     rejected = []

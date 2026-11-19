@@ -681,10 +681,24 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
             if (!builder) builder=&u;
             if (foundry && u.order==Order::Build && u.build_id==foundry->id) constructing=true;
         }
+        // Restore the opening workforce. Paid anchor jobs already cover a loss,
+        // even while a completed worker is waiting for a clear exit.
+        constexpr uint32_t target_workers=3;
+        int32_t available_salvage=sim.salvage(player);
+        const uint32_t reserved=sim.population_reserved(player);
+        uint32_t population=sim.population_used(player)+reserved;
+        size_t roster=sim.units().size()+reserved+sim.population_reserved(1-player);
+        if (worker_count+anchor->production_queue<target_workers && available_salvage>=kWorkerCost &&
+            anchor->production_queue<kProductionQueueLimit && population<kPopulationCap && roster<kLifetimeUnitLimit) {
+            emit(Order::TrainWorker,{anchor->id});
+            available_salvage-=kWorkerCost;
+            ++population;
+            ++roster;
+        }
         uint32_t assigned_builder=0;
         if (builder && foundry && foundry->build_ticks<kBuildTicks && !constructing) {
             emit(Order::Build,{builder->id},foundry->x,foundry->z); assigned_builder=builder->id;
-        } else if (builder && !foundry && sim.salvage(player)>=kFoundryCost) {
+        } else if (builder && !foundry && available_salvage>=kFoundryCost) {
             // Prefer a forward site away from the mining lane. Enumerate a
             // bounded anchor-linked fallback if units or ruins occupy that site.
             const int direction=player==0?1:-1;
@@ -737,15 +751,14 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
             else if (u.cargo>0) emit(Order::ReturnCargo,{u.id});
         }
         if (foundry && foundry->build_ticks>=kBuildTicks && foundry->production_queue<kProductionQueueLimit &&
-            sim.salvage(player)>=kStriderCost && sim.population_used(player)+sim.population_reserved(player)<kPopulationCap &&
-            sim.units().size()+sim.population_reserved(0)+sim.population_reserved(1)<kLifetimeUnitLimit)
+            available_salvage>=kStriderCost && population<kPopulationCap && roster<kLifetimeUnitLimit)
         {
             // After Hardened Plating, keep roughly one Lancer behind every two Striders when flux allows.
             int striders=0,lancers=0;
             for (const auto& u:sim.units()) if (u.hp>0 && u.player==player) {
                 if (u.kind==UnitKind::Strider) ++striders; else if (u.kind==UnitKind::Lancer) ++lancers;
             }
-            const bool want_lancer=sim.researched(player) && sim.flux(player)>=kLancerFluxCost && sim.salvage(player)>=kLancerCost && lancers*2<=striders;
+            const bool want_lancer=sim.researched(player) && sim.flux(player)>=kLancerFluxCost && available_salvage>=kLancerCost && lancers*2<=striders;
             emit(want_lancer?Order::TrainLancer:Order::TrainStrider,{foundry->id});
         }
         std::vector<uint32_t> army;

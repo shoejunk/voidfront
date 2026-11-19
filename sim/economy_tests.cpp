@@ -1,5 +1,6 @@
 #include "voidfront_sim.hpp"
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include <stdexcept>
 using namespace vf;
@@ -131,8 +132,99 @@ void replay_and_apply_time() {
     check(early.hash()==late.hash(),"economy replay diverged");
     std::cout<<"economy deterministic hash "<<early.hash()<<'\n';
 }
+
+void worker_replacement(int survivors,int prepaid,int starting_salvage) {
+    Sim sim(42,3,Map::Economy);
+    std::array<uint32_t,2> sequences{};
+    // Mine the bank with one worker on each side. Preserve these balances and any
+    // paid anchor work when applying the same casualties to the rotated bases.
+    for (uint8_t p=0;p<2;++p) {
+        const auto& mine=sim.deposits()[p];
+        check(sim.submit({sim.tick(),++sequences[p],p,Order::Gather,{3u*p+1},mine.x,mine.z}),"replacement funding order failed");
+    }
+    while (sim.salvage(0)<starting_salvage && sim.tick()<8000) sim.step();
+    for (uint8_t p=0;p<2;++p) {
+        check(sim.salvage(p)==starting_salvage,"replacement fixture did not earn the starting bank");
+        for (int i=0;i<prepaid;++i)
+            check(sim.submit({sim.tick(),++sequences[p],p,Order::TrainWorker,{sim.structures()[p].id}}),"prepaid worker order failed");
+    }
+    const size_t starting_roster=sim.units().size();
+    for (auto& u:const_cast<std::vector<Unit>&>(sim.units()))
+        if (!survivors || u.id!=3u*u.player+2) u.hp=0;
+    sim.step();
+    for (uint8_t p=0;p<2;++p)
+        check(sim.population_used(p)==survivors && sim.structures()[p].production_queue==prepaid &&
+            sim.salvage(p)==starting_salvage-prepaid*kWorkerCost,"casualties changed the bank or paid anchor work");
+
+    auto replay=sim;
+    std::array<int,2> purchases{};
+    std::array<bool,2> recruit_delivered{};
+    const bool stranded=survivors==0 && prepaid==0 && starting_salvage<kWorkerCost;
+    for (int tick=0;tick<(stranded?200:3500);++tick) {
+        std::array<uint32_t,2> returning_recruit{};
+        for (const auto& u:sim.units())
+            if (u.id>starting_roster && u.kind==UnitKind::Worker && u.order==Order::Gather &&
+                u.returning && u.cargo>0 && u.cargo_kind==0) returning_recruit[u.player]=u.id;
+        const std::array<int,2> previous_bank{sim.salvage(0),sim.salvage(1)};
+        for (uint8_t p=0;p<2;++p) {
+            int planned_spending=0;
+            for (const auto& c:make_ai_commands(sim,p,sequences[p])) {
+                if (c.order==Order::TrainWorker) {
+                    check(previous_bank[p]>=kWorkerCost,"AI ordered an unfunded worker");
+                    check(++purchases[p]<=3-survivors-prepaid,"AI purchased workers already alive or reserved");
+                    check(c.units==std::vector<uint32_t>{sim.structures()[p].id},"AI trained at the wrong anchor");
+                    planned_spending+=kWorkerCost;
+                } else if (c.order==Order::Build) {
+                    const bool resuming=std::any_of(sim.structures().begin(),sim.structures().end(),[&](const Structure& b) {
+                        return b.player==p && b.hp>0 && b.kind==StructureKind::Foundry && b.x==c.x && b.z==c.z;
+                    });
+                    if (!resuming) planned_spending+=kFoundryCost;
+                } else if (c.order==Order::TrainStrider || c.order==Order::TrainLancer) {
+                    planned_spending+=c.order==Order::TrainStrider?kStriderCost:kLancerCost;
+                }
+                Command decoded;
+                check(c.player==p && deserialize_command(serialize_command(c),decoded) &&
+                    sim.submit(c) && replay.submit(decoded),"replacement command wire replay failed");
+            }
+            check(planned_spending<=previous_bank[p],"AI allocated the same salvage to multiple purchases");
+        }
+        sim.step(); replay.step();
+        check(sim.state_hash()==replay.state_hash(),"worker replacement replay diverged");
+        check(purchases[0]==purchases[1] && sim.salvage(0)==sim.salvage(1) &&
+            sim.structures()[0].production_queue==sim.structures()[1].production_queue,
+            "mirrored worker replacement diverged");
+        for (uint8_t p=0;p<2;++p) {
+            const auto id=returning_recruit[p];
+            if (id && sim.units()[id-1].cargo==0 && sim.salvage(p)>previous_bank[p]) recruit_delivered[p]=true;
+        }
+        if (recruit_delivered[0] && recruit_delivered[1] && purchases[0]==3-survivors-prepaid &&
+            sim.structures()[0].production_queue==0) break;
+    }
+    for (uint8_t p=0;p<2;++p) {
+        if (stranded) {
+            check(!purchases[p] && sim.units().size()==starting_roster && sim.salvage(p)==starting_salvage,
+                "unfunded, wiped economy created workers or income");
+        } else {
+            const auto living=std::count_if(sim.units().begin(),sim.units().end(),[p](const Unit& u) {
+                return u.player==p && u.hp>0 && u.kind==UnitKind::Worker;
+            });
+            check(living==3 && purchases[p]==3-survivors-prepaid && !sim.structures()[p].production_queue,
+                "funded AI failed to restore three workers through the anchor queue");
+            check(recruit_delivered[p],"AI recruit never mined and delivered salvage");
+        }
+    }
+    std::cout<<"worker recovery survivors="<<survivors<<" prepaid="<<prepaid<<" bank="<<starting_salvage
+             <<" purchases="<<purchases[0]<<"/"<<purchases[1]<<" tick="<<sim.tick()<<" hash="<<sim.state_hash()<<'\n';
+}
 }
 int main() {
-    try { validation(); interruption_and_depletion(); construction_and_routes(); occupied_service_goal(); competing_purchases(); replay_and_apply_time(); std::cout<<"economy tests passed\n"; }
+    try {
+        validation(); interruption_and_depletion(); construction_and_routes(); occupied_service_goal(); competing_purchases(); replay_and_apply_time();
+        worker_replacement(0,0,kWorkerCost);
+        worker_replacement(1,1,3*kWorkerCost);
+        worker_replacement(1,0,kWorkerCost-kCargoCapacity);
+        worker_replacement(0,0,kWorkerCost-kCargoCapacity);
+        std::cout<<"economy tests passed\n";
+    }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }

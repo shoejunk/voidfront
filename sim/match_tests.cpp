@@ -130,7 +130,10 @@ void economic_match(bool duel) {
             for (const auto& u:sim.units()) if (u.hp>0 && u.kind!=UnitKind::Worker) ++army[u.player];
             fielded_armies=fielded_armies || (army[0]>0 && army[1]>0);
             if (fielded_armies && !wipe_roster && army[0]==0 && army[1]==0) wipe_roster=sim.units().size();
-            if (wipe_roster && sim.units().size()>wipe_roster) recovered=true;
+            if (wipe_roster && !recovered) {
+                recovered=std::any_of(sim.units().begin()+wipe_roster,sim.units().end(),
+                    [](const Unit& unit) { return unit.kind!=UnitKind::Worker && unit.hp>0; });
+            }
         }
         if (sim.winner()!=-1) { finish=sim.tick(); break; }
     }
@@ -175,7 +178,16 @@ void lone_worker_recovery() {
         u.path.clear(); u.detour.clear(); u.queue.clear();
     }
     const auto roster=sim.units().size();
-    const auto existing_reservations=sim.population_reserved(0)+sim.population_reserved(1);
+    std::array<uint32_t,2> paid_army{};
+    for (const auto& b:sim.structures()) if (b.kind==StructureKind::Foundry) paid_army[b.player]+=b.production_queue;
+    const auto armies_rebuilt=[&]() {
+        std::array<uint32_t,2> born{};
+        for (size_t i=roster;i<sim.units().size();++i) {
+            const auto& unit=sim.units()[i];
+            if (unit.kind!=UnitKind::Worker) ++born[unit.player];
+        }
+        return born[0]>paid_army[0] && born[1]>paid_army[1];
+    };
     const int initial_salvage[2]{sim.salvage(0),sim.salvage(1)},initial_flux[2]{sim.flux(0),sim.flux(1)};
     bool delivered[2]{},flux_returned[2]{};
     auto replay=sim;
@@ -196,11 +208,11 @@ void lone_worker_recovery() {
             a.returning==b.returning && sim.salvage(0)==sim.salvage(1) && sim.flux(0)==sim.flux(1),
             "lone-worker recovery lost rotational symmetry");
         if (delivered[0] && delivered[1] && flux_returned[0] && flux_returned[1] &&
-            sim.units().size()>roster+existing_reservations) break;
+            armies_rebuilt()) break;
     }
     check(flux_returned[0] && flux_returned[1],"recovery discarded partial flux cargo");
     check(delivered[0] && delivered[1],"sole flux workers never resumed salvage income");
-    check(sim.units().size()>roster+existing_reservations,"sole workers failed to fund replacement production");
+    check(armies_rebuilt(),"recovering economies failed to fund new military production");
 }
 // Bias survey: the same mirrored AI duel under several seeds. Reported, not
 // asserted: it measures whether a side wins regardless of seed.
