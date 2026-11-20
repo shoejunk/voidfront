@@ -44,7 +44,10 @@ struct Structure {
     bool spawn_blocked=false;
 };
 // kind 0 is common salvage, kind 1 is contested flux.
-struct Deposit { uint32_t id=0; int32_t x=0,z=0,remaining=2000; uint8_t kind=0; };
+struct Deposit {
+    uint32_t id=0; int32_t x=0,z=0,remaining=2000; uint8_t kind=0;
+    uint8_t depletion_seen_by=0; // Bit p stays set after player p sees this finite deposit empty.
+};
 struct Command {
     uint32_t tick = 0, sequence = 0;
     uint8_t player = 0;
@@ -101,6 +104,7 @@ public:
     bool blocked(int x, int z) const;
     // Cell visibility: 0 unexplored, 1 explored, 2 currently visible.
     uint8_t visibility(uint8_t player, int x, int z) const;
+    bool knows_depleted(uint8_t player,const Deposit& deposit) const;
     const std::vector<uint8_t>& vision(uint8_t player) const { return vision_[player]; }
     uint64_t hash() const;
     // Executed authoritative state only; independent of future input arrival order.

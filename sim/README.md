@@ -135,4 +135,4 @@ crossing. Gathered cargo keeps its kind and is credited to the matching bank; or
 deposit delivers that cargo first. `Research=9` takes exactly one owned completed Foundry ID and zero x/z, charges 50 flux and
 runs a 200-tick player-wide Hardened Plating timer (rejects: InsufficientFlux, AlreadyResearched). Striders gain +50 hp when it
 completes and spawn with it afterwards. Flux banks, research state, deposit kind and cargo kind are hashed (protocol 10).
-Combat-map lockstep rejects Research like other structure orders. The AI mines explored flux with one worker and researches.
+Combat-map lockstep rejects Research like other structure orders. The AI assigns a worker to flux when the deposit is visible and another worker can gather salvage. A miner can continue an assigned trip through fog. Each team remembers deposits it has seen empty. On Glass Reach, an AI whose home salvage is exhausted can scout the opposing start before committing workers to its deposit.

@@ -31,6 +31,9 @@ const std::vector<nav::Rect>& map_terrain(Map map) {
     throw std::invalid_argument("unsupported map");
 }
 namespace {
+nav::Point home_salvage(uint8_t player) {
+    return {(player==0?7:56)*kScale+kScale/2,(player==0?7:40)*kScale+kScale/2};
+}
 nav::Rect terrain_bounds(Map map) { return {kScale,kScale,(map_width(map)-1)*kScale,(map_height(map)-1)*kScale}; }
 constexpr int unit_radius = 64, movement_speed = 32;
 int64_t distance2(const Unit& a, const Unit& b) {
@@ -85,7 +88,8 @@ Sim::Sim(uint32_t seed, uint32_t count, Map map) : map_(map), rng_(seed ? seed :
     if (map==Map::Economy) {
         for (uint8_t p=0;p<2;++p) {
             structures_.push_back({uint32_t(p)+1,p,StructureKind::Anchor,(p==0?4:59)*kScale+128,(p==0?12:35)*kScale+128});
-            deposits_.push_back({uint32_t(p)+1,(p==0?7:56)*kScale+128,(p==0?7:40)*kScale+128,2000});
+            const auto mine=home_salvage(p);
+            deposits_.push_back({uint32_t(p)+1,mine.x,mine.z,2000});
             for (int n=0;n<3;++n) {
                 Unit u;
                 u.id=static_cast<uint32_t>(units_.size())+1; u.player=p; u.kind=UnitKind::Worker;
@@ -125,6 +129,10 @@ uint8_t Sim::visibility(uint8_t player,int x,int z) const {
     if (player>=2 || x<0 || z<0 || x>=width() || z>=height()) return 0;
     return map_==Map::Economy?vision_[player][z*width()+x]:2;
 }
+bool Sim::knows_depleted(uint8_t player,const Deposit& deposit) const {
+    return player<2 && ((deposit.depletion_seen_by & (1u<<player)) ||
+        (visibility(player,deposit.x/kScale,deposit.z/kScale)==2 && deposit.remaining==0));
+}
 void Sim::update_vision() {
     if (map_!=Map::Economy) return;
     for (auto& cells:vision_) {
@@ -142,6 +150,9 @@ void Sim::update_vision() {
     // Shared circular team vision. Ridges block movement, not sight in this increment.
     for (const auto& u:units_) if (u.hp>0) reveal(u.player,u.x,u.z,u.kind==UnitKind::Worker?7:9);
     for (const auto& b:structures_) if (b.hp>0) reveal(b.player,b.x,b.z,b.kind==StructureKind::Anchor?10:7);
+    for (auto& d:deposits_) if (d.remaining==0)
+        for (uint8_t p=0;p<2;++p) if (visibility(p,d.x/kScale,d.z/kScale)==2)
+            d.depletion_seen_by|=static_cast<uint8_t>(1u<<p);
 }
 
 bool Sim::blocked(int x, int z) const {
@@ -644,7 +655,7 @@ uint64_t Sim::state_hash() const {
     for (const auto& b:structures_) { add(b.id); add(b.player); add(static_cast<uint8_t>(b.kind)); add(b.x); add(b.z); add(b.hp); add(b.build_ticks);
         add(b.production_queue); add(b.queue_lancers); add(b.production_ticks); add(b.spawn_blocked); }
     add(deposits_.size());
-    for (const auto& d:deposits_) { add(d.id); add(d.x); add(d.z); add(d.remaining); add(d.kind); }
+    for (const auto& d:deposits_) { add(d.id); add(d.x); add(d.z); add(d.remaining); add(d.kind); add(d.depletion_seen_by); }
     for (const auto& player : vision_) for (auto cell : player) add(cell);
     return h;
 }
@@ -676,19 +687,47 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         const Unit* builder=nullptr;
         bool constructing=false;
         uint32_t worker_count=0;
-        for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker) {
+        bool army_can_scout=foundry && foundry->production_queue>0 && !foundry->spawn_blocked;
+        for (const auto& u:sim.units()) if (u.hp>0 && u.player==player) {
+            if (u.kind!=UnitKind::Worker) { army_can_scout=true; continue; }
             ++worker_count;
             if (!builder) builder=&u;
             if (foundry && u.order==Order::Build && u.build_id==foundry->id) constructing=true;
         }
-        // Restore the opening workforce. Paid anchor jobs already cover a loss,
-        // even while a completed worker is waiting for a clear exit.
-        constexpr uint32_t target_workers=3;
+        // The only alternate salvage on this map lies at the opposite start.
+        // Its position is public. Its reserve must be observed by this team.
+        const auto alternate=home_salvage(1-player);
+        bool alternate_depleted=false;
+        std::vector<const Deposit*> visible_salvage;
+        int32_t salvage_to_mine=0;
+        for (const auto& d:sim.deposits()) {
+            if (d.x==alternate.x && d.z==alternate.z) alternate_depleted=sim.knows_depleted(player,d);
+            if (sim.visibility(player,d.x/kScale,d.z/kScale)==2 && d.kind==0 && d.remaining>0) {
+                visible_salvage.push_back(&d);
+                salvage_to_mine+=d.remaining;
+            }
+        }
+        const bool needs_scout=visible_salvage.empty() && !alternate_depleted;
+        // Preserve one worker's cost for the army's sighting. If neither an
+        // army nor workers can scout, use one recruit to look for new income.
+        const uint32_t workforce=worker_count+anchor->production_queue;
+        // An existing miner can finish a small remnant. Add each further
+        // worker only if another worker cost remains in observed salvage.
+        uint32_t target_workers=needs_scout && !army_can_scout?1u:0u;
+        if (salvage_to_mine>0) target_workers=std::min(3,1+salvage_to_mine/kWorkerCost);
         int32_t available_salvage=sim.salvage(player);
+        const bool foundry_can_train=foundry && foundry->build_ticks>=kBuildTicks && foundry->production_queue<kProductionQueueLimit;
+        // The anchor sees the home patch. Once the alternate is accounted
+        // for too, keep the military purchase if a first miner could never fund it.
+        const bool all_salvage_known=alternate_depleted || sim.visibility(player,alternate.x/kScale,alternate.z/kScale)==2;
+        if (!workforce && all_salvage_known && foundry_can_train && !foundry->spawn_blocked &&
+            available_salvage>=kStriderCost && available_salvage-kWorkerCost+salvage_to_mine<kStriderCost)
+            target_workers=0;
+        if (needs_scout && !workforce && army_can_scout) available_salvage-=std::min(available_salvage,kWorkerCost);
         const uint32_t reserved=sim.population_reserved(player);
         uint32_t population=sim.population_used(player)+reserved;
         size_t roster=sim.units().size()+reserved+sim.population_reserved(1-player);
-        if (worker_count+anchor->production_queue<target_workers && available_salvage>=kWorkerCost &&
+        if (workforce<target_workers && available_salvage>=kWorkerCost &&
             anchor->production_queue<kProductionQueueLimit && population<kPopulationCap && roster<kLifetimeUnitLimit) {
             emit(Order::TrainWorker,{anchor->id});
             available_salvage-=kWorkerCost;
@@ -712,7 +751,23 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
                 if (placed) break;
             }
         }
-        // Once the Foundry stands, dedicate one worker to explored flux only when
+        const Unit* scout=nullptr;
+        if (needs_scout) {
+            const int32_t approach_z=alternate.z+(player==0?-3:3)*kScale;
+            for (const auto& u:sim.units()) {
+                if (u.hp<=0 || u.player!=player || u.kind!=UnitKind::Worker || u.id==assigned_builder ||
+                    u.order==Order::Build || u.order==Order::ReturnCargo || u.returning || u.cargo>0) continue;
+                // A worker already on a valid salvage trip provides its own sight.
+                if (u.order==Order::Gather && u.resource_id && sim.deposits()[u.resource_id-1].kind==0) continue;
+                if (!scout) scout=&u;
+                if (u.order==Order::Move && u.goal_x==alternate.x && u.goal_z==approach_z) {
+                    scout=&u; break;
+                }
+            }
+            if (scout && (scout->order!=Order::Move || scout->goal_x!=alternate.x || scout->goal_z!=approach_z))
+                emit(Order::Move,{scout->id},alternate.x,approach_z);
+        }
+        // Once the Foundry stands, dedicate one worker to visible flux only when
         // another worker remains for salvage. The last survivor must retain the
         // common-resource income needed to replace an army after casualties.
         uint32_t flux_worker=0;
@@ -720,21 +775,21 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         const Deposit* flux_site=nullptr;
         if (foundry && foundry->build_ticks>=kBuildTicks) {
             for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker && u.order==Order::Gather &&
-                u.resource_id && sim.deposits()[u.resource_id-1].kind==1 && sim.deposits()[u.resource_id-1].remaining>0) flux_mined=true;
+                u.resource_id && sim.deposits()[u.resource_id-1].kind==1 && !sim.knows_depleted(player,sim.deposits()[u.resource_id-1])) flux_mined=true;
             int64_t best=std::numeric_limits<int64_t>::max();
-            for (const auto& d:sim.deposits()) if (d.kind==1 && d.remaining>0 && sim.visibility(player,d.x/kScale,d.z/kScale)>0) {
+            for (const auto& d:sim.deposits()) if (sim.visibility(player,d.x/kScale,d.z/kScale)==2 && d.kind==1 && d.remaining>0) {
                 const int64_t dx=int64_t(anchor->x)-d.x,dz=int64_t(anchor->z)-d.z;
                 if (dx*dx+dz*dz<best) { best=dx*dx+dz*dz; flux_site=&d; }
             }
             if (worker_count>1 && !flux_mined && flux_site) for (const auto& u:sim.units())
-                if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker && u.id!=assigned_builder && u.order!=Order::Build) {
+                if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker && &u!=scout && u.id!=assigned_builder && u.order!=Order::Build) {
                     flux_worker=u.id; emit(Order::Gather,{u.id},flux_site->x,flux_site->z); break;
                 }
             if (!sim.researched(player) && !sim.research_ticks(player) && sim.flux(player)>=kResearchFluxCost)
                 emit(Order::Research,{foundry->id});
         }
         for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker &&
-            u.id!=assigned_builder && u.id!=flux_worker && u.order!=Order::Build && u.order!=Order::ReturnCargo) {
+            &u!=scout && u.id!=assigned_builder && u.id!=flux_worker && u.order!=Order::Build && u.order!=Order::ReturnCargo) {
             // Reassign an existing sole flux miner once; Gather's mixed-cargo
             // rule delivers its flux first, then resumes the salvage deposit.
             // Existing salvage trips keep their goals and work progress.
@@ -743,15 +798,14 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
             if (u.order==Order::Gather && !sole_flux_miner) continue;
             const Deposit* nearest=nullptr;
             int64_t distance=std::numeric_limits<int64_t>::max();
-            for (const auto& d:sim.deposits()) if (d.kind==0 && d.remaining>0 && sim.visibility(player,d.x/kScale,d.z/kScale)>0) {
-                const int64_t dx=int64_t(u.x)-d.x,dz=int64_t(u.z)-d.z;
-                if (dx*dx+dz*dz<distance) { distance=dx*dx+dz*dz; nearest=&d; }
+            for (const auto* d:visible_salvage) {
+                const int64_t dx=int64_t(u.x)-d->x,dz=int64_t(u.z)-d->z;
+                if (dx*dx+dz*dz<distance) { distance=dx*dx+dz*dz; nearest=d; }
             }
             if (nearest) emit(Order::Gather,{u.id},nearest->x,nearest->z);
             else if (u.cargo>0) emit(Order::ReturnCargo,{u.id});
         }
-        if (foundry && foundry->build_ticks>=kBuildTicks && foundry->production_queue<kProductionQueueLimit &&
-            available_salvage>=kStriderCost && population<kPopulationCap && roster<kLifetimeUnitLimit)
+        if (foundry_can_train && available_salvage>=kStriderCost && population<kPopulationCap && roster<kLifetimeUnitLimit)
         {
             // After Hardened Plating, keep roughly one Lancer behind every two Striders when flux allows.
             int striders=0,lancers=0;

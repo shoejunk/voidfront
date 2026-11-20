@@ -109,7 +109,8 @@ void Sim::apply_economy(const Command& c) {
     }
     uint32_t deposit=0;
     if (c.order==Order::Gather) {
-        for (const auto& d:deposits_) if (std::abs(d.x-c.x)<=kScale/2 && std::abs(d.z-c.z)<=kScale/2 && d.remaining>0) { deposit=d.id; break; }
+        for (const auto& d:deposits_) if (std::abs(d.x-c.x)<=kScale/2 && std::abs(d.z-c.z)<=kScale/2 &&
+            !knows_depleted(c.player,d)) { deposit=d.id; break; }
         if (!deposit) { results_[c.player]=CommandResult::InvalidTarget; return; }
     }
     for (auto id:workers) {
@@ -153,7 +154,7 @@ void Sim::economy_step() {
         }
         if (u.order!=Order::Gather && u.order!=Order::ReturnCargo) continue;
         Deposit* d=u.resource_id && u.resource_id<=deposits_.size()?&deposits_[u.resource_id-1]:nullptr;
-        if (!u.returning && (!d || d->remaining==0)) {
+        if (!u.returning && (!d || knows_depleted(u.player,*d))) {
             if (u.cargo>0) { u.returning=true; u.work_ticks=0; set_goal(u,{u.x,u.z}); }
             else { u.order=Order::Stop; continue; }
         }
@@ -175,7 +176,7 @@ void Sim::economy_step() {
         if (u.x!=u.goal_x || u.z!=u.goal_z) continue;
         if (u.returning) {
             (u.cargo_kind?flux_:salvage_)[u.player]+=u.cargo; u.cargo=0; u.returning=false; u.work_ticks=0;
-            if (u.order==Order::ReturnCargo || !d || d->remaining==0) u.order=Order::Stop;
+            if (u.order==Order::ReturnCargo || !d || knows_depleted(u.player,*d)) u.order=Order::Stop;
             else set_goal(u,{u.x,u.z});
         } else if (++u.work_ticks>=kGatherTicks) {
             u.work_ticks=0;

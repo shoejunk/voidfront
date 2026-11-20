@@ -101,6 +101,16 @@ bool same_path(const std::string& a,const std::string& b) {
 std::vector<vf::Command> profile_commands(const vf::Sim& sim,uint8_t player,uint32_t& sequence,const std::string& profile) {
     if (profile=="ai") return vf::make_ai_commands(sim,player,sequence);
     if (profile=="economic-ai") return player==1?vf::make_ai_commands(sim,player,sequence):std::vector<vf::Command>{};
+    if (profile=="depleted-home") {
+        if (player!=0) return {};
+        const auto& home=sim.deposits().front();
+        if (home.remaining==0) return vf::make_ai_commands(sim,player,sequence);
+        if (sim.tick()!=0) return {};
+        vf::Command gather{0,++sequence,player,vf::Order::Gather,{},home.x,home.z};
+        for (const auto& unit:sim.units()) if (unit.player==player && unit.kind==vf::UnitKind::Worker)
+            gather.units.push_back(unit.id);
+        return {std::move(gather)};
+    }
     const auto tick=sim.tick();
     const bool repeat=profile=="repeated" && tick<=800 && tick%80==0;
     const bool pause=profile=="moving-blockers" && player==0 && tick==200;
@@ -148,7 +158,7 @@ int main(int argc, char** argv) {
             }
             else if (arg == "--profile") {
                 profile=argv[++i]; explicit_setup=true;
-                if (profile!="ai" && profile!="economic-ai" && profile!="crossing" && profile!="repeated" && profile!="moving-blockers")
+                if (profile!="ai" && profile!="economic-ai" && profile!="depleted-home" && profile!="crossing" && profile!="repeated" && profile!="moving-blockers")
                     throw std::invalid_argument("unsupported benchmark profile");
             }
             else if (arg == "--hash-mode") {
@@ -166,8 +176,9 @@ int main(int argc, char** argv) {
         Replay replay;
         if (!replay_path.empty()) { replay=load_replay(replay_path); ticks=replay.ticks; seed=replay.seed; count=replay.count; map=replay.map; }
         if (ticks < 1 || ticks > max_ticks) throw std::invalid_argument("ticks must be 1..10000000");
-        if (profile=="economic-ai" && map!=vf::Map::Economy) throw std::invalid_argument("economic-ai profile requires economy map");
-        if (profile!="ai" && profile!="economic-ai" && map!=vf::Map::Scale128) throw std::invalid_argument("traffic profiles require scale128 map");
+        const bool economy_profile=profile=="economic-ai" || profile=="depleted-home";
+        if (economy_profile && map!=vf::Map::Economy) throw std::invalid_argument("economic profiles require economy map");
+        if (profile!="ai" && !economy_profile && map!=vf::Map::Scale128) throw std::invalid_argument("traffic profiles require scale128 map");
         vf::Sim sim(seed,count,map);
         if (map==vf::Map::Economy) count=3;
         auto initial=sim.units();
