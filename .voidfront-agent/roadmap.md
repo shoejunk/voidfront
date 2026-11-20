@@ -1,5 +1,23 @@
 # Continuing roadmap
 
+## 2026-11-19 — scouting after home salvage runs out
+
+The economic AI now checks the opposing start, remembers exhaustion that
+its team has actually seen, and budgets its last 50 for a worker or a
+Strider. The dated TESTING entry covers both orientations, changes in sight
+during a trip and a reproducible opening with all 2,000 home salvage mined.
+
+Next, fix camera framing at the map edges. Reproduce the empty space at
+both spawns using the ordinary home, minimap and zoom controls. Constrain
+the ground footprint of the visible viewport at each supported zoom, then
+verify selection and orders near all four edges in a fresh package. Inspect
+the overlap between health bars and resource labels at the opposing deposit.
+
+For the next AI increment, test the alternate site against a defending army.
+Measure worker losses, escort timing and how often the AI repurchases a lone
+scout before changing that policy. Human matches, physical-network soak,
+reference-hardware budgets and the production content gates remain open.
+
 ## 2026-11-18 — income after a raid
 
 The economic AI now restores its opening workforce with paid anchor orders.

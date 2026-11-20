@@ -1,5 +1,114 @@
 # Verification ledger
 
+## 2026-11-19 — scouting after the home deposit is empty
+
+Glass Reach has two 2,000-salvage deposits, one at each start. The central
+deposits supply flux. The pre-change Release library spent its last 50 on
+a worker and issued zero Move or Gather orders over the next 2,000 ticks
+when the other start was unexplored. Both spawn orientations reproduced
+the stall with zero or one survivor and with the hidden deposit empty or
+full. With the other deposit explored and dark, its actual contents changed
+the old AI's first decision. See `artifacts/finite-baseline-2026-11-19`
+and the independent counterexamples in `artifacts/critic-finite-2026-11-19`.
+
+The native economy tests shorten reserves and apply controlled casualties
+to reach the last-50 decision. They cover prior sight, remembered depletion,
+partial worker loads, visible reserves of 1/49/50/99/100, a paid military
+scout and a blocked Foundry exit. The hidden-stock twins compare canonical
+orders before sight returns. The receipt and movement tests also cover a
+previously assigned worker continuing an outbound or return trip in fog.
+
+For a recording from ordinary opening state, use the following profile.
+The initial command sends all three player-0 workers to gather. After
+they exhaust the full deposit, the economic AI takes control. Player 1
+holds its starting position. All orders enter the normal command pipeline.
+
+```powershell
+./build/windows/sim/Release/voidfront_headless.exe --map economy --profile depleted-home --ticks 15000 --record artifacts/depleted-home.vfr --trace artifacts/depleted-home.trace --metrics artifacts/depleted-home.json
+```
+
+**Results.** Final `tools/verify.ps1` passed all 12 CTest cases in both MSVC
+configurations, 15 malformed replays and seven output-path alias checks per
+configuration, the 2,000-tick cross-build comparison and ten Release repeats.
+The final economy test logs are byte-identical. A survivor first saw the
+alternate at 1,462, mined at 1,527 and delivered at 2,114. With no surviving
+worker, the paid recruit reached those milestones at 1,562/1,640/2,213.
+Each pair matched under 180-degree rotation. A trapped military scout with
+all eight exits blocked triggered a worker purchase. An ordinary paid scout
+revealed the alternate and the reserved 50 funded a worker at 5,101.
+
+Independent probes found two issues during development. A worker already on
+a valid trip reacted to a hidden stock change 49 tiles away. The final worker
+continues until its team observes depletion and can finish returning cargo.
+The second issue spent the last 50 on a miner when the sole remaining patch
+held one salvage. In the final fixture with no workers, a ready Foundry and
+the alternate known empty, the AI fielded a Strider at 3,660. With 50 still
+in the patch, it hired a worker, mined all 50 and fielded a Strider at 4,840.
+See `artifacts/finite-cases-{debug,release}-2026-11-19.log` and
+`artifacts/critic-finite-2026-11-19/final*.log`.
+
+The full-size opening recording is in `artifacts/finite-opening-2026-11-19`.
+Debug and Release generated identical command bytes and 15,000 tick hashes.
+The Godot project renderer reissued each order through the native bridge,
+matched every hash and wrote the original VFR bytes back. Worker 3 started
+scouting at command tick 13,460, extracted its first opposing salvage at
+13,955 and delivered ten to its own anchor at 14,541 (bank 1,450 to 1,460).
+Six independently replayed Release prefixes verified the adjacent states,
+service positions, cargo and bank. See `project-render.json`, the three
+`project-*.png` captures, and the critic's `prefix-review-project-render.json`.
+The exported EXE opened its ordinary setup on the external-script attempt,
+which timed out. The three opening images came from the project runtime.
+
+In the separate packaged victory fixture, player 0 won at tick 4,512 with
+hash `9207566f6fe14bbe` and restarted. The AI paid for worker 21 at 3,920.
+It mined ten at home and died at 4,184 carrying all ten. The optional
+`--require-ai-recruit` delivery check correctly failed. At both 3,900 and
+4,060, the preceding version issued new Gather orders to a flux field under
+explored fog (visibility 1). The revised AI issued neither order in this
+raid. Both revisions' replay prefixes and the recruit's actual fate are in
+`artifacts/finite-opening-2026-11-19/raid-review.json`.
+
+The standard victory audit matched all 4,512 ticks in one Debug and ten
+Release runs and rejected 13 altered reports. A second packaged match on
+the normal 20 Hz clock ended in AI victory at 3,227, hash
+`9176a5c03d0bb930`, and restarted. Its 21-command recording matched all 11
+native replays and rejected 11 altered reports. The instrumented match took
+169.5s and sampled 951,685,120 bytes peak working set. The reports are in
+`artifacts/finite-victory-standard-audit-2026-11-19/summary.json` and
+`artifacts/finite-defeat-audit-2026-11-19/summary.json`. Reproduce with
+`tools/capture.ps1 -Packaged -Victory -Movie -Ticks 7000 -Name finite-victory`
+or `tools/capture.ps1 -Packaged -Match -MatchRealtime -Ticks 4500 -Name finite-defeat`,
+then run `python -B tools/verify_match_capture.py` on the report with a fresh
+`--out` directory.
+
+The frozen export is `artifacts/finite-package-2026-11-19`. Its five playable
+files match `artifacts/package`; the preceding frozen package is retained.
+The pinned engine reported `4.7.2.stable.official.ed1daf0bf` and godot-cpp
+matched `05057de73de4b99f114d36c40d84ca46926c0e25`. Sandbox C1902 and
+Godot safe-save failures cleared on scoped retries. Protocol 13 carries
+content ID `88e62b3ede84819d`. Both the old and new readers rejected the
+other version's opening VFR. Release bridge SHA256 is
+`9872468d88a3058ef16e6e29a63e0e4165a35d023849e037175a032a4a2e4bb1`.
+
+Two rendered clients confirmed 32 and 64 ticks in separate rounds; the
+second crossed guest TCP loss with only 63 ticks confirmed. All four
+archives replayed in Debug and Release. Results are in
+`artifacts/finite-peer-2026-11-19/summary.json`. In a separate native
+seed-42 mirrored AI duel both anchors fell on tick 20,622. The full
+36,000-tick recording matched Debug playback. The old build still had both
+anchors alive at the cap. This single symmetric matchup cannot establish
+competitive balance.
+
+The 578-frame packaged victory movie shows the home build, the fighting
+and the result panel. Four sampled movie frames and the original PNGs show
+large empty areas beyond the map. At 1280×720 the health bar obscures the
+resource count at the opposing deposit. The retained SC2 victory reference
+dims the field and presents distinct action buttons. Voidfront shows the
+opening objective and a keyboard restart prompt over the result. The
+instrumented movie sampled 1,396,375,552 bytes peak working set over 41.7s.
+No reference-hardware performance, human play or defended alternate mining
+acceptance is established by these captures.
+
 ## 2026-11-18 — economic AI replaces workers after a raid
 
 The prior Release simulation library fails the new casualty test with

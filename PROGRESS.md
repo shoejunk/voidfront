@@ -1,5 +1,42 @@
 # Voidfront progress
 
+## 2026-11-19 20:57 America/Los_Angeles — home salvage exhaustion
+
+Started from clean `dev` at `0f70ca2`, five commits ahead of its tracking
+branch. This run will measure spending and scouting after the home deposit
+runs dry, exercise both spawn positions and replay an ordinary packaged
+match. The previous packaged match verified a replacement worker delivering
+home salvage before the final assault.
+
+Source `d1034bd` fixes the observed stall. On both sides, the previous AI
+spent its last 50 and issued zero scout or Gather orders in 2,000 ticks.
+The new AI uses one scout, assigns Gather after sight is established and
+remembers an empty deposit. An idle Foundry can spend the last 50 on a
+Strider when a replacement worker could never earn that cost back.
+
+All 12 native tests passed in Debug and Release. Worker 3 returned ten
+salvage from the opposing deposit at tick 14,541 after the opening workers
+mined all 2,000 at home. The 15,000-tick Debug and Release traces matched
+the project renderer. An independent reviewer verified six adjacent replay
+prefixes and reproduced the fog and last-purchase decisions on both sides.
+The exported game opened its normal setup when given the external playback
+script. The scouting images are from the project renderer.
+
+The separate packaged victory ended at 4,512 and restarted. Its 43 commands
+replayed in one Debug and ten Release runs. A replacement AI miner died
+carrying ten during this raid, so the optional recruit-delivery audit failed.
+On the normal 20 Hz clock, the AI won at 3,227, restarted and matched
+all 11 native replays. The two-client 32/64-tick rematch fixture and all
+eight archive replays passed. The prior package remains available. See the dated TESTING entry
+for the frozen Windows build, footage, timings and retained failed checks.
+
+Next run, fix camera framing when the player centers on either spawn.
+At the opposing deposit, the final 720p capture also shows the miner's
+health bar covering the reserve count. Defended mining, direct human
+matches, network soak, reference performance and production quality remain
+open. The verified remote tip is `8dffef2`; publication of the local
+history to the external repository awaits explicit approval.
+
 ## 2026-11-18 21:00 America/Los_Angeles — AI worker replacement
 
 Started from clean `dev` at `1e3e631`, three local commits ahead of `origin/dev`.
