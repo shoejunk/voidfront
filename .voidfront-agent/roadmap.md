@@ -1,5 +1,27 @@
 # Continuing roadmap
 
+## 2026-11-20 — bounded camera and access to covered ground
+
+Home, minimap navigation and zoom now keep the ground viewport within the
+map. Holding Space makes unit selection and orders available beneath the
+command card and minimap. The Windows export retains both players' Home
+views and the four-edge and two-corner input recordings in the dated
+TESTING entry.
+
+Next, measure the economic AI's trip to the alternate salvage field with
+an enemy defender present. Start with ordinary home depletion and compare
+the two spawn orientations. Record sight of the defender, worker losses,
+repeat purchases, military availability and salvage actually delivered.
+Use those observations to choose between waiting, sending an available
+escort and abandoning the trip. Verify the chosen policy through canonical
+commands and native replay before changing its spending rules.
+
+For the next presentation pass, observe human Home, zoom and corner
+orders at 720p. Check whether players discover Space, how much playable
+ground the upper status strip obscures, and whether they can identify
+which unit owns each health bar when workers cluster near an anchor.
+Camera geometry and scripted clicks cover only part of that evaluation.
+
 ## 2026-11-19 — scouting after home salvage runs out
 
 The economic AI now checks the opposing start, remembers exhaustion that

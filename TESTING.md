@@ -1,5 +1,147 @@
 # Verification ledger
 
+## 2026-11-20 — camera framing, covered corners and resource labels
+
+The old 64×48 Glass Reach camera at size 27 projected player 0's Home view
+from x −14 to 34 and z −5.13 to 30.13. Player 1's Home view reached x 86
+and z 53.13. At the far zoom, the southeast minimap click reached x 94 and
+z 69.51. The original source with the new input fixture failed all 19 of
+its original floor-containment checks. Its worker still reached the four
+open edges. See `artifacts/camera-baseline-2026-11-20/baseline.json` and
+`artifacts/camera-projection-2026-11-20/baseline.log`.
+
+Source `c3dc4be` bounds the orthographic ground footprint on both axes and
+retains the requested Home or minimap focus through zoom. Player 0's new
+default view covers x 0–48 and z 0–35.26. Player 1 sees x 16–64 and
+z 12.74–48. In an intermediate build a selected worker could receive no
+world order in either southern corner at sizes 14, 27 or 36. The old
+camera had accepted all six clicks. Hold Space now exposes either target
+for a normal click, preserving selection. Release, loss of window focus
+and opening setup restore the HUD. The isolated focus test used Windows
+activation messages and observed Godot's focus-exited signal.
+
+The following runs used the same frozen Windows export. Each applied 14
+canonical commands, retained 23 four-ray samples, clicked a worker at
+each of four open edges and two HUD-covered corners, and mined one unit
+from the opposing deposit. Each report matched a full Debug and Release
+replay and twelve Release prefixes at the worker's stage and destination
+positions. Actual input dispatch ticks can vary between captures.
+
+| Window | Captured play area | Final tick | State hash | Sampled peak working set |
+| --- | --- | ---: | --- | ---: |
+| 1280×720 | 1280×720 | 2832 | `83994c7db0d9ddde` | 220,545,024 B |
+| 1920×1080 | 1920×1080 | 2816 | `a5e555e19734a0ae` | 227,393,536 B |
+| 1280×960 | 1280×720 | 2832 | `83994c7db0d9ddde` | 233,353,216 B |
+
+The normal window preserves a 1600×900 logical viewport. The 4:3 window
+exercised letterboxing and physical mouse-coordinate conversion. A separate
+project probe resized the logical viewport itself through four aspect
+ratios on the 32×24, 64×48 and 128×128 maps. All 148 projected corner
+samples passed. The 32×24 movement fixture retained its three exact
+arrivals and nine stationary ticks. Scale128 retained its Move, Stop and
+restart with four walkers per side. See `artifacts/camera-projection-2026-11-20`.
+With a forced 2560×720 logical viewport on the small map, both zoom limits
+coincide at size 9. Normal letterboxed windows retain their zoom range.
+
+Reproduce a packaged run and its native audit with fresh output names.
+
+```powershell
+./tools/capture.ps1 -Packaged -PackagePath artifacts/edge-package-2026-11-20/Voidfront.exe -CameraEdge -Resolution 1280x720 -Name edge-check
+python -B tools/verify_camera_edges.py artifacts/edge-check.json --out artifacts/edge-check-audit
+```
+
+See `artifacts/edge-final-{720,1080,4x3}-2026-11-20-audit/summary.json`.
+The independent reader unpacked all 14 commands from the 720p VFR, checked
+both native traces and decoded all ten PNGs. It found the first auditor
+accepted a screenshot timestamp of −20. The corrected audit binds each
+image to the relevant camera or action interval. It rejected that timestamp,
+a positive early capture and a false resolution. A 4:3 trial then exposed
+an incorrect full-window PNG expectation. The final audit checks the
+launcher's requested window, the fitted viewport dimensions and the
+package fingerprints. See `artifacts/camera-edge-review-final-2026-11-20/focus`.
+
+The project renderer also replayed the previous 15,000-tick mining sequence
+and reproduced its VFR bytes. At the same extraction tick, 13,955, the
+worker bar now occupies pixel rows 522–524 above the full reserve count.
+The orange anchor's full HP label draws above the fog edge while its root
+remains hidden outside current vision. Packaged capture and independent
+pixel inspection confirmed both labels. See
+`artifacts/edge-hud-2026-11-20/final/before-after-labels.png`,
+`fog-pixel-audit.json`, `input-review.json` and `review.md` in that folder.
+
+The retained SC2 result image has a more compact resource strip and
+clickable outcome actions. Blizzard's resource guide also describes reading
+reserves in the selected resource's status display. Voidfront's default
+Home view still devotes much of the center to unexplored fog. At 720p the
+instructions are dense, displaced bars can be hard to associate with
+stacked workers, and the southern wall covers part of the selection ring.
+In the guest's contested-combat view the minimap covers the end of the
+southeast reserve label until the player clears the HUD. The offline
+defeat screen still carries the opening objective above its result panel.
+See `artifacts/outcome-sc2-reference-2026-11-17.jpg` and the
+[StarCraft II resource guide](https://news.blizzard.com/en-us/article/4488900/game-guide-resources).
+
+Pinned Godot 4.7.2, its Windows templates and godot-cpp revision
+`05057de73de4b99f114d36c40d84ca46926c0e25` passed the build checks.
+Both MSVC configurations passed 12/12 CTests, 15 malformed VFRs and seven
+output aliases. The 2,000-tick cross-build replay and ten Release repeats
+matched. An initial sandbox C1902 required a scoped build retry, then a
+concurrent project probe held the Debug DLL during linking (LNK1168).
+After the probe exited the full check passed. See
+`artifacts/camera-native-final-2026-11-20.log`.
+
+In the frozen package the scripted counterattack destroyed the enemy
+anchor at tick 4,512, hash `a71732fb7ccf7c95`, then restarted. The 42
+commands matched all 11 native replay runs and the audit rejected 13
+mutated reports. On the ordinary 20 Hz clock the economic AI won at tick
+3,227, hash `d9bc88be684ab7e0`. Restart restored the opening and the AI
+resumed gathering. All 11 native runs matched and 11 mutations were
+rejected. The latter instrumented run took 169.54 seconds and sampled a
+peak working set of 964,341,760 bytes on the development host. The movie
+fixture advances eight simulation ticks per rendered frame. Its 578 frames
+are preserved at 30 fps, 1600×900, in `artifacts/edge-victory-2026-11-20.mp4`.
+The inspected sequence shows production, camera changes during the assault,
+the victory panel and the restarted base. Both audits are in
+`artifacts/edge-{victory,defeat}-audit-2026-11-20/summary.json`.
+
+Two separate rendered clients moved the camera away and used Home to return
+to their own spawn. Their 720p captures show each side's three workers,
+anchor and starting salvage. Both 32/64-tick rounds completed. In round
+two the guest observed TCP EOF at tick 64 with 63 confirmed and no archive,
+then both clients confirmed 64 and saved replays. Eight native archive runs
+matched. See `artifacts/edge-peer-2026-11-20/summary.json` and the two
+`p*-home.png` captures beside it.
+
+The separate full contested match first ended at tick 7,227 with player 0
+winning, hash `461e31da26616e72`. The two packaged clients recorded
+byte-identical VFRs containing 44 commands and both returned to offline
+play, selected their own three workers and moved them. The audit passed
+22 complete native replays, 119 prefixes, 82 recorded phases and ten
+offline-return replays or prefixes. It rejected 35 altered reports. The
+loopback pair took 369.05 seconds and sampled peak working sets of
+247,910,400 and 252,624,896 bytes. The captures exercised scripted combat
+and the human-play and physical-network gates remain open. See
+`artifacts/edge-contested-audit-2026-11-20/summary.json`.
+
+All five playable files in `artifacts/package` match the frozen
+`artifacts/edge-package-2026-11-20` export. Its PCK SHA-256 is
+`ae76601bdbaed6cbd3d035e9b673134c70df86627c31dbc768ba24026197a327`
+and the Release bridge is
+`ca14ca512bb3eda74a777d6a2f75461b772958c7cbeaab3d7d2e1113d30eafd2`.
+The previous `artifacts/finite-package-2026-11-19` export remains available.
+
+An independent CPU timing comparison alternated the old and current HUD
+implementations (old, current, current, old) in separate 1280×720 project
+processes. Each discarded 50 draws and measured 250, using the same camera,
+opening hash, three visible workers and two labels. For 500 draws per
+version, median/p95/p99 HUD draw-submission times were 111/151/191 µs
+before and 131/166/218 µs after. Per-run p95 values were 126/162/166/165 µs
+in run order. Tails overlapped and native verification also used the host.
+This measures one CPU submission function on the development RTX 2070 SUPER
+machine with the simulation frozen. Whole frames, crowded battles, input
+latency and reference hardware still need measurements. See
+`artifacts/camera-hud-perf-2026-11-20/summary.json`.
+
 ## 2026-11-19 — scouting after the home deposit is empty
 
 Glass Reach has two 2,000-salvage deposits, one at each start. The central

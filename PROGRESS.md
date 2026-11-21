@@ -1,5 +1,50 @@
 # Voidfront progress
 
+## 2026-11-20 21:01 America/Los_Angeles — map-edge camera and input
+
+Started from clean `dev` at `bf4b28c`. The previous mining capture showed
+ground outside Glass Reach and a health bar across the opposing deposit's
+reserve count. This run will measure the camera footprint, fix edge
+framing and label visibility, and exercise ordinary selection and orders
+at the four map edges in the Windows export.
+
+Source `c3dc4be` bounds the projected floor at every zoom and preserves the
+requested Home or minimap focus. Independent input testing caught an
+intermediate regression that blocked both southern corners. Holding Space
+now lets the player select and order units underneath the HUD, then restores
+the command card on release. Worker bars clear the reserve count, and a
+visible anchor's HP text stays readable where its label crosses fog.
+
+At 720p, 1080p and in a letterboxed 4:3 window the exported game passed
+23 camera samples and 14 canonical commands per run. A worker reached four
+open edges, both previously blocked corners and the opposing salvage field.
+Debug and Release replayed all three recordings, with twelve native arrival
+checks per recording. The 15,000-tick project replay also reproduced the
+original mining moment, now with readable labels. Both MSVC builds passed
+12/12 tests. In a fixed opening scene the HUD's measured draw-submission
+p95 rose from 151 to 166 µs.
+
+The packaged offline player won at tick 4,512, and the economic AI won a
+separate ordinary-clock game at 3,227. Both restarted and each matched 11
+native replays. Two real peers returned to their respective spawns with
+Home and confirmed and archived both capped rounds. In a separate contested
+match both clients reached player 0's first victory at tick 7,227, returned
+offline and moved their workers. The recordings matched 22 native replays
+and 119 prefixes. See the dated TESTING
+entry for native parity, image comparisons, hardware and window coverage.
+
+The frozen Windows build is `artifacts/edge-package-2026-11-20/Voidfront.exe`.
+All five playable files in `artifacts/package` match that export and the
+November 19 package is retained. Next, measure worker losses, escort
+availability and delivered salvage when the economic AI finds its alternate
+deposit defended. Human handling of the camera and clear-view control,
+full battle performance, physical-network soak and production content
+remain open.
+
+The verified GitHub dev tip was 8dffef2. Publication of the accumulated
+source and evidence is pending explicit approval after an earlier automatic
+review could not confirm authorization for that destination.
+
 ## 2026-11-19 20:57 America/Los_Angeles — home salvage exhaustion
 
 Started from clean `dev` at `0f70ca2`, five commits ahead of its tracking
