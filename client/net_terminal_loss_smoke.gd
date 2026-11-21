@@ -89,6 +89,21 @@ func run_round(index: int, seed: int, delay: int, cap: int) -> bool:
 	if not await until(func(): return str(game.lobby_round.get("session", "")) not in ["", previous_id] and game.commands_available(), "New round did not become ready"):
 		return false
 	var initial: Dictionary = game.current
+	if index == 1:
+		# Verify that Home restores each genuine peer's own starting view.
+		var home: Vector3 = game.camera_target
+		var minimap: Rect2 = game.hud.minimap_rect()
+		var away := minimap.position + minimap.size * (0.95 if player == 0 else 0.05)
+		game._smoke_mouse(MOUSE_BUTTON_LEFT, away, true)
+		game._smoke_mouse(MOUSE_BUTTON_LEFT, away, false)
+		if not await until(func(): return game.camera_target.distance_to(home) > 5.0, "Minimap did not move away from home"): return false
+		game._smoke_key(KEY_HOME)
+		if not await until(func(): return game.camera_target.distance_to(home) < 0.01, "Home did not restore the peer's spawn view"): return false
+		var anchor: Dictionary = initial.structures[player]
+		var at := Vector3(anchor.x / 256.0, 0, anchor.z / 256.0)
+		if anchor.player != player or not game.get_viewport().get_visible_rect().has_point(game.camera.unproject_position(at)):
+			return fail("The peer's own anchor is outside its Home view")
+		if not await capture("p%d-home.png" % player): return false
 	game._smoke_key(KEY_F1)
 	var button: Button = game.hud.command_card.buttons[CardAction.STOP]
 	if not await until(func(): return game.selected.size() == 3 and button.is_visible_in_tree(), "Workers' Stop button is unavailable"):

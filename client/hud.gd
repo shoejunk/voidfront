@@ -5,6 +5,7 @@ var drag_from := Vector2.ZERO
 var drag_to := Vector2.ZERO
 var dragging := false
 var title: Label
+var clear_view_hint: Label
 var status: Label
 var selection: Label
 var tip: RichTextLabel
@@ -23,6 +24,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title = _label(Vector2(32, 22), 27, Color("edf1ea"))
 	title.text = "V O I D F R O N T"
+	clear_view_hint = _label(Vector2.ZERO, 14, Color("a4b9b6"))
+	clear_view_hint.text = "Hold Space  /  clear view"
+	clear_view_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	clear_view_hint.size = Vector2(210, 28)
 	status = _label(Vector2(32, 59), 13, Color("8eaaa8"))
 	status.text = "THE GLASS REACH   /   CAIRN COMPACT"
 	connection = _label(Vector2(32, 82), 13, Color("d6c49c"))
@@ -227,6 +232,8 @@ func _process(_delta: float) -> void:
 			if not game.lobby_notice.is_empty(): actions += "\n" + game.lobby_notice
 		result.text = ""
 	title.visible = not game.setup_open
+	clear_view_hint.visible = game.commands_available()
+	clear_view_hint.position = Vector2((920 if game.economy or game.network else 548) - clear_view_hint.size.x, 28)
 	status.visible = not game.setup_open
 	connection.visible = not game.setup_open
 	result.visible = not result.text.is_empty()
@@ -279,6 +286,7 @@ func _draw() -> void:
 				var at := map_rect.position + Vector2(deposit.x, deposit.z) / 256.0 * map_scale
 				draw_circle(at, 3.0, Color("5cc8ff") if int(deposit.get("kind", 0)) == 1 else Color("d6b869"))
 	for id in game.selected: selected_ids[id] = true
+	var label_rects := _economy_label_rects()
 	for u in game.current.units:
 		if u.hp <= 0 or not game._entity_visible(u):
 			continue
@@ -290,8 +298,11 @@ func _draw() -> void:
 			var screen: Vector2 = game.camera.unproject_position(actor.position + Vector3(0, 1.8, 0))
 			if not game.camera.is_position_behind(actor.position):
 				var bar_width: float = clampf(24.0 * 27.0 / game.camera.size, 3, 24) if game.scale128 else 36.0
-				draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width, 4)), Color("102128"))
-				draw_rect(Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width * clampf(float(u.hp) / float(u.max_hp), 0, 1), 3)), color)
+				var bar := Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width, 4))
+				if not label_rects.is_empty():
+					bar = _place_health_bar(bar, label_rects, view.y)
+				draw_rect(bar, Color("102128"))
+				draw_rect(Rect2(bar.position, Vector2(bar_width * clampf(float(u.hp) / float(u.max_hp), 0, 1), 3)), color)
 	if game.economy:
 		var corners := PackedVector2Array()
 		for screen in [Vector2.ZERO, Vector2(view.x, 0), view, Vector2(0, view.y), Vector2.ZERO]:
@@ -303,6 +314,42 @@ func _draw() -> void:
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color(0.3, 0.85, 0.83, 0.1))
 		draw_rect(Rect2(drag_from, drag_to - drag_from).abs(), Color("64d8d0"), false, 1)
 	if game.presentation_profiler: game.presentation_profiler.record("hud_draw", Time.get_ticks_usec() - profile_start)
+
+func _economy_label_rects() -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	if not game.economy: return rects
+	var camera: Camera3D = game.camera
+	var center: Vector3 = game.camera_target
+	var pixels_per_unit := camera.unproject_position(center + camera.global_basis.x).distance_to(camera.unproject_position(center))
+	for entry in game.economy_actors.values():
+		var label: Label3D = entry.label
+		if not label.is_visible_in_tree() or camera.is_position_behind(label.global_position): continue
+		# These single-line billboards are centered on their world anchors.
+		var font := label.font if label.font else ThemeDB.fallback_font
+		var text_size := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size)
+		var text_scale := label.pixel_size * pixels_per_unit
+		var screen_size := text_size * text_scale
+		var at := camera.unproject_position(label.global_position)
+		rects.append(Rect2(at - screen_size * 0.5, screen_size).grow(label.outline_size * text_scale + 2.0))
+	return rects
+
+func _place_health_bar(desired: Rect2, labels: Array[Rect2], view_height: float) -> Rect2:
+	var above := desired
+	var below := desired
+	# Find the nearest clear position on each side, including overlapping labels.
+	for step in labels.size():
+		var moved := false
+		for label in labels:
+			if above.intersects(label):
+				above.position.y = floorf(label.position.y - above.size.y)
+				moved = true
+			if below.intersects(label):
+				below.position.y = ceilf(label.end.y)
+				moved = true
+		if not moved: break
+	if above.position.y < 0: return below
+	if below.end.y > view_height: return above
+	return above if desired.position.y - above.position.y <= below.position.y - desired.position.y else below
 
 func _draw_order_paths() -> void:
 	var font := ThemeDB.fallback_font

@@ -2,6 +2,7 @@ extends "res://production_smoke.gd"
 # Actual input, active AI, no injected resources/units. Keep compact hash traces.
 var trace: Array[Dictionary] = []
 var vision_samples: Array[Dictionary] = []
+var starting_camera: Vector3
 
 func tick() -> void:
 	if int(game.current.tick) > last_tick:
@@ -23,18 +24,21 @@ func observe(name: String) -> void:
 func run() -> void:
 	await frames()
 	check(initial.width == 64 and initial.height == 48 and initial.enemy_ai, "Larger 64x48 default economy with active AI")
-	check(game.camera_target.x < 16 and game.camera.size == 27, "Camera starts over own economy at playable zoom")
+	starting_camera = game.camera_target
+	var home: Dictionary = initial.structures[0]
+	var anchor_point := Vector3(home.x / 256.0, 0, home.z / 256.0)
+	check(game.camera.is_position_in_frustum(anchor_point) and starting_camera.x < initial.width * 0.5 and game.camera.size == 27, "Camera starts over own economy at playable zoom")
 	check(not game._entity_visible(initial.structures[1]) and not game.economy_actors["structures2"].root.visible, "Unscouted enemy anchor hidden")
 	check(game.current.units.filter(func(u): return u.player == 1).all(func(u): return not game.actors[u.id].root.visible), "Unscouted enemy workers hidden")
 	await observe("home")
 	await minimap(Vector2(59.5, 35.5))
-	check(game.camera_target.distance_to(Vector3(59.5, 0, 35.5)) < 0.1, "Minimap navigates across larger map")
+	check(game.camera_target.x > initial.width * 0.5 and game.camera.is_position_in_frustum(Vector3(59.5, 0, 35.5)), "Minimap navigates across larger map")
 	check(game._vision_at(59.5, 35.5) == 0, "Camera navigation does not reveal unexplored ground")
 	var enemy_screen: Vector2 = game.camera.unproject_position(Vector3(59.5, 0.5, 35.5))
 	check(game._economy_entity_at(enemy_screen).is_empty(), "Hidden enemy cannot be picked through fog")
 	await observe("unexplored")
 	await key(KEY_HOME)
-	check(game.camera_target.x < 16, "Home returns camera to own base")
+	check(game.camera_target.is_equal_approx(starting_camera), "Home returns camera to own base")
 	# Exercise middle drag with real mouse-motion input.
 	var before: Vector3 = game.camera_target
 	game._smoke_mouse(MOUSE_BUTTON_MIDDLE, Vector2(700, 450), true)
@@ -55,7 +59,7 @@ func run() -> void:
 	arrow.physical_keycode = KEY_RIGHT
 	arrow.pressed = false
 	Input.parse_input_event(arrow)
-	check(game.camera_target.x > 10.1, "Arrow key pans camera")
+	check(game.camera_target.x > starting_camera.x + 0.1, "Arrow key pans camera")
 	var zoom_before: float = game.camera.size
 	game._smoke_mouse(MOUSE_BUTTON_WHEEL_UP, Vector2(600, 450), true)
 	await frames()
@@ -121,7 +125,7 @@ func finish_exploration() -> void:
 		replay_file.close()
 	await key(KEY_R)
 	check(game.current.hash == initial.hash and game._vision_at(22.5, 32.5) == 0, "Restart resets economy and explored fog identically")
-	check(game.camera_target.x < 16 and game.selected.is_empty(), "Restart restores base camera and clears selection")
+	check(game.camera_target.is_equal_approx(starting_camera) and game.selected.is_empty(), "Restart restores base camera and clears selection")
 	var report := {"ok": errors.is_empty(), "mode": "exploration", "initial_snapshot": initial, "ticks": final_tick, "checks": checks, "errors": errors, "trace": trace, "inputs": inputs, "vision_samples": vision_samples, "captures": captures, "replay_path": replay_path}
 	var output := FileAccess.open(game.report_path, FileAccess.WRITE)
 	if output: output.store_string(JSON.stringify(report, "\t"))

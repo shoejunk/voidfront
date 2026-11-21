@@ -1,7 +1,12 @@
-param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[switch]$Crowd,[switch]$Scale,[switch]$Economy,[switch]$Production,[switch]$Flux,[switch]$Match,[switch]$Victory,[switch]$Exploration,[switch]$Queue,[switch]$NetworkReturn,[switch]$MatchRealtime,[ValidateRange(1,250)][int]$UnitsPerTeam=250,[int]$Ticks=400,[string]$Name='runtime')
+param([switch]$Packaged,[switch]$Movie,[switch]$Movement,[switch]$Crowd,[switch]$Scale,[switch]$Economy,[switch]$Production,[switch]$Flux,[switch]$Match,[switch]$Victory,[switch]$Exploration,[switch]$Queue,[switch]$NetworkReturn,[switch]$MatchRealtime,[ValidateRange(1,250)][int]$UnitsPerTeam=250,[int]$Ticks=400,[string]$Name='runtime',[switch]$CameraEdge,[ValidatePattern('^[1-9][0-9]{1,4}x[1-9][0-9]{1,4}$')][string]$Resolution='1920x1080',[string]$PackagePath='artifacts/package/Voidfront.exe')
 . "$PSScriptRoot/common.ps1"
 Assert-RunningAllowed
 Assert-Godot
+if ($CameraEdge) {
+    if ($Movement -or $Crowd -or $Scale -or $Economy -or $Production -or $Flux -or $Match -or $Victory -or $Exploration -or $Queue -or $NetworkReturn -or $MatchRealtime) { throw 'CameraEdge requires its own offline fixture.' }
+    if (-not $PSBoundParameters.ContainsKey('Ticks')) { $Ticks = 10000 }
+    if ($Ticks -lt 1 -or $Ticks -gt 10000) { throw 'CameraEdge requires 1..10000 ticks.' }
+}
 if (($Queue -or $NetworkReturn) -and ($Movement -or $Crowd -or $Scale -or $Economy -or $Production -or $Flux -or $Match -or $Victory -or $Exploration -or $MatchRealtime -or ($Queue -and $NetworkReturn))) { throw 'Queue and NetworkReturn require separate fixtures.' }
 if ($Queue -and ($Ticks -lt 300 -or $Ticks -gt 2000)) { throw 'Queue capture requires 300..2000 ticks.' }
 if ($Exploration -and ($Victory -or $Match -or $Production -or $Economy -or $Movement -or $Crowd -or $Scale)) { throw 'Exploration requires its own fixture.' }
@@ -18,11 +23,12 @@ if ($Scale -and ($Movement -or $Crowd -or $Ticks -lt 200 -or $Ticks -gt 1000)) {
 if ($Name -notmatch '^[a-zA-Z0-9_-]+$') { throw 'Capture name must contain only letters, digits, underscores and hyphens.' }
 $out = Join-Path $Repo 'artifacts'
 New-Item -ItemType Directory -Force $out | Out-Null
-$executable = if ($Packaged) { "$Repo/artifacts/package/Voidfront.exe" } else { $Toolchain.godot_console }
-$arguments = @('--log-file',"$out/$Name-engine.log",'--resolution','1920x1080')
+if (-not $Packaged -and $PSBoundParameters.ContainsKey('PackagePath')) { throw 'PackagePath requires Packaged.' }
+$executable = if ($Packaged) { (Resolve-Path -LiteralPath ([IO.Path]::Combine($Repo, $PackagePath))).Path } else { $Toolchain.godot_console }
+$arguments = @('--log-file',"$out/$Name-engine.log",'--resolution',$Resolution)
 if (-not $Packaged) { $arguments += @('--path',"$Repo/client") }
 if ($Movie) { $arguments += @('--write-movie',"$out/$Name.avi",'--fixed-fps','60') }
-$smokeOption = if ($Queue) { '--queue-smoke' } elseif ($NetworkReturn) { '--network-return-smoke' } elseif ($Exploration) { '--exploration-smoke' } elseif ($Victory) { '--victory-smoke' } elseif ($Match) { '--match-smoke' } elseif ($Flux) { '--flux-smoke' } elseif ($Production) { '--production-smoke' } elseif ($Economy) { '--economy-smoke' } elseif ($Scale) { '--scale-smoke' } elseif ($Movement) { '--movement-smoke' } elseif ($Crowd) { '--crowd-smoke' } else { '--smoke' }
+$smokeOption = if ($CameraEdge) { '--camera-edge-smoke' } elseif ($Queue) { '--queue-smoke' } elseif ($NetworkReturn) { '--network-return-smoke' } elseif ($Exploration) { '--exploration-smoke' } elseif ($Victory) { '--victory-smoke' } elseif ($Match) { '--match-smoke' } elseif ($Flux) { '--flux-smoke' } elseif ($Production) { '--production-smoke' } elseif ($Economy) { '--economy-smoke' } elseif ($Scale) { '--scale-smoke' } elseif ($Movement) { '--movement-smoke' } elseif ($Crowd) { '--crowd-smoke' } else { '--smoke' }
 $arguments += @('--',$smokeOption,"--ticks=$Ticks","--capture=$out/$Name.png","--report=$out/$Name.json")
 if ($NetworkReturn) {
     $reservations = @()
@@ -58,7 +64,18 @@ try {
         }
     }
     $process.WaitForExit() # populate ExitCode reliably after the polling loop
-    @{ wall_seconds=$timer.Elapsed.TotalSeconds; peak_resident_bytes=$peakResident; movie=[bool]$Movie; source='Windows process PeakWorkingSet64 sampled once per second'; } | ConvertTo-Json | Set-Content "$out/$Name-host.json"
+    $hostData = @{ wall_seconds=$timer.Elapsed.TotalSeconds; peak_resident_bytes=$peakResident; movie=[bool]$Movie; source='Windows process PeakWorkingSet64 sampled once per second' }
+    if ($CameraEdge) {
+        $hostData.requested_resolution = $Resolution
+        $hostData.executable = $executable
+        if ($Packaged) {
+            $hostData.package = @{}
+            foreach ($file in @($executable, [IO.Path]::ChangeExtension($executable, 'pck'), (Join-Path (Split-Path $executable) 'voidfront_bridge.dll'))) {
+                $hostData.package[$file] = (Get-FileHash -LiteralPath $file).Hash.ToLowerInvariant()
+            }
+        }
+    }
+    $hostData | ConvertTo-Json | Set-Content "$out/$Name-host.json"
     if ($process.ExitCode -ne 0) { throw "Runtime smoke failed ($($process.ExitCode)); inspect artifacts/$Name logs." }
     $errors = Get-Content "$out/$Name-stderr.log" | Where-Object { $_ -match '^(SCRIPT ERROR:|ERROR:)' -and $_ -notmatch '^ERROR: Failed to read the root certificate store\.' }
     if ($errors) { throw "Runtime reported errors: $($errors -join ' | ')" }
