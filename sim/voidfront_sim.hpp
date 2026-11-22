@@ -105,6 +105,7 @@ public:
     // Cell visibility: 0 unexplored, 1 explored, 2 currently visible.
     uint8_t visibility(uint8_t player, int x, int z) const;
     bool knows_depleted(uint8_t player,const Deposit& deposit) const;
+    nav::Point last_salvage_guard_cell(uint8_t player) const { return salvage_guard_cell_.at(player); }
     const std::vector<uint8_t>& vision(uint8_t player) const { return vision_[player]; }
     uint64_t hash() const;
     // Executed authoritative state only; independent of future input arrival order.
@@ -113,7 +114,10 @@ public:
     int winner() const;
 private:
     std::array<std::vector<uint8_t>,2> vision_;
+    std::array<nav::Point,2> salvage_guard_cell_{{{-1,-1},{-1,-1}}};
+    std::array<uint32_t,2> salvage_guard_seen_tick_{};
     void update_vision();
+    void update_salvage_guard(uint8_t player);
     Map map_;
     uint32_t tick_ = 0, rng_ = 1;
     std::array<uint32_t, 2> last_sequence_{};

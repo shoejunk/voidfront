@@ -155,10 +155,13 @@ func _process(_delta: float) -> void:
 		var research_ticks: int = int(game.current.get("research_ticks", [0, 0])[game.local_player])
 		var plating := "PLATING DONE" if game.current.get("researched", [false, false])[game.local_player] else ("PLATING %d%%" % int(float(research_ticks) / game.current.research_total_ticks * 100) if research_ticks > 0 else "PLATING %d FLUX" % game.current.research_cost)
 		status.text = "SALVAGE %d   /   FLUX %d   /   %s   /   POPULATION %d + %d QUEUED / %d   /   FOUNDRY %d • STRIDER %d / LANCER %d+%d FLUX [L]" % [resources[game.local_player], flux[game.local_player], plating, game.current.population_used[game.local_player], game.current.population_reserved[game.local_player], game.current.population_cap, cost, game.current.strider_cost, game.current.lancer_cost, game.current.lancer_flux_cost]
-		var briefing := "64 x 48 EXPLORATION / Scout the dark ground. Destroy the enemy anchor; protect yours. Gather, build and train."
-		# Keep the session readiness/stall/error text above the briefing in shared matches.
-		connection.text = (connection.text + "\n" + briefing) if game.network else briefing
-		if not game.network and not game.current.get("enemy_ai", false): connection.text += " Passive economy fixture."
+		if not game.network: connection.text = ""
+		if game.commands_available():
+			var briefing := "64 x 48 EXPLORATION / Scout the dark ground. Destroy the enemy anchor; protect yours. Gather, build and train."
+			connection.text = (connection.text + "\n" + briefing) if game.network else briefing
+			if not game.network and not game.current.get("enemy_ai", false): connection.text += " Passive economy fixture."
+		elif game.current.winner != -1 or (game.network and game.network_state.get("state") == "complete"):
+			status.text = "FINAL RESERVES   /   %d SALVAGE   /   %d FLUX" % [resources[game.local_player], flux[game.local_player]]
 		if game.current.winner in [0, 1]:
 			var outcome := "VICTORY / ENEMY ANCHOR DESTROYED" if game.current.winner == game.local_player else "DEFEAT / YOUR ANCHOR DESTROYED"
 			result.text = outcome + ("\nAwaiting session confirmation" if game.network else "\nR  /  new match")
@@ -173,9 +176,14 @@ func _process(_delta: float) -> void:
 		if lancers > 0: roster.append("Lancer" if lancers == 1 else "%d Lancers" % lancers)
 		selection.text = "Select a unit or structure" if roster.is_empty() else "  /  ".join(roster)
 		if workers > 0:
+			var returning_workers := 0
 			for unit in game.current.units:
-				if unit.id in game.selected: cargo += int(unit.get("cargo", 0))
+				if unit.id in game.selected:
+					cargo += int(unit.get("cargo", 0))
+					if unit.returning: returning_workers += 1
 			selection.text += "   ·   Carrying %d" % cargo
+			if returning_workers:
+				selection.text += "   ·   Returning to anchor" if game.selected.size() == 1 else "   ·   %d returning to anchor" % returning_workers
 		if not game.selected_entity.is_empty():
 			var entity: Dictionary = game.selected_entity
 			if entity.category == "deposit": selection.text = "%s DEPOSIT   /   %d REMAINING" % ["FLUX (CONTESTED)" if int(entity.get("kind", 0)) == 1 else "SALVAGE", entity.remaining]
@@ -256,6 +264,8 @@ func _draw() -> void:
 		return
 	var network_panel: bool = is_instance_valid(game) and (game.network or game.economy or not game.option_error.is_empty())
 	var panel_size := Vector2(920, 128) if network_panel else Vector2(548, 80)
+	if is_instance_valid(game) and game.economy and not game.network and connection.text.is_empty():
+		panel_size = Vector2(380, 80)
 	if is_instance_valid(game) and game.network:
 		panel_size.y += maxi(0, connection.get_line_count() - 2) * 18
 	draw_rect(Rect2(Vector2(16, 12), panel_size), Color(0.025, 0.047, 0.055, 0.94))

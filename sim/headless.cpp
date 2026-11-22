@@ -98,19 +98,54 @@ bool same_path(const std::string& a,const std::string& b) {
 #endif
     return left==right;
 }
-std::vector<vf::Command> profile_commands(const vf::Sim& sim,uint8_t player,uint32_t& sequence,const std::string& profile) {
+std::vector<vf::Command> depletion_commands(const vf::Sim& sim,uint8_t player,uint32_t& sequence,uint8_t miner,uint32_t guards) {
+    if (sim.winner()!=-1 || (player!=miner && !guards)) return {};
+    const auto& home=sim.deposits()[player];
+    if (player==miner && home.remaining==0) return vf::make_ai_commands(sim,player,sequence);
+    const uint32_t first=1u+3u*player;
+    if (!sim.tick()) return {{0,++sequence,player,vf::Order::Gather,{first,first+1,first+2},home.x,home.z}};
+    if (player==miner || sim.tick()%20!=0) return {};
+
+    const auto& anchor=sim.structures()[player];
+    const auto foundry=std::find_if(sim.structures().begin(),sim.structures().end(),[&](const auto& b) {
+        return b.player==player && b.kind==vf::StructureKind::Foundry;
+    });
+    const int toward_center=player==0?1:-1;
+    if (foundry==sim.structures().end()) {
+        if (sim.salvage(player)<vf::kFoundryCost) return {};
+        return {{sim.tick(),++sequence,player,vf::Order::Build,{first},
+            anchor.x+5*toward_center*vf::kScale,anchor.z+3*toward_center*vf::kScale}};
+    }
+    std::vector<vf::Command> commands;
+    const auto emit=[&](vf::Order order,std::vector<uint32_t> ids,int x=0,int z=0) {
+        commands.push_back({sim.tick(),++sequence,player,order,std::move(ids),x,z});
+    };
+    // Tombstones count toward the requested garrison. The opponent stops
+    // mining as soon as it has paid for the final defender.
+    const auto is_guard=[&](const vf::Unit& u) { return u.player==player && u.kind==vf::UnitKind::Strider; };
+    const auto trained=std::count_if(sim.units().begin(),sim.units().end(),is_guard);
+    if (foundry->hp>0 && foundry->build_ticks==vf::kBuildTicks && foundry->production_queue==0 &&
+        trained<guards && sim.salvage(player)>=vf::kStriderCost) {
+        emit(vf::Order::TrainStrider,{foundry->id});
+        if (trained+1==guards) emit(vf::Order::Stop,{first,first+1,first+2});
+    }
+    int slot=0;
+    for (const auto& u:sim.units()) if (is_guard(u)) {
+        const int x=home.x-toward_center*(slot%3-1)*vf::kScale;
+        const int z=home.z+toward_center*(2+slot/3)*vf::kScale;
+        ++slot;
+        if (u.hp<=0 || u.order==vf::Order::Hold) continue;
+        if (u.x==x && u.z==z) emit(vf::Order::Hold,{u.id});
+        else if (u.order==vf::Order::Stop) emit(vf::Order::Move,{u.id},x,z);
+    }
+    return commands;
+}
+
+std::vector<vf::Command> profile_commands(const vf::Sim& sim,uint8_t player,uint32_t& sequence,const std::string& profile,
+                                         uint8_t miner,uint32_t guards) {
     if (profile=="ai") return vf::make_ai_commands(sim,player,sequence);
     if (profile=="economic-ai") return player==1?vf::make_ai_commands(sim,player,sequence):std::vector<vf::Command>{};
-    if (profile=="depleted-home") {
-        if (player!=0) return {};
-        const auto& home=sim.deposits().front();
-        if (home.remaining==0) return vf::make_ai_commands(sim,player,sequence);
-        if (sim.tick()!=0) return {};
-        vf::Command gather{0,++sequence,player,vf::Order::Gather,{},home.x,home.z};
-        for (const auto& unit:sim.units()) if (unit.player==player && unit.kind==vf::UnitKind::Worker)
-            gather.units.push_back(unit.id);
-        return {std::move(gather)};
-    }
+    if (profile=="depleted-home") return depletion_commands(sim,player,sequence,miner,guards);
     const auto tick=sim.tick();
     const bool repeat=profile=="repeated" && tick<=800 && tick%80==0;
     const bool pause=profile=="moving-blockers" && player==0 && tick==200;
@@ -138,6 +173,8 @@ int main(int argc, char** argv) {
     std::string trace_path, record_path, replay_path,metrics_path,samples_path,profile="ai";
     vf::Map map=vf::Map::Foundry;
     bool explicit_setup=false;
+    uint32_t mining_player=0,guard_count=0;
+    bool depletion_options=false;
     bool state_trace=false;
     try {
         for (int i = 1; i < argc; ++i) {
@@ -146,6 +183,11 @@ int main(int argc, char** argv) {
             if (arg == "--ticks") { ticks = number(argv[++i]); explicit_setup=true; }
             else if (arg == "--units-per-team") { count = number(argv[++i]); explicit_setup=true; }
             else if (arg == "--seed") { seed = number(argv[++i]); explicit_setup=true; }
+            else if (arg=="--mining-player" || arg=="--guards") {
+                const uint32_t value=number(argv[++i]);
+                if (arg=="--mining-player") mining_player=value; else guard_count=value;
+                explicit_setup=true; depletion_options=true;
+            }
             else if (arg == "--trace") trace_path = argv[++i];
             else if (arg == "--record") record_path = argv[++i];
             else if (arg == "--replay") replay_path = argv[++i];
@@ -177,6 +219,8 @@ int main(int argc, char** argv) {
         if (!replay_path.empty()) { replay=load_replay(replay_path); ticks=replay.ticks; seed=replay.seed; count=replay.count; map=replay.map; }
         if (ticks < 1 || ticks > max_ticks) throw std::invalid_argument("ticks must be 1..10000000");
         const bool economy_profile=profile=="economic-ai" || profile=="depleted-home";
+        if (depletion_options && (profile!="depleted-home" || mining_player>1 || guard_count>8))
+            throw std::invalid_argument("depleted-home requires mining player 0..1 and guards 0..8");
         if (economy_profile && map!=vf::Map::Economy) throw std::invalid_argument("economic profiles require economy map");
         if (profile!="ai" && !economy_profile && map!=vf::Map::Scale128) throw std::invalid_argument("traffic profiles require scale128 map");
         vf::Sim sim(seed,count,map);
@@ -222,7 +266,8 @@ int main(int argc, char** argv) {
                 while(replay_index<replay.commands.size() && replay.commands[replay_index].tick==tick)
                     if(!sim.submit(replay.commands[replay_index++])) throw std::runtime_error("replay command rejected at tick " + std::to_string(tick));
             } else {
-                for (uint8_t p = 0; p < 2; ++p) for (const auto& c : profile_commands(sim,p,sequence[p],profile)) {
+                for (uint8_t p = 0; p < 2; ++p) for (const auto& c : profile_commands(sim,p,sequence[p],profile,
+                        static_cast<uint8_t>(mining_player),guard_count)) {
                     if(!sim.submit(c)) throw std::runtime_error("AI command rejected");
                     if(record.is_open()) {
                         const auto bytes=vf::serialize_command(c);

@@ -155,6 +155,120 @@ void economic_match(bool duel) {
     check(sim.units().size()>6 && sim.structures().size()>(duel?3u:2u),"match did not produce/build");
     std::cout<<(duel?"AI duel":"AI vs passive")<<" winner="<<sim.winner()<<" tick="<<finish<<" hash="<<sim.state_hash()<<'\n';
 }
+// One worker remains after home depletion. A Hold Strider covers the approach
+// to the stocked field. In the second fixture a friendly escort has sight and
+// can clear that Strider. Without an escort, the guard leaves through fog.
+void guarded_salvage(uint8_t player,bool escort,int carried=0) {
+    Sim sim(42,3,Map::Economy);
+    remove_units(sim);
+    const int sign=player==0?1:-1;
+    const uint32_t worker_id=3u*player+1,guard_id=3u*(1-player)+1;
+    auto& units=const_cast<std::vector<Unit>&>(sim.units());
+    units[worker_id-1].hp=100;
+    const_cast<std::vector<Deposit>&>(sim.deposits())[player].remaining=0;
+    const auto& site=sim.deposits()[1-player];
+    attacker(sim,guard_id,site.x-sign*kScale,site.z-sign*2*kScale);
+    if (escort) {
+        // The miner is already committed. Keep the escort close enough to
+        // observe the kill, then let the ordinary military AI take over.
+        attacker(sim,worker_id,site.x-sign*4*kScale,site.z-sign*4*kScale).kind=UnitKind::Worker;
+        attacker(sim,worker_id+1,site.x-sign*5*kScale,site.z-sign*4*kScale);
+        units[guard_id-1].hp=24;
+        units[worker_id-1].cargo=carried;
+        check(sim.submit({0,1,player,Order::Gather,{worker_id},site.x,site.z}),"initial escorted Gather rejected");
+    }
+    sim.step();
+    auto control=sim;
+    // Identical unseen unit roster and position. Only the guard's ability
+    // to threaten the field differs; it cannot inform a decision through fog.
+    const_cast<std::vector<Unit>&>(control.units())[guard_id-1].kind=UnitKind::Worker;
+    uint32_t sequence=escort?1:0,control_sequence=sequence;
+    uint32_t sight=0,recall=0,departure=0,clear=0,retry=0,gather=0,mined=0,delivered=0,cargo_banked=0;
+    for (int i=0;i<4000;++i) {
+        const auto& guard=sim.units()[guard_id-1];
+        const bool visible=sim.visibility(player,guard.x/kScale,guard.z/kScale)==2;
+        if (!sight && visible) sight=sim.tick();
+        if (!escort && recall && !departure && !visible && sim.tick()>recall+100) {
+            const int x=site.x-sign*17*kScale, z=site.z+sign*3*kScale;
+            check(sim.submit({sim.tick(),1,uint8_t(1-player),Order::Move,{guard_id},x,z}),"hidden guard withdrawal rejected");
+            departure=sim.tick();
+        }
+        if (escort && !clear && guard.hp<=0) {
+            check(visible,"escort lost sight of guard's defeat");
+            clear=sim.tick();
+        }
+        const auto commands=make_ai_commands(sim,player,sequence);
+        if (!sight) {
+            const auto blind=make_ai_commands(control,player,control_sequence);
+            check(blind.size()==commands.size(),"hidden defender changed the number of worker orders");
+            for (size_t j=0;j<blind.size();++j) {
+                check(serialize_command(blind[j])==serialize_command(commands[j]),"hidden defender changed order bytes");
+                check(control.submit(blind[j]),"unarmed control rejected a command");
+            }
+            control.step();
+        }
+        for (const auto& c:commands) {
+            if (c.units.front()==worker_id && c.order==Order::ReturnCargo && !recall) recall=sim.tick();
+            if (sight && guard.hp>0 && visible) check(c.order!=Order::Gather && c.order!=Order::TrainWorker,
+                "AI recruited or assigned an exposed miner to a guarded field");
+            if (!escort && departure && !retry && (c.order==Order::Move || c.order==Order::Gather)) retry=sim.tick();
+            if (sight && c.order==Order::Gather && c.x==site.x && c.z==site.z && !gather) gather=sim.tick();
+            check(sim.submit(c),"defended field AI command rejected");
+        }
+        const int previous_cargo=sim.units()[worker_id-1].cargo,previous_bank=sim.salvage(player),previous_ore=site.remaining;
+        sim.step();
+        const auto& worker=sim.units()[worker_id-1];
+        check(worker.hp>0,"AI lost its miner to the observed guard");
+        if (!mined && previous_ore>site.remaining && worker.resource_id==site.id && worker.cargo_kind==0 && worker.cargo==previous_cargo+1) mined=sim.tick();
+        if (previous_cargo>0 && worker.cargo==0 && sim.salvage(player)==previous_bank+previous_cargo) {
+            if (carried && !cargo_banked && previous_cargo==carried) cargo_banked=sim.tick();
+            if (mined) delivered=sim.tick();
+        }
+        if ((escort && gather && clear) || (!escort && delivered)) break;
+    }
+    check(sight && recall>=sight,"AI never recalled the worker from a defended alternate");
+    if (carried) check(clear>recall && cargo_banked>clear && gather>=cargo_banked && gather<=cargo_banked+20,
+        "clearance interrupted a partial cargo return or stranded the miner at home");
+    else if (escort) check(clear>recall && gather>=clear && gather<=clear+20,
+        "visible guard defeat failed to reopen the stocked field by the next decision");
+    else check(departure>recall && retry>departure+100 && gather>=retry && mined>gather && delivered>mined,
+        "unseen guard departure failed bounded re-scout, extraction or actual cash delivery");
+    std::cout<<"guarded field player="<<int(player)<<" escort="<<escort<<" sight="<<sight<<" recall="<<recall
+             <<" cargo_banked="<<cargo_banked<<" departure="<<departure<<" clear="<<clear<<" retry="<<retry<<" gather="<<gather
+             <<" mined="<<mined<<" banked="<<delivered<<" hash="<<sim.state_hash()<<'\n';
+}
+// Six tiles behind the field is outside a stationary Strider's protected
+// service area. The same observed position warrants a recall for a Lancer.
+void far_side_guard(uint8_t player,UnitKind kind) {
+    Sim sim(42,3,Map::Economy);
+    remove_units(sim);
+    const uint32_t worker_id=3u*player+1,guard_id=3u*(1-player)+1;
+    const_cast<std::vector<Unit>&>(sim.units())[worker_id-1].hp=100;
+    const_cast<std::vector<Deposit>&>(sim.deposits())[player].remaining=0;
+    const auto& site=sim.deposits()[1-player];
+    const int x=site.x+(player==0?6:-6)*kScale;
+    attacker(sim,guard_id,x,site.z).kind=kind;
+    uint32_t sequence=0,sight=0,recall=0,delivery=0;
+    for (int i=0;i<2000;++i) {
+        if (!sight && sim.visibility(player,x/kScale,site.z/kScale)==2) sight=sim.tick();
+        for (const auto& c:make_ai_commands(sim,player,sequence)) {
+            if (c.order==Order::ReturnCargo) recall=sim.tick();
+            check(sim.submit(c),"far-side guard fixture rejected an AI command");
+        }
+        const int cargo=sim.units()[worker_id-1].cargo,bank=sim.salvage(player);
+        sim.step();
+        const auto& worker=sim.units()[worker_id-1];
+        check(worker.hp==100,"far-side Hold guard damaged the miner");
+        if (cargo && !worker.cargo && sim.salvage(player)==bank+cargo) delivery=sim.tick();
+        if (delivery || recall) break;
+    }
+    if (kind==UnitKind::Strider) check(sight && !recall && delivery>sight && sim.salvage(player)==kCargoCapacity,
+        "distant Hold Strider denied a safe full salvage delivery");
+    else check(sight && recall>=sight && recall<=sight+20 && !delivery,
+        "longer-range Lancer failed to trigger a timely recall at the same position");
+    std::cout<<"far-side guard player="<<int(player)<<" kind="<<int(kind)<<" sight="<<sight
+             <<" recall="<<recall<<" banked="<<delivery<<'\n';
+}
 void lone_worker_recovery() {
     Sim sim(42,3,Map::Economy);
     std::array<uint32_t,2> sequences{};
@@ -264,7 +378,12 @@ void mirrored_economy() {
 }
 }
 int main() {
-    try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands(); lone_worker_recovery(); economic_match(false); duel_seed_survey(); economic_match(true); mirrored_economy();
+    try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands();
+        for (uint8_t p=0;p<2;++p) {
+            guarded_salvage(p,false); guarded_salvage(p,true); guarded_salvage(p,true,3);
+            far_side_guard(p,UnitKind::Strider); far_side_guard(p,UnitKind::Lancer);
+        }
+        lone_worker_recovery(); economic_match(false); duel_seed_survey(); economic_match(true); mirrored_economy();
         std::cout<<"economic match tests passed\n"; }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }
 }
