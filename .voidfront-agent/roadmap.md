@@ -1,5 +1,26 @@
 # Continuing roadmap
 
+## 2026-11-21 — defended mining and moving interceptors
+
+The economic AI preserves its workers against one, four and eight Hold
+guards at the alternate deposit. The controlled withdrawal and escort
+cases cover unseen departure, visible clearance, full and partial
+deliveries. Read the dated TESTING entry before extending the policy.
+
+Next, reproduce the two mirrored moving interceptions from
+`artifacts/defended-native-2026-11-21/approaching-mirrored.log`. A lone
+Strider six tiles toward the approach is harmless on Hold and lethal
+when its AttackMove intercepts the scout. Measure changes in visible
+relative position, when the worker can first retreat, route clearance,
+damage and eventual delivery. Use observations the mining team can
+make. Preserve the six-tile far-side Strider/Lancer distinction, the
+six fixed-garrison openings, and the worker's loaded return. A
+larger fixed exclusion radius previously suppressed a safe delivery.
+
+The six-unit reversed-goal stall and 500-unit crowd-progress gate,
+human 1v1 and 1vAI play, physical-network soak, reference performance
+and production art/content remain on the roadmap.
+
 ## 2026-11-20 — bounded camera and access to covered ground
 
 Home, minimap navigation and zoom now keep the ground viewport within the

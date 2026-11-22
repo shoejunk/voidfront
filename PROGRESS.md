@@ -1,5 +1,49 @@
 # Voidfront progress
 
+## 2026-11-21 21:05 America/Los_Angeles — defended alternate salvage
+
+Started from clean `dev` at `3173021`. This run will follow the economic
+AI after its workers mine out their home deposit, measure trips to a
+guarded alternate on both sides of Glass Reach, and use the observed
+losses, spending and deliveries to choose and verify a response.
+
+Source `b645fff` uses the last observed guard cell after the AI sees its
+home salvage run out. Scouts and miners recall when visible enemy weapon
+reach covers the alternate field's approach. The AI holds off replacement
+purchases, resumes after visible clearance, and rechecks a dark contact
+after 30 simulated seconds. Empty returning workers can turn around
+immediately. Loaded workers bank their cargo first. The HUD identifies
+workers returning to the anchor and shows final reserves on the result screen.
+
+All six ordinary openings (one, four or eight purchased Hold guards and
+both spawn orientations) preserved all three workers with zero replacement
+spending. The previous AI lost one or two workers and spent 50 or 100.
+Neither revision delivered alternate salvage before military victory in
+these matches. In the smaller withdrawal fixture the scout returned ten
+after the defender left through fog. Independent review caught a 446-tick
+empty return and a far-side Strider that incorrectly denied a safe delivery.
+Both have regression coverage.
+
+Both MSVC builds passed 12/12 tests and reproduced all six recorded
+openings across 90,018 tick positions. The frozen Windows export is
+`artifacts/defended-package-2026-11-21/Voidfront.exe`. Its offline victory
+and defeat both restarted and matched eleven native playbacks each.
+Two actual clients also confirmed and archived a capped rematch through
+loss of the lobby connection. In a separate full 1v1 both clients reached
+player 0's victory at 7,228 and returned to offline play. Their recordings
+matched 22 full native replays and 120 prefixes. See the dated TESTING entry for the movie,
+guarded project renders, field measurements and independent reviews.
+
+Next, reproduce the moving Strider interception six tiles along the
+approach. The scout sees it at 394 and takes damage at 417, before recall
+at 460. Preserve both the harmless Hold control and partial cargo return
+while testing earlier recognition of a pursuit. Human play, network soak,
+reference battle performance and finished factions remain open.
+
+The live GitHub `dev` tip was `8dffef2`. Local checkpoints are awaiting
+explicit approval to publish the accumulated source and evidence after
+an earlier automatic approval review rejected that push.
+
 ## 2026-11-20 21:01 America/Los_Angeles — map-edge camera and input
 
 Started from clean `dev` at `bf4b28c`. The previous mining capture showed

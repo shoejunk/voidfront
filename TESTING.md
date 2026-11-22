@@ -1,5 +1,139 @@
 # Verification ledger
 
+## 2026-11-21 — economic AI at a defended alternate salvage field
+
+Source `b645fff`. In each seed-42 Glass Reach opening, three workers gathered all
+2,000 home salvage before control passed to the economic AI. The opponent
+used normal orders to build a Foundry, pay for its Striders, position them
+on the approach and Hold. Its workers stopped mining after the last purchase.
+Home ran dry at tick 13,423 with 1,980 in the mining player's bank. Each row
+below was played from both spawns. Counts are per match.
+
+| Hold guards | Worker deaths, old → new | Paid replacements, old → new | Alternate salvage mined, old → new | Banked before victory, old → new | First victory tick, old → new |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1 → 0 | 1 → 0 | 26 → 1 | 0 → 0 | 14,885 → 14,884 |
+| 4 | 1 → 0 | 1 → 0 | 20 → 0 | 0 → 0 | 14,963 → 14,967 |
+| 8 | 2 → 0 | 2 → 0 | 10 → 0 | 0 → 0 | 15,095 → 15,158 |
+
+With eight guards the scout saw the first defender at 13,855. Both friendly
+Striders were more than eight tiles from the patch. The old AI assigned Gather
+at 13,900 after its scout had taken damage. The scout died at 13,909 and a
+second worker died at 14,167. Two payments reduced the bank from 1,450 to
+1,350. The revised AI recalled the scout at 13,860. It lost sight at 13,866,
+the army regained sight at 14,076, and workers received Gather at 14,900.
+All three kept full HP. The eight-guard win took 63 additional ticks.
+
+Reproduce either orientation by changing `--mining-player` to 0 or 1. For
+one and four guards, use the corresponding tick count from the table. Omitting
+both new options runs the original unguarded opening.
+
+```powershell
+./build/windows/sim/Release/voidfront_headless.exe --map economy --profile depleted-home --mining-player 0 --guards 8 --ticks 15158 --record artifacts/guard-check.vfr --trace artifacts/guard-check.trace
+python -B tools/render_replay_samples.py artifacts/guard-check.vfr --player 0 --frame 13861:3 --frame 13888:3 --frame 14901:3 --out artifacts/guard-view
+```
+
+Both MSVC builds generated the same VFR bytes as a separately written opening
+driver for all six cases. Generation and playback matched at every tick
+(90,018 tick positions). The independent reviewer regenerated all 172 AI
+orders after depletion. Changing a legal ReturnCargo to a legal Stop in a
+prefix was accepted by playback and rejected by the independent policy
+check. The unguarded control mined at 13,955 and banked ten at 14,542.
+See `artifacts/defended-native-2026-11-21/summary.json`,
+`artifacts/defended-review-2026-11-21/review.md` and
+`artifacts/defended-unguarded-2026-11-21/ledger.log`.
+
+The smaller native cases use a controlled starting state and both spawns.
+Hidden guards and civilian twins produced the same orders until sight.
+A defender can be visible before its deposit is visible. Seeing a deposit
+does not reveal an adjacent guard in fog. A guardian leaving unseen allowed
+the sole scout to retry at 1,040, mine at 1,547 and bank at 2,128. When
+an escort visibly killed the guard at 54, an empty recalled scout turned
+back at 60. The first implementation sent it all the way home until 500.
+A scout carrying three instead banked all three at 492 and resumed at 500.
+Six tiles beyond the field, a stationary Strider allowed a full delivery at
+1,061. A longer-range Lancer in the same position prompted recall at 480.
+The first candidate treated the distant Strider as a threat. Final coverage
+uses weapon reach plus two tiles for the approach and service positions.
+
+Pinned Godot 4.7.2, export templates and godot-cpp passed their checks.
+Protocol 13 now has content ID `527afd5cffa8e588`. Stock readers rejected
+the other content revision's VFR in both directions. The final Debug and
+Release builds each passed 12/12 CTest, 15 malformed recordings and seven
+output-alias cases. The 2,000-tick cross-build trace and ten repeats matched.
+See `artifacts/defended-final-verify-2026-11-21.log`. A sandboxed loopback
+handshake timed out and Godot's safe-save failed on the initial import.
+Scoped retries passed. An intermediate verification used differing Debug
+and Release content IDs. Final verification records the same ID twice.
+
+The project renderer displayed adjacent native VFR snapshots with each
+mining player's fog, scripted selection and camera. At 13,888 the old
+scout is damaged beside the guards. The final scout is at full HP on its
+return, with the enemy base under fog and “Returning to anchor” on its card.
+The heading clears on its new Gather order. Position checks caught duplicate
+actor nodes caused by JSON numeric IDs. Only the corrected stills under
+`artifacts/defended-playback-2026-11-21/verified-{base,final}-p{0,1}`
+support this comparison. The guarded frames are sampled project renders.
+The separate Windows export played the complete offline and network fixtures.
+
+The packaged player victory ended at 4,512 (`5a9f9a681876181e`, 43 orders).
+The ordinary-clock AI victory ended at 3,227 (`718f4ad6fa4c2710`, 21 orders).
+Both restarted, matched 11 native playbacks and rejected 13 and 11 corrupted
+reports respectively. Final reserves replaced the active objective at
+1080p victory (30 salvage, zero flux) and 720p defeat (both zero).
+The victory movie shows the group heading “2 returning to anchor” and two
+cargo blocks. Its 289 MP4 frames at 30 fps represent 578 source frames at
+60 fps from accelerated play. The real-time defeat capture took 171.4 s
+and sampled 963,813,376 B peak working set. Concurrent runs and test
+instrumentation limit these measurements. See
+`artifacts/defended-{victory,defeat}-audit-2026-11-21/summary.json` and
+`artifacts/defended-victory-2026-11-21.mp4`.
+
+The two-client lobby test played capped rounds of 32 and 64 ticks. Guest TCP
+EOF occurred with 63 ticks confirmed. Both clients confirmed 64 and saved
+matching archives. All eight Debug/Release archive playbacks passed.
+See `artifacts/defended-final-peer-2026-11-21/summary.json`. Compared with
+the retained SC2 result screenshot, Voidfront's result and keyboard action
+share the same visual weight, and stacked garrison health bars are difficult
+to associate with individual units. See the dated visual review.
+
+The frozen export `artifacts/defended-package-2026-11-21` and
+`artifacts/package` match across five playable files. PCK SHA256 is
+`5501ef347e62e488f297261536ae9b8df559e6b58a45c8c498201e137bf942f7`.
+Release bridge SHA256 is
+`24ab7b355325fa53ea477ee64146200f0abd1b18dde75fa87ec245e5488de27a`.
+The November 20 export remains available.
+
+Two rendered clients also finished a contested 1v1 at 7,228 with state
+hash `25c761d005eac6e5`. The winner's reserves were 65 salvage and five
+flux and the loser's were 68 and five. Each client returned to offline
+play and moved a worker. The 369.6 s local run sampled peak working sets
+of 241,864,704 and 240,439,296 B. The final audit verified 44 canonical
+commands, 22 full replays, 120 prefixes, 82 gameplay phases and ten
+offline-return runs. It rejected 35 deliberate corruptions. See
+`artifacts/defended-contested-audit-2026-11-21/summary.json`.
+In the losing view, workers 4 and 6
+were dead in explored fog but their cargo blocks remained bright. The
+visual handoff is to hide or subdue cargo on a corpse while preserving
+the recorded cargo. Images and snapshots are in
+`artifacts/defended-contested-2026-11-21`.
+
+The independent CPU diagnostic alternated four old and four final Release
+runs with identical command bodies and matched gameplay metrics. It adjusted
+the compatibility header for this measurement only. For 6,688 post-depletion
+step samples per build, old median/p95/p99 were 47.7/84.0/115.8 µs and
+final values were 48.1/71.7/106.8 µs. Concurrent host workloads and this
+small 64×48 encounter preclude a performance improvement or budget claim.
+See `artifacts/defended-review-2026-11-21/perf-527afd5cffa8e588/summary.json`.
+
+**Remaining failure.** In a 60-case controlled survey a Strider on
+AttackMove six tiles toward the approach intercepted the lone scout.
+Both sides saw the guard at 394, took damage at 417 and recalled at 460.
+The scouts died at 949 and 946 with zero banked. The same-position Hold
+controls delivered ten at 1,061 with full HP. See
+`artifacts/defended-native-2026-11-21/approaching-mirrored.log`.
+Human matches, route safety, competitive balance, reference battle
+performance, physical-network soak and the production gates remain open.
+
 ## 2026-11-20 — camera framing, covered corners and resource labels
 
 The old 64×48 Glass Reach camera at size 27 projected player 0's Home view
