@@ -1,5 +1,174 @@
 # Verification ledger
 
+## 2026-11-22 — approaching a mobile salvage defender
+
+The seed-42 Glass Reach replay harness can now place one normally purchased
+Strider six tiles along the approach to the alternate salvage field. The
+defender receives either Hold or AttackMove at its own position. Both
+players open with three workers. Home salvage runs out at tick 13,423.
+
+```powershell
+./build/windows/sim/Release/voidfront_headless.exe --map economy --profile depleted-home --mining-player 0 --approach-guard attack-move --ticks 15000 --record artifacts/approach.vfr --trace artifacts/approach.trace
+```
+
+Change `--mining-player` to 1 for the opposite spawn or `--approach-guard`
+to `hold` for the stationary control. The numeric `--guards` option retains
+the garrison beside the field. The runner rejects unknown stances, an
+approach guard count other than one, an unrelated profile, and setup overrides
+combined with replay input.
+
+On the November 21 binary, both full openings first saw the Strider at
+13,858. AttackMove hit the scout at 13,881, ReturnCargo followed at 13,940,
+and the scout died at 14,058. Its team banked zero alternate salvage before
+victory. Hold hit the scout at 13,900, but all three workers survived and
+ten salvage reached the anchor at 14,542. The smaller controlled encounter
+starts with one worker, one guard and an exhausted home field. There Hold
+and AttackMove gave the mining side identical visible positions through
+403. At 404 the guard began to move and a direct retreat was already too late.
+Forcing ReturnCargo at 405 still lost the worker at 974 on both sides.
+See `artifacts/interceptor-opening-2026-11-22/old-{hold,intercept}-p{0,1}.tsv`
+and `artifacts/interceptor-review-2026-11-22`.
+
+### Worker cargo at death and restart
+
+The previous packaged guest defeat showed two cyan cubes on workers 4 and 6,
+dead in explored fog with ten and four flux still recorded. Rendering
+the same snapshots at 1280×720 showed zero bright cyan pixels in the two
+original cargo patches after the fix (209 and 210 previously). Live flux
+and salvage stayed visible. The independent review checked 96 worker
+observations including 24 restart rows and nine loaded enemy observations
+in fog. A separate comparison against retained native replay prefixes
+checked the new capture records at all 32 screenshot events and rejected
+12 deliberately damaged records. See `artifacts/cargo-view-2026-11-22/review.md`.
+Use `--require-cargo` with `tools/verify_net_match.py` to require both clients'
+observations. Older reports identify cargo visibility as unmeasured.
+
+### Routing, partial loads and repeat deliveries
+
+The tested approach uses visible armed contacts and their acquisition radii
+to choose a waypoint, then resumes ordinary gathering. The worker can also
+steer on the tick a full or final partial load starts its return. An early
+candidate delivered once and died on the second trip. Another kept sending
+the worker back to the same waypoint after it resumed Gather near a Hold
+guard. The final route makes progress toward the destination and leaves
+room beside the deposit for its service position.
+
+| Full opening, either spawn | Workers lost | Alternate mined | Alternate banked | First bank tick | Victory tick |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Prior AttackMove | 1 | 10 | 0 | — | 14,824 |
+| Final AttackMove | 0 | 20 | 10 | 14,602 | 14,815 |
+| Prior Hold | 0 | 20 | 10 | 14,542 | 14,815 |
+| Final Hold | 0 | 20 | 10 | 14,602 | 14,815 |
+
+All four final scouts and their two teammates kept full HP. The detour
+cost the Hold control 60 ticks (three simulated seconds) to its first
+delivery. In both mobile openings a canonical Move was issued on sight at
+13,858. Worker 3 or 6 mined the first unit at 14,013. Sixteen independent
+native prefixes confirmed extraction, worker position at its own anchor,
+cargo 10→0 and bank 1,450→1,460. The six prior one/four/eight-garrison
+endpoints and state hashes also matched their historical results. All ten
+openings matched an independent driver's command bodies and both MSVC
+builds' generation and replay traces through 149,278 tick positions.
+See `artifacts/interceptor-opening-2026-11-22/{summary,bank-prefixes}.json`.
+
+With only one miner in the controlled scenario, both stances and
+orientations now bank ten at 1,123 and thirty at 3,403 with 100 HP. A
+defender withdrawing unseen after the first payment removes the need for
+later detours once its absence can be observed. All 22 cases with 1–11
+ore remaining banked the entire reserve and retained full HP through
+5,000 ticks. Across 216 trials with 18 nearby guard positions and six
+behaviors per orientation, AttackMove killed the worker at eight positions
+per side (previously twelve). A guard at offset (-1,-6) still kills it at
+935. The independent reviewer banked ten at 1,115 in that case with a
+different canonical waypoint. See `artifacts/interceptor-review-2026-11-22/review.md`.
+
+Both isolated Godot extensions used the same final simulation and a
+controlled reset. With the previous bridge's 20-tick call interval, the
+worker banked ten, took damage at 651 and died at 1,251. The new bridge
+lets the simulation decide on every advance. Its off-cycle loaded Move
+orders at 603, 1,743 and 2,883 led to three payments and full HP.
+Both callers' complete command bodies and 3,601 snapshots each matched
+their respective native oracle. The custom starting state is required
+for this comparison. The ten normal-opening VFRs above replay from
+standard setup. See `artifacts/interceptor-bridge-2026-11-22/review.md`.
+
+With four alternating Release generations per version and profile, the
+independent reviewer measured 4,708 post-depletion ticks per group. Whole
+tick time including AI had p95/p99 of 67.4/107.8 µs before and
+65.0/129.1 µs after for one interceptor. Eight fixed guards measured
+90.2/143.6 µs before and 88.7/121.1 µs after. The development host
+ran other jobs concurrently, and one-guard play changed between builds.
+Reference-battle and frame-time gates remain open. See
+`artifacts/interceptor-review-2026-11-22/generated-perf-fingerprinted/summary.json`.
+
+### Windows package and replay evidence
+
+Pinned Godot 4.7.2, templates and godot-cpp passed validation. The final
+MSVC Debug and Release builds share content ID `620a43ec80fe00a1` and each
+passed 12/12 CTest, 15 malformed replays and seven output-alias cases.
+All 2,000 cross-build hashes and ten repeat traces matched. Both stock
+readers rejected recordings from the other content revision. The initial
+sandboxed build hit MSVC C1902. A local retry worked. One intermediate
+package failed the repeated-trip test. The final package passed it.
+See `artifacts/interceptor-final-{verify,package}-2026-11-22.log`.
+
+In the 1600×900 exported player victory, 42 commands produced winner 0 at
+4,512, hash `626b249259694a35`. In a separate ordinary-clock 1280×720
+game, 21 commands produced AI victory at 3,227, hash `25791d3169eeb318`.
+Both restarted and matched eleven native replays each. The audits rejected
+13 and 11 corruptions. The 289-frame, 30 fps movie shows gathering,
+training, the result and restart in accelerated play. Its 29.7 s capture
+sampled 1,394,900,992 bytes peak working set. The ordinary-clock defeat
+took 171.2 s and sampled 960,339,968 bytes. See
+`artifacts/interceptor-{victory,defeat}-audit-2026-11-22/summary.json` and
+`artifacts/interceptor-victory-2026-11-22.mp4`.
+
+Separate 720p package processes played two capped rounds of 32 and 64
+ticks. The guest observed lobby disconnect with only 63 confirmed and
+an empty archive. Both clients subsequently confirmed 64 and saved
+matching archives. All eight Debug/Release archive replays matched.
+See `artifacts/interceptor-peer-2026-11-22/summary.json`.
+
+The complete two-client contested match ended with winner 0 at 7,227,
+hash `4b60e451be629dca`. Both clients returned to offline play. Their
+byte-identical shared recordings matched 22 full native runs and 119
+prefixes. The audit covered 44 commands, 82 gameplay phases, ten offline
+return runs, all 32 captured cargo lists and 39 rejected corruptions.
+At the final tick, only the host could see loaded worker 3. Guest workers
+4 and 6 had zero HP and still held ten and four flux in the simulation.
+The guest displayed no cargo. The two-process loopback run took 369.0 s
+and sampled peak working sets of 245,727,232 and 240,783,360 bytes.
+See `artifacts/interceptor-contested-audit-2026-11-22/summary.json`.
+
+Six separate-process native pairs completed 240 ticks in the delay study.
+Debug/Release traces and ten repeats agreed. At 80 ms simulated RTT with
+20 ms jitter and 1% loss, generated-command p95 was 109.49/111.36 ms.
+At 160 ms RTT, two buffered ticks produced 18.34/18.32 Hz. Four restored
+19.98 Hz for both peers with command p95 of 205.38/206.13 ms. The
+initial sandboxed peers timed out in their handshake. The local retry ran
+one pair at a time while other jobs shared the development machine. This
+measures generated commands over loopback. Physical-network, human input
+and 30-minute soak gates remain open. See
+`artifacts/interceptor-delay-verified-2026-11-22/summary.json`.
+
+The 1280×720 replay samples at 13,941 show a damaged worker among enemy
+units in the previous opening and a full-health worker outside the camp
+in the revised one. At 14,013 the new worker has one salvage and the
+reserve reads 1,839. Review caught a misleading passive-fixture briefing
+on diagnostic renders. Recaptured frames label the original tick and player,
+and their UTF-8 card text agrees with Godot's report. See
+`artifacts/interceptor-opening-2026-11-22/{replay-prior,replay-final}`.
+The new packaged guest defeat shows dark workers with both cargo blocks
+gone. The retained StarCraft II outcome gives the result title much more
+prominence than the action text. Voidfront still shows both lines at
+similar size, and the terrain, structures and deposits remain blockouts.
+
+The five frozen playable files in `artifacts/interceptor-package-2026-11-22`
+matched `artifacts/package`. PCK SHA256 is
+`763f93fd2e3685b146508e752b52c751820f8b7a6f7cff0037144ea4cba83dad`
+and the bridge DLL SHA256 is
+`140656318323e3d9305adbb4e42b74ad7891824304a41f9918c31731556c06f2`.
+
 ## 2026-11-21 — economic AI at a defended alternate salvage field
 
 Source `b645fff`. In each seed-42 Glass Reach opening, three workers gathered all

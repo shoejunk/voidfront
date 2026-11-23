@@ -1,5 +1,55 @@
 # Voidfront progress
 
+## 2026-11-22 America/Los_Angeles — moving interceptors and worker cargo
+
+Started from clean `dev` at `d60b32a`. Reproduce the mirrored worker
+interceptions on Glass Reach, identify what the mining player can observe
+in time to retreat, and preserve the stationary guard and delivery controls.
+Also reproduce the bright cargo remaining on dead workers in explored fog
+and check the correction at RTS camera distance.
+
+Source `c8a9b1f` routes the miner around a visible armed defender on
+the way to the deposit and back to the anchor. In both full Glass Reach
+openings the moving Strider previously killed the scout at 14,058 and
+its team banked no alternate salvage. Now all three workers stay at full
+health and the scout banks ten at 14,602. The same-position Hold control
+still delivers, three simulated seconds later than before. The six fixed
+garrisons retained their prior outcomes and state hashes. Ten complete
+command streams reproduced across MSVC Debug and Release through 149,278
+tick positions.
+
+Review found a worker dying on its second trip, losses on partial final
+loads and a waypoint loop in one full Hold opening. The corrected AI
+banked 40 and retained full HP over 5,000 ticks in the controlled pursuit,
+and delivered all remaining ore in 22 finite-reserve cases. The offline
+bridge now lets the AI observe each simulation tick. In isolated Godot
+tests using the same final simulation, the old caller lost the worker
+after one payment and the new caller banked three full loads.
+
+The frozen Windows build is `artifacts/interceptor-package-2026-11-22/Voidfront.exe`.
+Its scripted player victory and ordinary-clock AI victory both restarted
+and replayed across both configurations. The paired loopback games confirmed
+and archived both capped rounds, including a lobby disconnect at the final
+tick. The dated TESTING entry identifies all captures and independent reviews.
+
+Presentation checkpoint `ac6a696` hides cargo on dead or empty workers
+from the first frame after spawn or restart. Both clients now record
+which workers display cargo. In the new 7,227-tick contested match,
+the guest's dead workers retained ten and four flux in the simulation,
+and neither displayed a cargo cube. Replay samples now identify the
+recorded player and tick.
+
+Next, investigate the guard one tile west of the tested approach in
+the miner's orientation. The worker dies at 935 with zero income, but
+an independently executed route banked ten at 1,115 with full HP from
+both spawns. Eight of 18 AttackMove positions remain lethal. Human
+matches, competitive balance, physical networks, crowded movement,
+reference performance and production art remain open.
+
+Live GitHub `dev` was `8dffef2`. The pending local commits include the
+source and evidence covered by an earlier automatic approval rejection.
+Explicit authorization to publish the accumulated commits is still pending.
+
 ## 2026-11-21 21:05 America/Los_Angeles — defended alternate salvage
 
 Started from clean `dev` at `3173021`. This run will follow the economic

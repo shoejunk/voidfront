@@ -1,5 +1,25 @@
 # Continuing roadmap
 
+## 2026-11-22 — remaining approach to the alternate salvage field
+
+On the six-tile approach, both miners now see the guard soon enough to
+go around it, return loaded and repeat the trip. The Windows bridge gives
+the simulation an opportunity to issue the order on that exact tick.
+The dated TESTING entry covers the paid openings, finite ore and cargo display.
+
+Next, reproduce the independently measured guard one tile to the side,
+at offset (-1,-6) from the alternate deposit in the mining player's
+orientation. The current AI loses its worker at 935 with no delivery.
+The reviewer used ordinary commands through offset (-5,+2) to bank ten
+at 1,115 with full HP from both spawns. Use the observed guard and the
+worker's actual service position to find a legal path. Verify repeated
+loaded returns, partial loads and both orientations. Re-run the 18 guard
+positions and the ordinary purchased-defender games. The review and
+recorded commands are in `artifacts/interceptor-review-2026-11-22`.
+
+The human 1vAI/1v1 playtest, crowded movement, physical-network soak,
+reference-hardware budgets and production content remain open.
+
 ## 2026-11-21 — defended mining and moving interceptors
 
 The economic AI preserves its workers against one, four and eight Hold
