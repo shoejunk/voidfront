@@ -59,6 +59,11 @@ func run() -> void:
 				# Initializing a scene at a replay prefix must not leave a spurious
 				# attack beam from comparing a late cooldown to the opening state.
 				await create_timer(0.15).timeout
+		# The renderer installs authoritative snapshots into a paused scene.
+		# Its local setup does not describe the players in the source recording.
+		game.hud._process(0.0)
+		game.hud.set_process(false)
+		game.hud.connection.text = "REPLAY SAMPLE   /   TICK %d   /   PLAYER %d" % [tick, game.local_player + 1]
 		await process_frame
 		await RenderingServer.frame_post_draw
 		var shot := root.get_texture().get_image()
@@ -72,6 +77,7 @@ func run() -> void:
 		var position: Vector3 = game.actors[id].root.position
 		var card = game.hud.command_card
 		frames.append({"tick":tick, "actor":id, "hash":game.current.hash, "visible_enemies":visible_enemies,
+			"caption":game.hud.connection.text,
 			"position":[roundi(position.x * 256.0), roundi(position.z * 256.0)],
 			"selected":id in game.selected, "hp":game.current.units[id - 1].hp,
 			"card_heading":card.heading.text if card.is_visible_in_tree() else ""})

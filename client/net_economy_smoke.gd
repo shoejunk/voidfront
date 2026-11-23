@@ -135,8 +135,17 @@ func capture(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	var path: String = game.capture_path.get_basename() + "-" + name + ".png"
 	var result: int = game.get_viewport().get_texture().get_image().save_png(path)
+	var visible_cargo := []
+	var expected_cargo := []
+	for unit in game.current.units:
+		if unit.kind != 1: continue
+		if game.actors[unit.id].root.get_node("SalvageCargo").is_visible_in_tree():
+			visible_cargo.append(unit.id)
+		if unit.hp > 0 and unit.cargo > 0 and game._entity_visible(unit):
+			expected_cargo.append(unit.id)
+	check(visible_cargo == expected_cargo, "Visible cargo matches living loaded workers at " + name)
 	captures.append({"label": name, "tick": game.current.tick, "path": path, "error": result,
-		"snapshot": game.current.duplicate(true), "selection": game.selected.duplicate(),
+		"visible_cargo": visible_cargo, "snapshot": game.current.duplicate(true), "selection": game.selected.duplicate(),
 		"paths": game._order_paths().duplicate(true), "hud": hud_state()})
 	check(result == OK, "Saved " + name + " screenshot")
 
@@ -410,6 +419,7 @@ func run() -> void:
 
 func report() -> Dictionary:
 	return {"checks": checks, "errors": errors, "inputs": inputs, "phases": phases, "captures": captures,
+		"cargo_visibility_version": 1,
 		"initial_snapshot": initial_snapshot, "final_snapshot": final_snapshot,
 		"fixture_done": done, "player": player, "stage": stage,
 		"role": "attacker" if player == 0 else ("contested_defender" if contested else "bounded_passive_defender"),

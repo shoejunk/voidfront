@@ -88,13 +88,15 @@ def main():
     require(not any(line.startswith(("SCRIPT ERROR:", "ERROR:"))
                     and "Failed to read the root certificate store" not in line for line in errors),
             "Godot errors in stderr.log")
-    report = json.loads((out/"frames.json").read_text())
+    report = json.loads((out/"frames.json").read_text(encoding="utf-8"))
     require(len(report["frames"]) == len(choices), "missing rendered frame")
     for (tick, actor), frame in zip(choices, report["frames"], strict=True):
         snapshot = snapshots[tick]
         unit = snapshot["units"][actor-1]
         require((frame["tick"], frame["actor"], frame["hash"]) ==
                 (tick, actor, snapshot["hash"]), "rendered wrong tick or actor")
+        require(frame["caption"] == f"REPLAY SAMPLE   /   TICK {tick}   /   PLAYER {args.player+1}",
+                "missing replay viewpoint or sample tick")
         require(frame["position"] == [unit["x"], unit["z"]] and frame["hp"] == unit["hp"]
                 and frame["selected"] == (unit["hp"] > 0), "scene position, health or selection mismatch")
         frame.update(cargo=unit["cargo"], returning=unit["returning"], order=unit["order"])

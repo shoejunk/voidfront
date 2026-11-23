@@ -259,6 +259,28 @@ def metric_state(metrics):
     return row
 
 
+def audit_visible_cargo(fixtures, states, required=False):
+    counts = {f'p{p}.json': sum('visible_cargo' in c for c in f['captures']) for p, f in enumerate(fixtures)}
+    if not any('cargo_visibility_version' in f for f in fixtures) and not any(counts.values()):
+        require(not required, 'cargo visibility was not recorded')
+        return dict(status='not recorded', captures_by_report=counts)
+    for player, fixture in enumerate(fixtures):
+        version = fixture.get('cargo_visibility_version')
+        require(type(version) is int and version == 1, f'p{player}: missing or unsupported cargo visibility version')
+        for capture in fixture['captures']:
+            label = f'p{player} {capture["label"]} at {capture["tick"]}'
+            actual = capture.get('visible_cargo')
+            require(isinstance(actual, list) and all(type(i) is int for i in actual),
+                    f'{label}: missing or malformed visible cargo IDs')
+            # Use the native replay prefix and the screenshot viewer's own vision.
+            state = states[capture['tick']]
+            vision = state['vision'][player]
+            expected = [u['id'] for u in state['units'] if u['kind'] == 1 and u['hp'] > 0 and u['cargo'] > 0
+                        and (u['player'] == player or vision[(u['z'] // 256) * state['width'] + u['x'] // 256] == 2)]
+            require(actual == expected, f'{label}: visible cargo IDs {actual} differ from replay {expected}')
+    return dict(status='verified', version=1, captures_by_report=counts)
+
+
 def own(snapshot, player, category, kind=None):
     return [u for u in snapshot[category] if u['player'] == player and u['hp'] > 0 and (kind is None or u['kind'] == kind)]
 
@@ -497,6 +519,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('folder', type=Path)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--require-cargo', action='store_true',
+                        help='require both clients to have recorded visible worker cargo IDs at every capture')
     args = parser.parse_args()
     require(not (ROOT / '.voidfront-agent/STOP').exists(), 'STOP present')
     paths = [args.folder / f'p{p}.json' for p in (0, 1)]
@@ -590,6 +614,8 @@ def main():
             capture_path = Path(capture['path'])
             require(capture_path.is_file() and capture_path.read_bytes()[:8] == b'\x89PNG\r\n\x1a\n', 'missing/invalid captured PNG')
     summary['capture_sha256'] = [{c['label']: digest(c['path']) for c in r['fixture']['captures']} for r in reports]
+    fixtures = [r['fixture'] for r in reports]
+    summary['visible_cargo'] = audit_visible_cargo(fixtures, states, args.require_cargo)
     summary.update(audit_semantics(reports, commands, states))
     summary['offline_return_runs'] = []
     offline_raws = []
@@ -631,6 +657,27 @@ def main():
             {capture['label']: digest(capture['path']) for capture in report['offline_return']['captures']}
             for report in reports]
     rejected = []
+    if summary['visible_cargo']['status'] == 'verified':
+        for name in ('cargo-missing-row', 'cargo-extra-id', 'cargo-missing-version', 'cargo-stripped'):
+            altered = [dict(f, captures=[dict(c) for c in f['captures']]) for f in fixtures]
+            row = altered[1]['captures'][-1]
+            if name == 'cargo-missing-row':
+                del row['visible_cargo']
+            elif name == 'cargo-extra-id':
+                row['visible_cargo'] = row['visible_cargo'] + [0]
+            elif name == 'cargo-missing-version':
+                del altered[1]['cargo_visibility_version']
+            else:
+                for fixture in altered:
+                    del fixture['cargo_visibility_version']
+                    for capture in fixture['captures']:
+                        del capture['visible_cargo']
+            try:
+                audit_visible_cargo(altered, states, required=True)
+            except AssertionError:
+                rejected.append(name)
+            else:
+                raise AssertionError(f'accepted deliberate cargo visibility corruption: {name}')
     for name in ('trace-gap', 'trace-extra', 'trace-endpoint', 'shared-false-hash', 'unexecuted-input', 'input-sequence',
                  'input-order', 'input-delay', 'missing-phase', 'phase-hash', 'phase-resource',
                  'phase-queue', 'phase-target', 'phase-winner', 'replay-truncated', 'replay-trailing', 'replay-count',

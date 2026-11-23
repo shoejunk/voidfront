@@ -739,7 +739,7 @@ func _spawn_actor(unit: Dictionary) -> void:
 		cargo_mesh.size = Vector3(0.52, 0.28, 0.52)
 		cargo.mesh = cargo_mesh
 		cargo.position = Vector3(0, 0.95, 0)
-		cargo.material_override = _material(Color("d6b869"), 0.25)
+		_present_worker_cargo(cargo, unit)
 		cargo.name = "SalvageCargo"
 		root.add_child(cargo)
 	if int(unit.get("kind", 0)) == 2:
@@ -755,6 +755,11 @@ func _spawn_actor(unit: Dictionary) -> void:
 	actors[unit.id] = {"root": root, "model": model, "ring": ring, "animation": animation, "clip": "", "dead": false, "hp": unit.hp, "cooldown": 0, "flash": 0.0}
 	if animation:
 		print("VOIDFRONT_ASSET id=", unit.id, " clips=", animation.get_animation_list())
+
+func _present_worker_cargo(cargo: MeshInstance3D, unit: Dictionary) -> void:
+	cargo.visible = unit.hp > 0 and int(unit.get("cargo", 0)) > 0
+	if cargo.visible:
+		cargo.material_override = _material(Color("5cc8ff") if int(unit.get("cargo_kind", 0)) == 1 else Color("d6b869"), 0.25)
 
 func _find_animation(node: Node) -> AnimationPlayer:
 	if node is AnimationPlayer: return node
@@ -1089,9 +1094,7 @@ func _present(alpha: float, delta: float) -> void:
 		entry.root.position = from.lerp(to, alpha)
 		entry.ring.visible = unit.id in selected and unit.hp > 0
 		if int(unit.get("kind", 0)) == 1:
-			var cargo_node: MeshInstance3D = entry.root.get_node("SalvageCargo")
-			cargo_node.visible = int(unit.get("cargo", 0)) > 0
-			cargo_node.material_override = _material(Color("5cc8ff") if int(unit.get("cargo_kind", 0)) == 1 else Color("d6b869"), 0.25)
+			_present_worker_cargo(entry.root.get_node("SalvageCargo"), unit)
 		if unit.hp <= 0:
 			if not entry.dead:
 				_play(entry, "death")
