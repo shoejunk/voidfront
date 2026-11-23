@@ -194,7 +194,7 @@ public:
     }
     void advance() {
         if (network) return;
-        if (ai_enabled && (simulation.map() == vf::Map::Economy || simulation.tick() >= 100) && simulation.tick() % 20 == 0) {
+        if (ai_enabled && (simulation.map() == vf::Map::Economy || simulation.tick() >= 100)) {
             for (auto &command : vf::make_ai_commands(simulation, 1, ai_sequence)) {
                 if (simulation.submit(command) && simulation.map() == vf::Map::Economy) {
                     if (economy_commands.size() < max_recorded_commands) economy_commands.push_back(command);

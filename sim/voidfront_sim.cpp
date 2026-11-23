@@ -35,7 +35,7 @@ nav::Point home_salvage(uint8_t player) {
     return {(player==0?7:56)*kScale+kScale/2,(player==0?7:40)*kScale+kScale/2};
 }
 nav::Rect terrain_bounds(Map map) { return {kScale,kScale,(map_width(map)-1)*kScale,(map_height(map)-1)*kScale}; }
-constexpr int unit_radius = 64, movement_speed = 32, strider_range_tiles = 3;
+constexpr int unit_radius = 64, movement_speed = 32, strider_range_tiles = 3, strider_acquire_tiles = 6;
 int64_t distance2(const Unit& a, const Unit& b) {
     const int64_t dx = a.x - b.x, dz = a.z - b.z;
     return dx * dx + dz * dz;
@@ -334,7 +334,7 @@ void Sim::step() {
     std::vector<std::vector<nav::Point>> attempted_detours(units_.size());
     std::vector<uint8_t> reconsidered_detour(units_.size(),0);
     constexpr int64_t attack_range2 = int64_t(strider_range_tiles * kScale) * (strider_range_tiles * kScale);
-    constexpr int64_t acquire_range2 = int64_t(6 * kScale) * (6 * kScale);
+    constexpr int64_t acquire_range2 = int64_t(strider_acquire_tiles * kScale) * (strider_acquire_tiles * kScale);
     for (auto& u : units_) {
         u.moving = false; u.target_id = 0; u.target_structure_id=0;
         if (u.hp <= 0) continue;
@@ -347,7 +347,7 @@ void Sim::step() {
         const uint16_t unit_cooldown=lancer?kLancerCooldown:10;
         int64_t nearest = unit_acquire2 + 1;
         if (u.kind!=UnitKind::Worker && u.order != Order::Move) {
-            const int reach=(lancer?kLancerAcquireTiles:6)*kScale+movement_speed;
+            const int reach=(lancer?kLancerAcquireTiles:strider_acquire_tiles)*kScale+movement_speed;
             spatial.query({u.x-reach,u.z-reach,u.x+reach,u.z+reach},nearby);
             for (const auto id : nearby) {
                 const auto& other=units_[id-1];
@@ -698,8 +698,82 @@ uint64_t Sim::hash() const {
     return h;
 }
 
+namespace {
+struct ArmedContact {
+    nav::Point position;
+    int range;
+};
+bool crosses_acquisition(nav::Point from,nav::Point to,const ArmedContact& contact) {
+    const int64_t dx=to.x-from.x,dz=to.z-from.z;
+    const int64_t x=contact.position.x-from.x,z=contact.position.z-from.z;
+    const int64_t length2=dx*dx+dz*dz, projection=x*dx+z*dz;
+    const int64_t radius2=int64_t(contact.range)*contact.range;
+    if (projection<=0) return x*x+z*z<radius2;
+    if (projection>=length2) return (x-dx)*(x-dx)+(z-dz)*(z-dz)<radius2;
+    const int64_t cross=x*dz-z*dx;
+    return cross*cross<radius2*length2;
+}
+// A scout can see an armed unit before it can distinguish Hold from a pursuit.
+// If the direct leg crosses acquisition range, look for a visible flank that
+// clears the armed contacts on both legs. Only use positions the team sees.
+nav::Point salvage_flank(const Sim& sim,const Unit& miner,nav::Point patch,nav::Point home,bool inbound) {
+    const nav::Point start{miner.x,miner.z},end=inbound?patch:home;
+    std::vector<ArmedContact> contacts;
+    std::vector<nav::Point> candidates;
+    for (const auto& enemy:sim.units()) {
+        if (enemy.player==miner.player || enemy.hp<=0 || enemy.kind==UnitKind::Worker ||
+            sim.visibility(miner.player,enemy.x/kScale,enemy.z/kScale)!=2) continue;
+        const int reach=(enemy.kind==UnitKind::Lancer?kLancerAcquireTiles:strider_acquire_tiles)*kScale;
+        const ArmedContact contact{{enemy.x,enemy.z},reach};
+        contacts.push_back(contact);
+        if (!crosses_acquisition(start,end,contact)) continue;
+        // Leave room to round the deposit to a different miner's service slot.
+        const int away_x=(patch.x>enemy.x)-(patch.x<enemy.x);
+        const int away_z=(patch.z>enemy.z)-(patch.z<enemy.z);
+        candidates.push_back({enemy.x+(home.x<enemy.x?-reach:reach),patch.z+away_z*kScale});
+        candidates.push_back({patch.x+away_x*kScale,enemy.z+(home.z<enemy.z?-reach:reach)});
+    }
+    for (const auto point:candidates) {
+        if (point.x<kScale+unit_radius || point.z<kScale+unit_radius ||
+            point.x>(sim.width()-1)*kScale-unit_radius || point.z>(sim.height()-1)*kScale-unit_radius) continue;
+        // The worker must retain sight of the field from its staging point.
+        const int64_t dx=point.x-patch.x,dz=point.z-patch.z;
+        if (dx*dx+dz*dz>int64_t(7*kScale)*(7*kScale)) continue;
+        const auto remaining=[&](nav::Point p) {
+            const int64_t x=p.x-end.x,z=p.z-end.z;
+            return x*x+z*z;
+        };
+        if (remaining(point)>=remaining(start)) continue;
+        if (std::any_of(contacts.begin(),contacts.end(),[&](const ArmedContact& contact) {
+            return crosses_acquisition(start,point,contact) || crosses_acquisition(point,end,contact);
+        })) continue;
+        // A forced turn around a ridge, building or deposit on the first
+        // leg could cut back inside the contact. Use public terrain and
+        // observed obstacles; orders can lead into unexplored ground.
+        const auto clear=[&](nav::Rect r) {
+            return nav::segment_clear(start,point,{r.min_x-unit_radius,r.min_z-unit_radius,r.max_x+unit_radius,r.max_z+unit_radius});
+        };
+        if (std::any_of(map_terrain(sim.map()).begin(),map_terrain(sim.map()).end(),[&](nav::Rect r) {
+            return !clear(r);
+        })) continue;
+        if (std::any_of(sim.structures().begin(),sim.structures().end(),[&](const Structure& b) {
+            return b.hp>0 && sim.visibility(miner.player,b.x/kScale,b.z/kScale)==2 &&
+                !clear({b.x-kScale,b.z-kScale,b.x+kScale,b.z+kScale});
+        })) continue;
+        if (std::any_of(sim.deposits().begin(),sim.deposits().end(),[&](const Deposit& d) {
+            return sim.visibility(miner.player,d.x/kScale,d.z/kScale)==2 &&
+                !clear({d.x-kScale/2,d.z-kScale/2,d.x+kScale/2,d.z+kScale/2});
+        })) continue;
+        return point;
+    }
+    return {-1,-1};
+}
+}
+
 std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& sequence) {
-    if (player >= 2 || sim.winner() != -1 || sim.tick() % 20 != 0) return {};
+    if (player >= 2 || sim.winner() != -1) return {};
+    const bool decision=sim.tick()%kTicksPerSecond==0;
+    if (!decision && (sim.map()!=Map::Economy || !sim.knows_depleted(player,sim.deposits()[player]))) return {};
     if (sim.map()==Map::Economy) {
         std::vector<Command> commands;
         const auto emit=[&](Order order,std::vector<uint32_t> ids,int32_t x=0,int32_t z=0) {
@@ -718,6 +792,43 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         const bool home_depleted=sim.knows_depleted(player,sim.deposits()[player]);
         const auto guard=sim.last_salvage_guard_cell(player);
         const bool guarded=guard.x>=0;
+        std::vector<uint32_t> routing;
+        for (const auto& u:sim.units()) {
+            if (!home_depleted || guarded) break;
+            if (u.player!=player || u.hp<=0 || u.kind!=UnitKind::Worker) continue;
+            const bool collecting=u.order==Order::Gather && u.resource_id==sim.deposits()[1-player].id;
+            const bool scouting=u.order==Order::Move && u.goal_x==alternate.x && u.goal_z==approach_z;
+            if (!decision) {
+                // Between regular economy decisions a newly sighted contact
+                // can cross acquisition range. Check active approaches
+                // locally, and check the instant a full or final load turns home.
+                const int64_t x=u.x-alternate.x,z=u.z-alternate.z;
+                constexpr int local_range=(7+kLancerAcquireTiles)*kScale;
+                const bool approaching=(scouting || (collecting && !u.returning && !u.cargo)) &&
+                    x*x+z*z<=int64_t(local_range)*local_range;
+                const bool leaving=collecting && u.returning && u.cargo && u.goal_x==u.x && u.goal_z==u.z;
+                if (!approaching && !leaving) continue;
+            }
+            const int dx=u.goal_x-alternate.x,dz=u.goal_z-alternate.z;
+            if (u.order==Order::Move && !scouting && dx*dx+dz*dz<=7*kScale*7*kScale &&
+                u.blocked_ticks<kTicksPerSecond) {
+                // Finish the approach to the observed flank even if the
+                // contact goes dark along the way.
+                routing.push_back(u.id);
+                continue;
+            }
+            if (!scouting && !collecting && !(u.order==Order::ReturnCargo && u.cargo)) continue;
+            if (collecting && !u.returning && u.cargo) continue;
+            const auto flank=salvage_flank(sim,u,alternate,{anchor->x,anchor->z},!u.returning);
+            if (flank.x>=0 && !(u.order==Order::Move && u.goal_x==flank.x && u.goal_z==flank.z)) {
+                emit(Order::Move,{u.id},flank.x,flank.z);
+                routing.push_back(u.id);
+            }
+        }
+        if (!decision) return commands;
+        const auto routing_worker=[&](const Unit& u) {
+            return std::find(routing.begin(),routing.end(),u.id)!=routing.end();
+        };
         const auto needs_recall=[&](const Unit& u) {
             if (!guarded) return false;
             if (u.order==Order::Gather && u.resource_id==sim.deposits()[1-player].id) return true;
@@ -726,7 +837,7 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
             return dx*dx+dz*dz<=int64_t(9*kScale)*(9*kScale);
         };
         const auto reserved_for_recall=[&](const Unit& u) {
-            return (home_depleted && u.order==Order::ReturnCargo && (guarded || u.cargo>0)) || needs_recall(u);
+            return routing_worker(u) || (home_depleted && u.order==Order::ReturnCargo && (guarded || u.cargo>0)) || needs_recall(u);
         };
         const Unit* builder=nullptr;
         bool constructing=false;
@@ -798,7 +909,7 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
             }
         }
         const Unit* scout=nullptr;
-        if (needs_scout) {
+        if (needs_scout && routing.empty()) {
             for (const auto& u:sim.units()) {
                 if (u.hp<=0 || u.player!=player || u.kind!=UnitKind::Worker || u.id==assigned_builder ||
                     u.order==Order::Build || u.order==Order::ReturnCargo || u.returning || u.cargo>0) continue;
@@ -838,7 +949,7 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         // site in view. A worker carrying ore finishes its return to the bank.
         const bool alternate_open=home_depleted && !guarded && !visible_salvage.empty();
         for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker &&
-            &u!=scout && u.id!=assigned_builder && u.id!=flux_worker && u.order!=Order::Build &&
+            &u!=scout && !routing_worker(u) && u.id!=assigned_builder && u.id!=flux_worker && u.order!=Order::Build &&
             (u.order!=Order::ReturnCargo || (alternate_open && !u.cargo))) {
             if (needs_recall(u)) {
                 emit(Order::ReturnCargo,{u.id});

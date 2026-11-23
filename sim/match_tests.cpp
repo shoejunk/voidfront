@@ -269,6 +269,70 @@ void far_side_guard(uint8_t player,UnitKind kind) {
     std::cout<<"far-side guard player="<<int(player)<<" kind="<<int(kind)<<" sight="<<sight
              <<" recall="<<recall<<" banked="<<delivery<<'\n';
 }
+// The same Strider on the near approach can Hold or intercept. The miner
+// sees the position before either stance has produced a different action.
+// Follow three whole trips: the route from the bank differs from the
+// original scouting route, and the laden automatic return is a third leg.
+void intercepted_salvage(uint8_t player,Order stance,bool withdraw,int reserve=2000) {
+    Sim sim(42,3,Map::Economy);
+    remove_units(sim);
+    const int sign=player==0?1:-1;
+    const uint32_t worker_id=3u*player+1,guard_id=3u*(1-player)+1;
+    auto& worker=const_cast<std::vector<Unit>&>(sim.units())[worker_id-1];
+    worker.hp=100;
+    auto& deposits=const_cast<std::vector<Deposit>&>(sim.deposits());
+    deposits[player].remaining=0;
+    auto& site=deposits[1-player];
+    site.remaining=reserve;
+    const auto& guard=attacker(sim,guard_id,site.x,site.z-sign*6*kScale,stance);
+    uint32_t sequence=0,sight=0,first_flank=0,first_delivery=0,last_delivery=0,departure=0;
+    const int expected=std::min(reserve,3*kCargoCapacity);
+    const int trips=(expected+kCargoCapacity-1)/kCargoCapacity;
+    int payments=0,outbound=0,laden=0;
+    for (int i=0;i<4500;++i) {
+        const bool visible=sim.visibility(player,guard.x/kScale,guard.z/kScale)==2;
+        if (visible && !sight) sight=sim.tick();
+        if (withdraw && payments==1 && !departure) {
+            check(!visible,"withdrawal fixture needs the guard out of sight");
+            check(sim.submit({sim.tick(),1,uint8_t(1-player),Order::Move,{guard_id},
+                site.x+sign*5*kScale,site.z+sign*5*kScale}),"hidden withdrawal rejected");
+            departure=sim.tick();
+        }
+        for (const auto& c:make_ai_commands(sim,player,sequence)) {
+            if (c.order==Order::Move && (c.x!=site.x || c.z!=site.z-sign*3*kScale)) {
+                check(visible && !departure,"worker detoured around a hidden or departed guard");
+                check(worker.order!=Order::Move || worker.goal_x!=c.x || worker.goal_z!=c.z,
+                    "AI repeated the same active flank order");
+                if (!first_flank) first_flank=sim.tick();
+                if (worker.cargo) {
+                    check(worker.cargo==kCargoCapacity || site.remaining==0,"flank interrupted a partial load");
+                    ++laden;
+                } else ++outbound;
+            }
+            check(sim.submit(c),"interception fixture rejected an economic command");
+        }
+        const auto bank=sim.salvage(player),cargo=worker.cargo;
+        sim.step();
+        check(worker.hp==100,"interceptor damaged the mining worker");
+        if (sim.salvage(player)>bank) {
+            check(cargo==std::min(kCargoCapacity,expected-bank) && !worker.cargo && sim.salvage(player)-bank==cargo,
+                "flank worker failed to bank its complete load");
+            if (!first_delivery) first_delivery=sim.tick();
+            last_delivery=sim.tick();
+            ++payments;
+        }
+        // A pursuer can follow a miner home and kill it after the deposit.
+        if (payments==trips && (reserve>expected || sim.tick()-last_delivery>=200)) break;
+    }
+    check(sight && first_flank>=sight && first_delivery>first_flank && payments==trips &&
+        site.remaining==reserve-expected && sim.salvage(player)==expected,
+        "intercepted miner did not bank the harvested salvage");
+    check(outbound==(withdraw?1:trips) && laden==outbound,"flank orders did not match the observed trips");
+    std::cout<<"intercept player="<<int(player)<<" stance="<<int(stance)<<" reserve="<<reserve<<" withdrawn="<<departure
+             <<" sight="<<sight<<" first_flank="<<first_flank<<" first_bank="<<first_delivery
+             <<" final_bank="<<last_delivery<<" end="<<sim.tick()<<" deposits="<<payments<<" outbound="<<outbound<<" laden="<<laden
+             <<" hp="<<worker.hp<<" hash="<<sim.state_hash()<<'\n';
+}
 void lone_worker_recovery() {
     Sim sim(42,3,Map::Economy);
     std::array<uint32_t,2> sequences{};
@@ -382,6 +446,9 @@ int main() {
         for (uint8_t p=0;p<2;++p) {
             guarded_salvage(p,false); guarded_salvage(p,true); guarded_salvage(p,true,3);
             far_side_guard(p,UnitKind::Strider); far_side_guard(p,UnitKind::Lancer);
+            intercepted_salvage(p,Order::Hold,false); intercepted_salvage(p,Order::AttackMove,false);
+            intercepted_salvage(p,Order::AttackMove,true);
+            intercepted_salvage(p,Order::AttackMove,false,3); intercepted_salvage(p,Order::AttackMove,false,11);
         }
         lone_worker_recovery(); economic_match(false); duel_seed_survey(); economic_match(true); mirrored_economy();
         std::cout<<"economic match tests passed\n"; }

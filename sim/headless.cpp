@@ -98,7 +98,10 @@ bool same_path(const std::string& a,const std::string& b) {
 #endif
     return left==right;
 }
-std::vector<vf::Command> depletion_commands(const vf::Sim& sim,uint8_t player,uint32_t& sequence,uint8_t miner,uint32_t guards) {
+enum class GuardPost { Garrison, ApproachHold, ApproachIntercept };
+
+std::vector<vf::Command> depletion_commands(const vf::Sim& sim,uint8_t player,uint32_t& sequence,
+                                             uint8_t miner,uint32_t guards,GuardPost post) {
     if (sim.winner()!=-1 || (player!=miner && !guards)) return {};
     const auto& home=sim.deposits()[player];
     if (player==miner && home.remaining==0) return vf::make_ai_commands(sim,player,sequence);
@@ -131,21 +134,26 @@ std::vector<vf::Command> depletion_commands(const vf::Sim& sim,uint8_t player,ui
     }
     int slot=0;
     for (const auto& u:sim.units()) if (is_guard(u)) {
-        const int x=home.x-toward_center*(slot%3-1)*vf::kScale;
-        const int z=home.z+toward_center*(2+slot/3)*vf::kScale;
+        const int dx=post==GuardPost::Garrison ? 1-slot%3 : 0;
+        const int dz=post==GuardPost::Garrison ? 2+slot/3 : 6;
+        const int x=home.x+toward_center*dx*vf::kScale;
+        const int z=home.z+toward_center*dz*vf::kScale;
         ++slot;
-        if (u.hp<=0 || u.order==vf::Order::Hold) continue;
-        if (u.x==x && u.z==z) emit(vf::Order::Hold,{u.id});
+        if (u.hp<=0 || u.order==vf::Order::Hold || u.order==vf::Order::AttackMove) continue;
+        if (u.x==x && u.z==z) {
+            if (post==GuardPost::ApproachIntercept) emit(vf::Order::AttackMove,{u.id},x,z);
+            else emit(vf::Order::Hold,{u.id});
+        }
         else if (u.order==vf::Order::Stop) emit(vf::Order::Move,{u.id},x,z);
     }
     return commands;
 }
 
 std::vector<vf::Command> profile_commands(const vf::Sim& sim,uint8_t player,uint32_t& sequence,const std::string& profile,
-                                         uint8_t miner,uint32_t guards) {
+                                         uint8_t miner,uint32_t guards,GuardPost post) {
     if (profile=="ai") return vf::make_ai_commands(sim,player,sequence);
     if (profile=="economic-ai") return player==1?vf::make_ai_commands(sim,player,sequence):std::vector<vf::Command>{};
-    if (profile=="depleted-home") return depletion_commands(sim,player,sequence,miner,guards);
+    if (profile=="depleted-home") return depletion_commands(sim,player,sequence,miner,guards,post);
     const auto tick=sim.tick();
     const bool repeat=profile=="repeated" && tick<=800 && tick%80==0;
     const bool pause=profile=="moving-blockers" && player==0 && tick==200;
@@ -175,6 +183,8 @@ int main(int argc, char** argv) {
     bool explicit_setup=false;
     uint32_t mining_player=0,guard_count=0;
     bool depletion_options=false;
+    GuardPost guard_post=GuardPost::Garrison;
+    bool explicit_guards=false;
     bool state_trace=false;
     try {
         for (int i = 1; i < argc; ++i) {
@@ -185,7 +195,15 @@ int main(int argc, char** argv) {
             else if (arg == "--seed") { seed = number(argv[++i]); explicit_setup=true; }
             else if (arg=="--mining-player" || arg=="--guards") {
                 const uint32_t value=number(argv[++i]);
-                if (arg=="--mining-player") mining_player=value; else guard_count=value;
+                if (arg=="--mining-player") mining_player=value;
+                else { guard_count=value; explicit_guards=true; }
+                explicit_setup=true; depletion_options=true;
+            }
+            else if (arg=="--approach-guard") {
+                const std::string stance=argv[++i];
+                if (stance=="hold") guard_post=GuardPost::ApproachHold;
+                else if (stance=="attack-move") guard_post=GuardPost::ApproachIntercept;
+                else throw std::invalid_argument("approach-guard must be hold or attack-move");
                 explicit_setup=true; depletion_options=true;
             }
             else if (arg == "--trace") trace_path = argv[++i];
@@ -221,6 +239,10 @@ int main(int argc, char** argv) {
         const bool economy_profile=profile=="economic-ai" || profile=="depleted-home";
         if (depletion_options && (profile!="depleted-home" || mining_player>1 || guard_count>8))
             throw std::invalid_argument("depleted-home requires mining player 0..1 and guards 0..8");
+        if (guard_post!=GuardPost::Garrison) {
+            if (explicit_guards && guard_count!=1) throw std::invalid_argument("approach-guard uses one defender");
+            guard_count=1;
+        }
         if (economy_profile && map!=vf::Map::Economy) throw std::invalid_argument("economic profiles require economy map");
         if (profile!="ai" && !economy_profile && map!=vf::Map::Scale128) throw std::invalid_argument("traffic profiles require scale128 map");
         vf::Sim sim(seed,count,map);
@@ -267,7 +289,7 @@ int main(int argc, char** argv) {
                     if(!sim.submit(replay.commands[replay_index++])) throw std::runtime_error("replay command rejected at tick " + std::to_string(tick));
             } else {
                 for (uint8_t p = 0; p < 2; ++p) for (const auto& c : profile_commands(sim,p,sequence[p],profile,
-                        static_cast<uint8_t>(mining_player),guard_count)) {
+                        static_cast<uint8_t>(mining_player),guard_count,guard_post)) {
                     if(!sim.submit(c)) throw std::runtime_error("AI command rejected");
                     if(record.is_open()) {
                         const auto bytes=vf::serialize_command(c);
