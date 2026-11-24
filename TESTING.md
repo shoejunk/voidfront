@@ -1,5 +1,152 @@
 # Verification ledger
 
+## 2026-11-23 — the offset salvage defender and worker selection
+
+Start a normal Glass Reach opening with a purchased Strider one tile to
+the side of the previous guard post. The offset follows the mining player's
+orientation. Set `--mining-player 1` to rotate the scenario.
+
+```powershell
+./build/windows/sim/Release/voidfront_headless.exe --map economy --profile depleted-home --mining-player 0 --approach-guard attack-move --approach-offset -1 --ticks 15000 --record artifacts/offset.vfr --metrics artifacts/offset.json
+```
+
+The accepted lateral offsets are −3 through +1. The next two posts to
+the right intersect the defender's anchor. In an early diagnostic run
+the Strider walked to the nearest legal position and never armed at the
+requested +2 post. The runner now rejects those settings before recording.
+Omitting the offset selects the original central post.
+
+On the November 22 simulation, an isolated full-health worker at either
+spawn saw the offset Strider at 386 and died at 935 without bringing ore
+home. In both ordinary openings the mining side exhausted its home salvage
+at 13,423 and saw the guard at 13,850. Its scout took damage
+at 13,872 and was down to 12 HP when it started mining at 14,505. At
+victory (14,828), two workers held ten alternate salvage apiece and
+neither had banked it. The Hold control banked ten at 14,538.
+The original recordings, event logs and stock Release replayer are in
+`artifacts/offset-opening-2026-11-23`.
+
+The initial fix rescued the first and third starting workers, but a
+reviewer found a lost payment when an enemy worker occupied the second
+worker's preferred slot. On the centerline opening both branches saw
+the Strider at 392 and could not yet see the parked worker. The initial
+fix went straight in. The corrected AI approaches a safe side to inspect
+the field and lets Gather choose the actual service slot. With the
+blocker present it banked forty at full health through 5,000 ticks on
+both sides, with first payments at 1,141 (offset) and 1,158 (center).
+With the same slot unoccupied, the offset worker still died at 1,032
+or 1,031. Fog comparisons found identical mining commands until the
+miner's team could observe different occupancy.
+
+The independent review replayed 216 near-field trials, 22 finite-ore
+trials and 24 variations on starting worker and slot occupancy. None
+ended with less banked salvage or lower worker HP than the previous
+revision. Six of 18 AttackMove posts remained lethal on each side,
+down from eight. See `artifacts/offset-review-2026-11-23/review.md`.
+
+In 1280×720 project renders of the same original replay, the scout's
+card showed 92/100 HP and empty cargo on first damage. At 14,505 it
+showed 12/100 HP and one salvage. F1 selected workers 1–3 and showed
+the group's lowest worker HP, one salvage and seven flux. The return
+button was disabled for the empty group and enabled for the loaded one.
+Both headings fit. The minimap and bright deposit still obscured part
+of the scout in the world view. See `artifacts/offset-card-2026-11-23`.
+
+### Paid openings, native playback and the Windows client
+
+The 14 paid openings covered both spawns, Hold and AttackMove on the
+old and offset approach, plus one, four and eight fixed guards. A
+separate driver constructed the foundry, purchased the defenders and
+recorded the miner's decisions. The stock Debug and Release generators
+matched its canonical command bodies. Both readers reproduced every
+tick in all 14 recordings (208,712 positions). All six fixed garrisons
+retained their earlier endpoint hashes.
+
+| Paid guard, either spawn | Previous first bank | Final first bank | Final damage to miners |
+| --- | ---: | ---: | ---: |
+| Offset AttackMove | None before victory | 14,603 | 0 |
+| Offset Hold | 14,538 | 14,598 | 0 |
+| Centerline AttackMove | 14,602 | 14,625 | 0 |
+| Centerline Hold | 14,602 | 14,625 | 0 |
+
+In the offset AttackMove opening the scout mined its first unit at
+13,985. At 14,603 its cargo fell from ten to zero and the bank rose from
+1,450 to 1,460. The same actor stood at its own anchor's service position.
+Sixty-four independent native prefixes checked the eight approach games
+across both builds. Seven 720p Godot **project** frames reproduced the
+recorded positions, cargo, health and sight of both players. The full
+evidence is in `artifacts/offset-opening-2026-11-23`, including
+`summary.json`, `payments.json` and `final-views-p0` / `final-views-p1`.
+
+The isolated Godot extension with an offset guard and one surviving
+worker banked 10 at 1,099, 2,219 and 3,339. The November 22 extension
+lost the worker at 935. At the final revision all 3,601 Godot states and
+all 13 commands matched an independent native caller. The custom starting
+state and binary fingerprints are in `artifacts/offset-bridge-2026-11-23`.
+The mirrored service-slot, finite reserve and fog regressions are in
+`artifacts/offset-tests-2026-11-23`.
+
+Final Godot 4.7.2, templates and godot-cpp pins passed verification.
+Both MSVC configurations reported content `5b9c4da1e9e37bbd`, 12/12
+CTest, 15 malformed replay cases and seven alias cases. The 2,000-tick
+cross-build trace and ten repeated traces matched. An initial sandboxed
+build hit C1902, and a sandboxed package test timed out on its loopback
+handshake. Scoped local retries completed. See
+`artifacts/offset-final-{verify,package}-2026-11-23.log`.
+
+The frozen Windows build is `artifacts/offset-package-2026-11-23/Voidfront.exe`.
+Its five playable files matched the default export. The package PCK is
+`cc5a7ec4ffb9e413ae224dcf097e6912a509ad4769f6d41914d8f0605d590e0a`
+and the bridge DLL is `f27c3f9b2adfbfb311eb97a4728a7cfc6bcee32fb7b018a486298a2f54ac1aee`
+(SHA256). Two old temporary files in the default package directory were
+left intact.
+
+The exported scripted win reached 4,512 (`626b249259694a35`, 42 commands)
+and the ordinary-clock AI win reached 3,228 (`c6eb050f1aa74eae`,
+21 commands). Both restarted and matched 11 native runs. Their audits
+rejected 13 and 11 mutations. Production reached 1,992 with 12 commands,
+11 matching native runs and seven rejected mutations. The 289-frame
+movie at 1600×900 shows the worker card updating during gathering and
+return, then production, combat, victory and restart. At counterattack
+the camera showed largely dark ground while the card identified five
+offscreen Striders. The retained SC2 outcome image gives more prominence
+to victory and visually distinguishes the available actions. See
+`artifacts/offset-{victory,defeat,production}-audit-2026-11-23` and
+`artifacts/offset-victory-2026-11-23.mp4`.
+
+### Timing and networking
+
+Four alternating Release measurements per revision and profile covered
+4,708 post-depletion ticks per group on the development host. The offset
+interceptor's median/p95/p99 whole tick went from 40.1/80.5/128.0 µs to
+41.1/88.8/168.2 µs. With eight fixed guards the corresponding numbers
+were 68.4/133.0/333.7 and 67.1/140.3/356.5 µs. The final input phase
+at 14,120 took 1.33–2.12 ms across runs and issued orders to three units.
+The benchmark includes command recording and other jobs shared the host.
+The representative large-battle and reference-hardware gates remain open.
+See `artifacts/offset-review-2026-11-23/review.md`.
+
+Six 240-tick native loopback profiles passed. At simulated 80 ms RTT
+with 20 ms jitter and 1% loss, generated-command p95 was 109.55/108.64 ms.
+At 160 ms, two buffered ticks ran at 18.58/18.63 Hz. Four buffered ticks
+reached about 19.975 Hz without stalls at 202.87/203.18 ms p95. Each
+profile supplied 12 commands per peer. Four mixed-revision pairs rejected
+the other build before executing any command. Both packaged clients
+also archived two capped rounds at 32 and 64 ticks, including guest
+lobby loss with 63 confirmed, and all eight archive replays matched.
+See `artifacts/offset-network-2026-11-23` and `artifacts/offset-peer-2026-11-23`.
+
+In a full contested loopback match both clients confirmed winner 0 at
+7,181, hash `9bc41ccdeb5367c7`, and returned to offline play. Their
+byte-identical recordings reproduced 44 commands over 22 full native
+runs and 153 prefixes. The audit checked 82 gameplay phases, ten
+offline-return runs and both viewpoints at 32 cargo captures, and
+rejected 39 deliberately corrupted reports. The host harvesting frame
+showed three workers, ten salvage and one returning worker, matching
+the snapshot at 3,285. The two processes took 367.7 seconds and peaked
+at 251,334,656 and 246,198,272 bytes on this host during concurrent work.
+See `artifacts/offset-contested-audit-2026-11-23/summary.json`.
+
 ## 2026-11-22 — approaching a mobile salvage defender
 
 The seed-42 Glass Reach replay harness can now place one normally purchased

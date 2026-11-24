@@ -36,6 +36,29 @@ mouse selection, completed production and restarted. Its 1,992 ticks
 matched eleven native replays. The minimap still overlapped part of the
 scout's selection ring at the south-east deposit.
 
+Source checkpoints are `fb1d1e1` (simulation, match tests and opening
+runner) and `f0e4405` (worker card and packaged input fixture).
+The build is `artifacts/offset-package-2026-11-23/Voidfront.exe`.
+Packaged player and AI victories both restarted. The 32/64-tick paired
+rounds confirmed their archives despite a final lobby disconnect.
+Six native delay profiles passed. At 80 ms simulated RTT, generated-command
+p95 was 109.55/108.64 ms on loopback. Reference hardware, physical-network
+soak, human play, crowded movement and production content remain open.
+
+Two packaged clients also completed a contested match at 7,181 with hash
+`9bc41ccdeb5367c7` and returned to offline play. The independent native
+audit covered 22 full replays, 153 prefixes, 82 gameplay phases, all 32
+cargo views and 39 rejected corruptions. Ten offline-return runs matched.
+Live GitHub `dev` was `8dffef2`. Publishing the accumulated local source
+and evidence still awaits the explicit approval requested after the
+earlier automatic review rejection.
+
+Next, protect the middle worker when its actual unoccupied service
+position is inside the Strider's acquisition radius. A supervised
+retreat kept it at full HP and a later trip after clearance delivered ten.
+The current AI still loses it. The independent 18-position pursuit sweep
+found six lethal posts per spawn. The dated roadmap specifies the controls.
+
 ## 2026-11-22 America/Los_Angeles — moving interceptors and worker cargo
 
 Started from clean `dev` at `d60b32a`. Reproduce the mirrored worker

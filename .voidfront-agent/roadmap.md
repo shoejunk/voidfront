@@ -1,5 +1,30 @@
 # Continuing roadmap
 
+## 2026-11-23 — an exposed mining position
+
+The first and third starting workers can repeatedly bank salvage past
+the offset (-1,-6) Strider on both sides of Glass Reach. Their assigned
+mining positions lie on opposite sides of the deposit. The middle worker
+uses the south slot in its own orientation, inside the guard's acquisition
+radius. With that slot open, the final policy still loses it at 1,032
+or 1,031. If another worker occupies that slot, the miner can instead
+use a safer side and repeatedly deliver. Across 18 nearby
+pursuit positions, six remain lethal per spawn.
+
+Next, use the middle worker as the sole survivor. Reproduce an ordinary
+ReturnCargo on first sight at 384, with safe arrival at its anchor at 788.
+Handle an unsafe destination without diverting the other two workers
+from their safe slots. Verify a stationary guard, departure out of sight,
+and newly visible clearance. Measure first confirmed safe re-entry and
+banking, as well as losses, repeated empty orders, and worker purchases.
+The independent supervised run banked ten at 2,370 after the guard left.
+Preserve the paid openings, partial final loads and the 18-position matrix.
+
+The command card identifies the weakest worker in a damaged group. At
+the south-east patch the minimap can still cover part of its selection
+ring. Human selection/response testing, dense movement, physical-network
+soak, reference performance and production content remain open.
+
 ## 2026-11-22 — remaining approach to the alternate salvage field
 
 On the six-tile approach, both miners now see the guard soon enough to
