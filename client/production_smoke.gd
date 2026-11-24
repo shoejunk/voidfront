@@ -100,6 +100,7 @@ func run() -> void:
 	var worker: Dictionary = initial.units[0]
 	await mouse(MOUSE_BUTTON_LEFT, Vector3(worker.x / 256.0, 0.5, worker.z / 256.0))
 	check(game.selected == [worker.id] and game.hud.command_card.buttons[CardAction.GATHER].is_visible_in_tree(), "Clicking a worker opens its gathering commands")
+	check(game.hud.command_card.heading.text == "Worker   ·   %d/%d HP   ·   Empty cargo" % [worker.hp, worker.max_hp], "Fresh worker card shows its health and empty hold")
 	await mouse(MOUSE_BUTTON_LEFT, Vector3(anchor.x / 256.0, 0.5, anchor.z / 256.0))
 	check(game.hud.command_card.buttons[CardAction.WORKER].disabled, "Anchor shows unaffordable worker training at match start")
 	await click_command(CardAction.SELECT_WORKERS)

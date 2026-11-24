@@ -26,6 +26,16 @@ garrisons retained their previous endpoint hashes. Both configurations
 passed 12/12 native tests. The independent tests and controlled Godot
 bridge comparison are indexed in the dated TESTING entry.
 
+The worker command card now shows individual HP and names the carried
+resource. A group selection sums salvage and flux separately and reports
+its lowest worker HP if someone is hurt. At the same previous replay
+tick the selected scout showed 12/100 HP and one salvage. F1 showed a
+three-worker group carrying one salvage and seven flux. The packaged
+production fixture also checked the fresh worker card through ordinary
+mouse selection, completed production and restarted. Its 1,992 ticks
+matched eleven native replays. The minimap still overlapped part of the
+scout's selection ring at the south-east deposit.
+
 ## 2026-11-22 America/Los_Angeles — moving interceptors and worker cargo
 
 Started from clean `dev` at `d60b32a`. Reproduce the mirrored worker

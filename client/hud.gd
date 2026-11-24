@@ -165,10 +165,21 @@ func _process(_delta: float) -> void:
 		if game.current.winner in [0, 1]:
 			var outcome := "VICTORY / ENEMY ANCHOR DESTROYED" if game.current.winner == game.local_player else "DEFEAT / YOUR ANCHOR DESTROYED"
 			result.text = outcome + ("\nAwaiting session confirmation" if game.network else "\nR  /  new match")
-		workers = game._selected_workers()
 		var lancers := 0
+		var salvage_load := 0
+		var flux_load := 0
+		var returning_workers := 0
+		var weakest_worker: Dictionary = {}
 		for unit in game.current.units:
-			if unit.id in game.selected and int(unit.get("kind", 0)) == 2: lancers += 1
+			if unit.id not in game.selected or unit.hp <= 0: continue
+			if unit.kind == 2: lancers += 1
+			if unit.kind != 1: continue
+			workers += 1
+			if weakest_worker.is_empty() or unit.hp * weakest_worker.max_hp < weakest_worker.hp * unit.max_hp:
+				weakest_worker = unit
+			if unit.cargo_kind == 1: flux_load += int(unit.cargo)
+			else: salvage_load += int(unit.cargo)
+			if unit.returning: returning_workers += 1
 		var roster := PackedStringArray()
 		var striders: int = game.selected.size() - workers - lancers
 		if workers > 0: roster.append("Worker" if workers == 1 else "%d Workers" % workers)
@@ -176,12 +187,15 @@ func _process(_delta: float) -> void:
 		if lancers > 0: roster.append("Lancer" if lancers == 1 else "%d Lancers" % lancers)
 		selection.text = "Select a unit or structure" if roster.is_empty() else "  /  ".join(roster)
 		if workers > 0:
-			var returning_workers := 0
-			for unit in game.current.units:
-				if unit.id in game.selected:
-					cargo += int(unit.get("cargo", 0))
-					if unit.returning: returning_workers += 1
-			selection.text += "   ·   Carrying %d" % cargo
+			cargo = salvage_load + flux_load
+			var loads := PackedStringArray()
+			if salvage_load: loads.append("%d salvage" % salvage_load)
+			if flux_load: loads.append("%d flux" % flux_load)
+			if game.selected.size() == 1:
+				selection.text += "   ·   %d/%d HP" % [weakest_worker.hp, weakest_worker.max_hp]
+			elif weakest_worker.hp < weakest_worker.max_hp:
+				selection.text += "   ·   Lowest worker HP %d/%d" % [weakest_worker.hp, weakest_worker.max_hp]
+			selection.text += "   ·   " + ("Empty cargo" if loads.is_empty() else " + ".join(loads))
 			if returning_workers:
 				selection.text += "   ·   Returning to anchor" if game.selected.size() == 1 else "   ·   %d returning to anchor" % returning_workers
 		if not game.selected_entity.is_empty():
