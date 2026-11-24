@@ -1,5 +1,31 @@
 # Voidfront progress
 
+## 2026-11-23 America/Los_Angeles — mining around an offset defender
+
+Starting from clean `dev` at `e2be10e`, reproduce the worker loss at the
+alternate deposit with the mobile defender at offset (-1,-6). Check both
+spawn orientations, repeated trips and a partially depleted field. Compare
+the other guard positions and the ordinary paid-defender openings, then
+verify the changed command streams against both native builds and Godot.
+
+Against the offset AttackMove guard, both paid scouts now brought ten
+salvage home at 14,603 and kept full health. Previously each ended the
+match at 12 HP with its load still on board. The AI considers the worker's
+mining or drop-off position, the defender's observed acquisition radius
+and routes around known obstacles. An unseen preferred slot that appears
+unsafe now prompts a look from a safe side. Independent review caught
+the lost first payment that led to that correction and an eight-tick
+discrepancy between mirrored routes. The paid centerline control still
+delivered, 23 ticks later than the previous revision.
+
+Fourteen paid openings generated and replayed identically in MSVC Debug
+and Release through 208,712 tick positions. Sixty-four native prefixes
+verified the miner's extraction at the remote patch, its service position
+at the home anchor and the corresponding bank change. All six fixed
+garrisons retained their previous endpoint hashes. Both configurations
+passed 12/12 native tests. The independent tests and controlled Godot
+bridge comparison are indexed in the dated TESTING entry.
+
 ## 2026-11-22 America/Los_Angeles — moving interceptors and worker cargo
 
 Started from clean `dev` at `d60b32a`. Reproduce the mirrored worker

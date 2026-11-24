@@ -273,18 +273,34 @@ void far_side_guard(uint8_t player,UnitKind kind) {
 // sees the position before either stance has produced a different action.
 // Follow three whole trips: the route from the bank differs from the
 // original scouting route, and the laden automatic return is a third leg.
-void intercepted_salvage(uint8_t player,Order stance,bool withdraw,int reserve=2000) {
+enum class MiningWorker { First=0, SecondWithOccupiedSlot=1, Third=2 };
+std::array<uint32_t,2> intercepted_salvage(uint8_t player,Order stance,bool withdraw,int reserve=2000,int guard_dx=0,
+                                         MiningWorker setup=MiningWorker::First) {
     Sim sim(42,3,Map::Economy);
     remove_units(sim);
     const int sign=player==0?1:-1;
-    const uint32_t worker_id=3u*player+1,guard_id=3u*(1-player)+1;
+    const int worker_rank=static_cast<int>(setup);
+    const uint32_t worker_id=3u*player+worker_rank+1,guard_id=3u*(1-player)+1;
     auto& worker=const_cast<std::vector<Unit>&>(sim.units())[worker_id-1];
     worker.hp=100;
     auto& deposits=const_cast<std::vector<Deposit>&>(sim.deposits());
     deposits[player].remaining=0;
     auto& site=deposits[1-player];
     site.remaining=reserve;
-    const auto& guard=attacker(sim,guard_id,site.x,site.z-sign*6*kScale,stance);
+    const auto& guard=attacker(sim,guard_id,site.x+sign*guard_dx*kScale,site.z-sign*6*kScale,stance);
+    const int mine_slot=kScale/2+kScale/4+32;
+    if (setup==MiningWorker::SecondWithOccupiedSlot) {
+        // The blocking worker becomes visible after the Strider. Gather must
+        // service the field from the next slot in the second worker's rotation.
+        attacker(sim,guard_id+1,site.x,site.z-sign*mine_slot).kind=UnitKind::Worker;
+    }
+    const auto& anchor=sim.structures()[player];
+    const auto at_service=[](nav::Point position,int x,int z,int extent) {
+        // The eight service slots sit one worker radius plus 32 fixed units outside the footprint.
+        const int distance=extent+kScale/4+32;
+        const int dx=std::abs(position.x-x),dz=std::abs(position.z-z);
+        return std::max(dx,dz)==distance && (dx==0 || dz==0 || dx==dz);
+    };
     uint32_t sequence=0,sight=0,first_flank=0,first_delivery=0,last_delivery=0,departure=0;
     const int expected=std::min(reserve,3*kCargoCapacity);
     const int trips=(expected+kCargoCapacity-1)/kCargoCapacity;
@@ -311,11 +327,21 @@ void intercepted_salvage(uint8_t player,Order stance,bool withdraw,int reserve=2
             }
             check(sim.submit(c),"interception fixture rejected an economic command");
         }
-        const auto bank=sim.salvage(player),cargo=worker.cargo;
+        const auto bank=sim.salvage(player),cargo=worker.cargo,ore=site.remaining;
+        const nav::Point position{worker.x,worker.z};
         sim.step();
         check(worker.hp==100,"interceptor damaged the mining worker");
+        if (worker.cargo>cargo) {
+            check(worker.resource_id==site.id && worker.cargo_kind==0 && worker.cargo==cargo+1 && site.remaining==ore-1 &&
+                at_service(position,site.x,site.z,kScale/2),
+                "miner gained cargo away from the alternate salvage field");
+            if (setup==MiningWorker::SecondWithOccupiedSlot) {
+                check(position==nav::Point{site.x+sign*mine_slot,site.z},"occupied slot failed to redirect extraction");
+            }
+        }
         if (sim.salvage(player)>bank) {
-            check(cargo==std::min(kCargoCapacity,expected-bank) && !worker.cargo && sim.salvage(player)-bank==cargo,
+            check(cargo==std::min(kCargoCapacity,expected-bank) && !worker.cargo && sim.salvage(player)-bank==cargo &&
+                at_service(position,anchor.x,anchor.z,kScale),
                 "flank worker failed to bank its complete load");
             if (!first_delivery) first_delivery=sim.tick();
             last_delivery=sim.tick();
@@ -327,11 +353,16 @@ void intercepted_salvage(uint8_t player,Order stance,bool withdraw,int reserve=2
     check(sight && first_flank>=sight && first_delivery>first_flank && payments==trips &&
         site.remaining==reserve-expected && sim.salvage(player)==expected,
         "intercepted miner did not bank the harvested salvage");
-    check(outbound==(withdraw?1:trips) && laden==outbound,"flank orders did not match the observed trips");
-    std::cout<<"intercept player="<<int(player)<<" stance="<<int(stance)<<" reserve="<<reserve<<" withdrawn="<<departure
+    if (reserve==expected) check(sim.tick()-last_delivery>=200,"partial-load observation ended before the pursuit window");
+    // The central lane has one measured detour on each leg. Offset approaches
+    // can require a different number of waypoints to reach the service slot.
+    if (guard_dx==0 && setup==MiningWorker::First)
+        check(outbound==(withdraw?1:trips) && laden==outbound,"flank orders did not match the observed trips");
+    std::cout<<"intercept player="<<int(player)<<" rank="<<worker_rank<<" guard_dx="<<guard_dx<<" stance="<<int(stance)<<" reserve="<<reserve<<" withdrawn="<<departure
              <<" sight="<<sight<<" first_flank="<<first_flank<<" first_bank="<<first_delivery
              <<" final_bank="<<last_delivery<<" end="<<sim.tick()<<" deposits="<<payments<<" outbound="<<outbound<<" laden="<<laden
              <<" hp="<<worker.hp<<" hash="<<sim.state_hash()<<'\n';
+    return {first_delivery,last_delivery};
 }
 void lone_worker_recovery() {
     Sim sim(42,3,Map::Economy);
@@ -443,13 +474,21 @@ void mirrored_economy() {
 }
 int main() {
     try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands();
+        std::array<std::array<uint32_t,2>,2> opposite_slot_payments{};
         for (uint8_t p=0;p<2;++p) {
             guarded_salvage(p,false); guarded_salvage(p,true); guarded_salvage(p,true,3);
             far_side_guard(p,UnitKind::Strider); far_side_guard(p,UnitKind::Lancer);
             intercepted_salvage(p,Order::Hold,false); intercepted_salvage(p,Order::AttackMove,false);
             intercepted_salvage(p,Order::AttackMove,true);
             intercepted_salvage(p,Order::AttackMove,false,3); intercepted_salvage(p,Order::AttackMove,false,11);
+            // A miner keeping full health on its first scouting trip must also
+            // survive the trips from the anchor and bank the last partial load.
+            for (int reserve:{3,21,2000}) intercepted_salvage(p,Order::AttackMove,false,reserve,-1);
+            // The third opening worker services the opposite side of the patch.
+            opposite_slot_payments[p]=intercepted_salvage(p,Order::AttackMove,false,21,-1,MiningWorker::Third);
+            for (int guard_dx:{0,-1}) intercepted_salvage(p,Order::AttackMove,false,21,guard_dx,MiningWorker::SecondWithOccupiedSlot);
         }
+        check(opposite_slot_payments[0]==opposite_slot_payments[1],"rotated service route changed first or final delivery time");
         lone_worker_recovery(); economic_match(false); duel_seed_survey(); economic_match(true); mirrored_economy();
         std::cout<<"economic match tests passed\n"; }
     catch (const std::exception& e) { std::cerr<<e.what()<<'\n'; return 1; }

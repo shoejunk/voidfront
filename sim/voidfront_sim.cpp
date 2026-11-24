@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <tuple>
 
@@ -708,64 +709,125 @@ bool crosses_acquisition(nav::Point from,nav::Point to,const ArmedContact& conta
     const int64_t x=contact.position.x-from.x,z=contact.position.z-from.z;
     const int64_t length2=dx*dx+dz*dz, projection=x*dx+z*dz;
     const int64_t radius2=int64_t(contact.range)*contact.range;
-    if (projection<=0) return x*x+z*z<radius2;
-    if (projection>=length2) return (x-dx)*(x-dx)+(z-dz)*(z-dz)<radius2;
+    if (projection<=0) return x*x+z*z<=radius2;
+    if (projection>=length2) return (x-dx)*(x-dx)+(z-dz)*(z-dz)<=radius2;
     const int64_t cross=x*dz-z*dx;
-    return cross*cross<radius2*length2;
+    return cross*cross<=radius2*length2;
 }
-// A scout can see an armed unit before it can distinguish Hold from a pursuit.
-// If the direct leg crosses acquisition range, look for a visible flank that
-// clears the armed contacts on both legs. Only use positions the team sees.
+// A scout sees the defender before Hold and pursuit look different. Use
+// only map geometry, its own orders and currently observed contacts.
 nav::Point salvage_flank(const Sim& sim,const Unit& miner,nav::Point patch,nav::Point home,bool inbound) {
-    const nav::Point start{miner.x,miner.z},end=inbound?patch:home;
+    const nav::Point start{miner.x,miner.z},destination=inbound?patch:home;
     std::vector<ArmedContact> contacts;
-    std::vector<nav::Point> candidates;
     for (const auto& enemy:sim.units()) {
         if (enemy.player==miner.player || enemy.hp<=0 || enemy.kind==UnitKind::Worker ||
             sim.visibility(miner.player,enemy.x/kScale,enemy.z/kScale)!=2) continue;
         const int reach=(enemy.kind==UnitKind::Lancer?kLancerAcquireTiles:strider_acquire_tiles)*kScale;
-        const ArmedContact contact{{enemy.x,enemy.z},reach};
-        contacts.push_back(contact);
+        contacts.push_back({{enemy.x,enemy.z},reach});
+    }
+    if (contacts.empty()) return {-1,-1};
+
+    // The center of the field may be safe while the worker's slot is exposed.
+    // Before Gather assigns a goal, estimate the slot using only observed units.
+    const auto slots=sim.service_slots(miner,destination,inbound?kScale/2:kScale);
+    const nav::Point goal{miner.goal_x,miner.goal_z};
+    auto end=slots.front();
+    if (std::find(slots.begin(),slots.end(),goal)!=slots.end()) end=goal;
+    else for (const auto slot:slots) {
+        if (std::none_of(sim.units().begin(),sim.units().end(),[&](const Unit& u) {
+            return u.hp>0 && u.id!=miner.id && sim.visibility(miner.player,u.x/kScale,u.z/kScale)==2 &&
+                std::abs(u.x-slot.x)<2*unit_radius && std::abs(u.z-slot.z)<2*unit_radius;
+        })) { end=slot; break; }
+    }
+    const auto dangerous=[&](nav::Point a,nav::Point b) {
+        return std::any_of(contacts.begin(),contacts.end(),[&](const ArmedContact& c) {return crosses_acquisition(a,b,c);});
+    };
+    // Approach a safe side to inspect the field when the preferred slot is
+    // still unseen. Gather will assign the actual slot once the miner arrives.
+    if (inbound && dangerous(end,end) && sim.visibility(miner.player,end.x/kScale,end.z/kScale)!=2) {
+        const auto safe=std::find_if(slots.begin(),slots.end(),[&](nav::Point slot) {
+            return !dangerous(slot,slot);
+        });
+        if (safe!=slots.end()) end=*safe;
+    }
+    if (!dangerous(start,end) || dangerous(start,start) || dangerous(end,end)) return {-1,-1};
+
+    const auto distance_sq=[](nav::Point a,nav::Point b) {
+        const int64_t dx=a.x-b.x,dz=a.z-b.z;
+        return dx*dx+dz*dz;
+    };
+    auto obstacles=map_terrain(sim.map());
+    const auto add=[&](int x,int z,int size) { obstacles.push_back({x-size,z-size,x+size,z+size}); };
+    // The opposite field has a public map location even before the first visit.
+    add(patch.x,patch.z,kScale/2);
+    for (const auto& d:sim.deposits()) if ((d.x!=patch.x || d.z!=patch.z) && sim.visibility(miner.player,d.x/kScale,d.z/kScale)==2)
+        add(d.x,d.z,kScale/2);
+    for (const auto& b:sim.structures()) if (b.hp>0 && sim.visibility(miner.player,b.x/kScale,b.z/kScale)==2)
+        add(b.x,b.z,kScale);
+    const auto clear=[&](nav::Point a,nav::Point b,int clearance) {
+        return std::none_of(obstacles.begin(),obstacles.end(),[&](nav::Rect r) {
+            return !nav::segment_clear(a,b,{r.min_x-clearance,r.min_z-clearance,r.max_x+clearance,r.max_z+clearance});
+        });
+    };
+    std::optional<nav::World> known_world;
+    const auto safe_leg=[&](nav::Point from,nav::Point to) {
+        if (clear(from,to,unit_radius)) {
+            return clear(from,to,unit_radius+movement_speed/2) && !dangerous(from,to);
+        }
+        // A leg straight through the middle of a blocker has two equivalent
+        // ways around it. Navigation can break that tie on different sides
+        // after rotating the map; choose a waypoint that specifies a side.
+        for (const auto r:obstacles) {
+            const bool through_x=from.z==to.z && 2*from.z==r.min_z+r.max_z &&
+                std::min(from.x,to.x)<r.min_x && std::max(from.x,to.x)>r.max_x;
+            const bool through_z=from.x==to.x && 2*from.x==r.min_x+r.max_x &&
+                std::min(from.z,to.z)<r.min_z && std::max(from.z,to.z)>r.max_z;
+            if (through_x || through_z) return false;
+        }
+        if (!known_world) known_world.emplace(terrain_bounds(sim.map()),obstacles,unit_radius);
+        const auto route=known_world->route(from,to);
+        for (auto turn:route) {
+            if (dangerous(from,turn)) return false;
+            from=turn;
+        }
+        return from==to;
+    };
+    const auto useful=[&](nav::Point point) {
+        return point.x>=kScale+unit_radius && point.z>=kScale+unit_radius &&
+            point.x<=(sim.width()-1)*kScale-unit_radius && point.z<=(sim.height()-1)*kScale-unit_radius &&
+            distance_sq(point,patch)<=int64_t(7*kScale)*(7*kScale) && distance_sq(point,end)<distance_sq(start,end) &&
+            !dangerous(point,point) && safe_leg(start,point) && safe_leg(point,end);
+    };
+    for (const auto& contact:contacts) {
         if (!crosses_acquisition(start,end,contact)) continue;
-        // Leave room to round the deposit to a different miner's service slot.
-        const int away_x=(patch.x>enemy.x)-(patch.x<enemy.x);
-        const int away_z=(patch.z>enemy.z)-(patch.z<enemy.z);
-        candidates.push_back({enemy.x+(home.x<enemy.x?-reach:reach),patch.z+away_z*kScale});
-        candidates.push_back({patch.x+away_x*kScale,enemy.z+(home.z<enemy.z?-reach:reach)});
+        const auto pos=contact.position;
+        const int reach=contact.range;
+        const int away_x=(patch.x>pos.x)-(patch.x<pos.x);
+        const int away_z=(patch.z>pos.z)-(patch.z<pos.z);
+        const nav::Point x_side{pos.x+(home.x<pos.x?-reach:reach),patch.z+away_z*kScale};
+        const nav::Point z_side{patch.x+away_x*kScale,pos.z+(home.z<pos.z?-reach:reach)};
+        if (useful(x_side)) return x_side;
+        if (useful(z_side)) return z_side;
     }
-    for (const auto point:candidates) {
-        if (point.x<kScale+unit_radius || point.z<kScale+unit_radius ||
-            point.x>(sim.width()-1)*kScale-unit_radius || point.z>(sim.height()-1)*kScale-unit_radius) continue;
-        // The worker must retain sight of the field from its staging point.
-        const int64_t dx=point.x-patch.x,dz=point.z-patch.z;
-        if (dx*dx+dz*dz>int64_t(7*kScale)*(7*kScale)) continue;
-        const auto remaining=[&](nav::Point p) {
-            const int64_t x=p.x-end.x,z=p.z-end.z;
-            return x*x+z*z;
-        };
-        if (remaining(point)>=remaining(start)) continue;
-        if (std::any_of(contacts.begin(),contacts.end(),[&](const ArmedContact& contact) {
-            return crosses_acquisition(start,point,contact) || crosses_acquisition(point,end,contact);
-        })) continue;
-        // A forced turn around a ridge, building or deposit on the first
-        // leg could cut back inside the contact. Use public terrain and
-        // observed obstacles; orders can lead into unexplored ground.
-        const auto clear=[&](nav::Rect r) {
-            return nav::segment_clear(start,point,{r.min_x-unit_radius,r.min_z-unit_radius,r.max_x+unit_radius,r.max_z+unit_radius});
-        };
-        if (std::any_of(map_terrain(sim.map()).begin(),map_terrain(sim.map()).end(),[&](nav::Rect r) {
-            return !clear(r);
-        })) continue;
-        if (std::any_of(sim.structures().begin(),sim.structures().end(),[&](const Structure& b) {
-            return b.hp>0 && sim.visibility(miner.player,b.x/kScale,b.z/kScale)==2 &&
-                !clear({b.x-kScale,b.z-kScale,b.x+kScale,b.z+kScale});
-        })) continue;
-        if (std::any_of(sim.deposits().begin(),sim.deposits().end(),[&](const Deposit& d) {
-            return sim.visibility(miner.player,d.x/kScale,d.z/kScale)==2 &&
-                !clear({d.x-kScale/2,d.z-kScale/2,d.x+kScale/2,d.z+kScale/2});
-        })) continue;
-        return point;
+
+    // An offset defender can put both axis flanks out of sight of the field.
+    // Check closer detours first, with ties ordered in the miner's orientation.
+    struct FlankCandidate { uint64_t length; nav::Point point; };
+    std::vector<FlankCandidate> candidates;
+    const int sign=miner.player==0?1:-1;
+    for (int x=-7;x<=7;++x) for (int z=-7;z<=7;++z) {
+        // Sweep the two lanes beside each axis of the deposit. A point one
+        // tile off its center line clears the expanded half-tile footprint.
+        if (std::abs(x)!=1 && std::abs(z)!=1) continue;
+        if (x*x+z*z>49) continue;
+        const nav::Point point{patch.x+sign*x*kScale,patch.z+sign*z*kScale};
+        const auto cost=nav::ceil_sqrt(distance_sq(start,point))+nav::ceil_sqrt(distance_sq(point,end));
+        candidates.push_back({cost,point});
     }
+    std::stable_sort(candidates.begin(),candidates.end(),[](const FlankCandidate& a,const FlankCandidate& b) {
+        return a.length<b.length;
+    });
+    for (const auto& candidate:candidates) if (useful(candidate.point)) return candidate.point;
     return {-1,-1};
 }
 }

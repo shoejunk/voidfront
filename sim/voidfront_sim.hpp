@@ -99,6 +99,7 @@ public:
     CommandResult command_result(uint8_t player) const { return player<2?results_[player]:CommandResult::None; }
     uint32_t result_sequence(uint8_t player) const { return player<2?result_sequences_[player]:0; }
     bool can_build(uint8_t player,int32_t x,int32_t z) const;
+    std::array<nav::Point,8> service_slots(const Unit& unit,nav::Point center,int32_t extent) const;
     int width() const { return map_width(map_); }
     int height() const { return map_height(map_); }
     bool blocked(int x, int z) const;

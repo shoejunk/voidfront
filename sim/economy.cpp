@@ -26,17 +26,24 @@ void Sim::rebuild_navigation() {
     }
 }
 
-nav::Point Sim::service_point(const Unit& u,int32_t x,int32_t z,int32_t extent,const nav::World* world) const {
-    const auto& navigation=world?*world:navigation_;
+std::array<nav::Point,8> Sim::service_slots(const Unit& u,nav::Point center,int32_t extent) const {
     constexpr std::array<nav::Point,8> offsets{{{-1,0},{0,-1},{1,0},{0,1},{-1,-1},{1,-1},{1,1},{-1,1}}};
     // Spread by the unit's rank within its own team and rotate player 1's offsets by 180
     // degrees, so mirrored workers on the rotation-symmetric map pick mirrored service points.
     size_t rank=0;
     for (const auto& other:units_) if (other.player==u.player && other.id<u.id) ++rank;
     const int sign=u.player==1?-1:1;
-    for (size_t n=0;n<offsets.size();++n) {
-        auto d=offsets[(rank+n)%offsets.size()]; d={d.x*sign,d.z*sign};
-        const nav::Point point{x+d.x*(extent+radius+32),z+d.z*(extent+radius+32)};
+    std::array<nav::Point,8> slots;
+    for (size_t n=0;n<slots.size();++n) {
+        const auto d=offsets[(rank+n)%offsets.size()];
+        slots[n]={center.x+d.x*sign*(extent+radius+32),center.z+d.z*sign*(extent+radius+32)};
+    }
+    return slots;
+}
+
+nav::Point Sim::service_point(const Unit& u,int32_t x,int32_t z,int32_t extent,const nav::World* world) const {
+    const auto& navigation=world?*world:navigation_;
+    for (const auto point:service_slots(u,{x,z},extent)) {
         if (!navigation.valid(point)) continue;
         bool free=true;
         for (const auto& other:units_) if (other.hp>0 && other.id!=u.id &&
