@@ -364,6 +364,160 @@ std::array<uint32_t,2> intercepted_salvage(uint8_t player,Order stance,bool with
              <<" hp="<<worker.hp<<" hash="<<sim.state_hash()<<'\n';
     return {first_delivery,last_delivery};
 }
+bool same_order_bytes(const std::vector<Command>& a,const std::vector<Command>& b) {
+    return std::equal(a.begin(),a.end(),b.begin(),b.end(),[](const Command& left,const Command& right) {
+        return serialize_command(left)==serialize_command(right);
+    });
+}
+// On the centerline approach, seeing an occupied near slot through fog
+// changes the scout's initial flank while the blocker is still out of sight.
+void hidden_mining_slot(Sim vacant,uint8_t player,uint32_t guard_id,nav::Point slot,uint32_t sequence) {
+    const auto& field=vacant.deposits()[1-player];
+    const auto& guard=attacker(vacant,guard_id,field.x,vacant.units()[guard_id-1].z,Order::AttackMove);
+    Sim occupied=vacant;
+    attacker(occupied,guard_id+1,slot.x,slot.z).kind=UnitKind::Worker;
+    uint32_t occupied_sequence=sequence;
+    bool saw_defender=false;
+    for (int i=0;i<2000;++i) {
+        if (occupied.visibility(player,slot.x/kScale,slot.z/kScale)==2) {
+            check(saw_defender,"scout failed to see the guard before the hidden service slot");
+            return;
+        }
+        if (vacant.visibility(player,guard.x/kScale,guard.z/kScale)==2) saw_defender=true;
+        const auto orders=make_ai_commands(vacant,player,sequence);
+        const auto other=make_ai_commands(occupied,player,occupied_sequence);
+        check(same_order_bytes(orders,other),"AI reacted to hidden mining-slot occupancy");
+        for (size_t j=0;j<orders.size();++j)
+            check(vacant.submit(orders[j]) && occupied.submit(other[j]),"hidden-slot comparison rejected AI order");
+        vacant.step();
+        occupied.step();
+    }
+    check(false,"scout never observed the occupied service slot");
+}
+// The middle worker's unoccupied near slot is within the Strider's reach.
+// Keep a copy with the defender at its post when the other guard leaves in fog.
+// The scouting player must have the same orders until those worlds look different.
+void exposed_mining_slot(uint8_t player,bool funded) {
+    Sim held(42,3,Map::Economy);
+    const int opening_bank=funded?kWorkerCost:0;
+    // With just 49 remote salvage, another 50-cost worker cannot pay
+    // for itself. Earn that purchase price before reducing the workforce.
+    const int reserve=funded?kWorkerCost-1:2000;
+    uint32_t sequence=0;
+    auto& deposits=const_cast<std::vector<Deposit>&>(held.deposits());
+    auto& home_field=deposits[player];
+    home_field.remaining=opening_bank;
+    if (funded) {
+        check(held.submit({0,++sequence,player,Order::Gather,{3u*player+1},home_field.x,home_field.z}),
+            "middle miner funding order rejected");
+        while (held.salvage(player)<opening_bank && held.tick()<8000) held.step();
+        check(held.salvage(player)==opening_bank && !home_field.remaining,"failed to earn the last worker cost");
+    }
+    remove_units(held);
+    const uint32_t worker_id=3u*player+2,guard_id=3u*(1-player)+1;
+    auto& worker=const_cast<std::vector<Unit>&>(held.units())[worker_id-1];
+    worker.hp=100;
+    auto& site=deposits[1-player];
+    site.remaining=reserve;
+    const auto& anchor=held.structures()[player];
+    const int sign=player==0?1:-1;
+    const nav::Point post{site.x-sign*kScale,site.z-sign*6*kScale};
+    const auto& guard=attacker(held,guard_id,post.x,post.z,Order::AttackMove);
+    const auto seen=[&](const Sim& sim,int x,int z) { return sim.visibility(player,x/kScale,z/kScale)==2; };
+    const auto at_slot=[](const auto& slots,const Unit& u) {
+        return std::find(slots.begin(),slots.end(),nav::Point{u.x,u.z})!=slots.end();
+    };
+    const auto home_slots=held.service_slots(worker,{anchor.x,anchor.z},kScale);
+    const auto mine_slots=held.service_slots(worker,{site.x,site.z},kScale/2);
+    const auto preferred=mine_slots.front();
+    if (!funded) hidden_mining_slot(held,player,guard_id,preferred,sequence);
+    uint32_t sight=0,slot_sight=0,recall=0,home=0;
+    for (int i=0;i<2000 && !home;++i) {
+        if (!sight && seen(held,guard.x,guard.z)) sight=held.tick();
+        if (!slot_sight && seen(held,preferred.x,preferred.z)) slot_sight=held.tick();
+        for (const auto& c:make_ai_commands(held,player,sequence)) {
+            check(c.order!=Order::TrainWorker,"exposed-slot scout ordered a wasteful replacement");
+            if (c.order==Order::ReturnCargo && c.units.size()==1 && c.units.front()==worker_id) {
+                check(sight && !recall,"exposed miner recalled without sight or repeated its empty recall");
+                recall=held.tick();
+            }
+            check(held.submit(c),"exposed slot setup rejected AI order");
+        }
+        held.step();
+        check(worker.hp==100,"exposed middle miner took damage before reaching safety");
+        if (recall && at_slot(home_slots,worker) && worker.order==Order::Stop) home=held.tick();
+    }
+    check(home>recall && recall>=slot_sight && slot_sight>sight && sight && !seen(held,guard.x,guard.z) &&
+        site.remaining==reserve && held.salvage(player)==opening_bank,"exposed miner did not retreat safely to its anchor");
+
+    Sim departed=held;
+    check(departed.submit({departed.tick(),1,uint8_t(1-player),Order::Move,{guard_id},
+        site.x+4*sign*kScale,site.z-12*sign*kScale}),"unseen guard departure rejected");
+    uint32_t departed_sequence=sequence,clear=0,first_difference=0,probe=0,mine=0,bank=0;
+    int held_recalls=0,held_orders=0,unseen_motion_ticks=0;
+    const auto& freed=departed.units()[worker_id-1];
+    const auto& retreating_guard=departed.units()[guard_id-1];
+    const auto& freed_site=departed.deposits()[1-player];
+    for (int i=0;i<4000;++i) {
+        const bool held_visible=seen(held,guard.x,guard.z);
+        const bool departed_visible=seen(departed,retreating_guard.x,retreating_guard.z);
+        if (!first_difference && !held_visible && !departed_visible &&
+            (guard.x!=retreating_guard.x || guard.z!=retreating_guard.z)) ++unseen_motion_ticks;
+        if (!first_difference && (held_visible!=departed_visible || (held_visible &&
+            (guard.x!=retreating_guard.x || guard.z!=retreating_guard.z)))) first_difference=held.tick();
+        if (!clear && seen(departed,post.x,post.z) && (!departed_visible ||
+            retreating_guard.x!=post.x || retreating_guard.z!=post.z)) clear=departed.tick();
+        const auto stationary_orders=make_ai_commands(held,player,sequence);
+        const auto departed_orders=make_ai_commands(departed,player,departed_sequence);
+        if (!first_difference) check(same_order_bytes(stationary_orders,departed_orders),
+            "unseen guard departure changed AI order bytes");
+        for (const auto& c:stationary_orders) {
+            check(c.order!=Order::TrainWorker,"stationary guard triggered a wasteful worker purchase");
+            if (c.units.size()==1 && c.units.front()==worker_id) {
+                ++held_orders;
+                if (!probe && (c.order==Order::Move || c.order==Order::Gather)) probe=held.tick();
+                if (c.order==Order::ReturnCargo) {
+                    check(worker.order!=Order::ReturnCargo && !at_slot(home_slots,worker),
+                        "AI repeated an empty retreat at the anchor or during an active retreat");
+                    ++held_recalls;
+                }
+                if (c.order==Order::Move) check(worker.order!=Order::Move || worker.goal_x!=c.x || worker.goal_z!=c.z,
+                    "exposed miner repeated an active scouting waypoint");
+            }
+            check(held.submit(c),"stationary guard fixture rejected AI order");
+        }
+        for (const auto& c:departed_orders) {
+            check(c.order!=Order::TrainWorker,"cleared field triggered unnecessary worker recruitment");
+            check(departed.submit(c),"departed guard fixture rejected AI order");
+        }
+        const int ore=freed_site.remaining,cargo=freed.cargo,balance=departed.salvage(player);
+        const bool at_mine=at_slot(mine_slots,freed),at_bank=at_slot(home_slots,freed);
+        held.step();
+        departed.step();
+        check(worker.hp==100 && freed.hp==100,"exposed middle miner lost health on a later scouting attempt");
+        check(site.remaining==reserve && held.salvage(player)==opening_bank,"stationary guard allowed extraction from the exposed slot");
+        if (freed.cargo>cargo) {
+            check(clear && at_mine && freed.resource_id==site.id && !freed.cargo_kind && freed.cargo==cargo+1 &&
+                freed_site.remaining==ore-1,"miner failed to extract from the newly observed clear field");
+            if (!mine) mine=departed.tick();
+        }
+        if (!bank && departed.salvage(player)>balance) {
+            check(at_bank && cargo==kCargoCapacity && !freed.cargo && departed.salvage(player)==balance+cargo,
+                "cleared-field miner failed to deliver its own load at the anchor");
+            bank=departed.tick();
+        }
+    }
+    check(probe>=home+kTicksPerSecond && first_difference>probe,"miner immediately retried the remembered exposed slot");
+    check(unseen_motion_ticks>=kTicksPerSecond && first_difference>home && clear>=home && mine>clear && bank>mine,
+        "hidden departure never led to observed clearance and income");
+    // Four thousand ticks cover several complete round trips. Continually
+    // cancelling and reissuing orders can keep HP intact but strand the worker.
+    check(held_recalls<=8 && held_orders<=40,"exposed miner churned scouting or retreat orders");
+    std::cout<<"exposed slot player="<<int(player)<<" opening_bank="<<opening_bank<<" sight="<<sight<<" slot_sight="<<slot_sight
+        <<" recall="<<recall<<" home="<<home<<" next_probe="<<probe<<" unseen_motion="<<unseen_motion_ticks
+        <<" first_different_sight="<<first_difference<<" clear="<<clear<<" mined="<<mine<<" banked="<<bank
+        <<" stationary_orders="<<held_orders<<" stationary_recalls="<<held_recalls<<"\n";
+}
 void lone_worker_recovery() {
     Sim sim(42,3,Map::Economy);
     std::array<uint32_t,2> sequences{};
@@ -476,6 +630,7 @@ int main() {
     try { anchor_rules(); target_priority(); destroyed_factory_and_navigation(); terminal_commands();
         std::array<std::array<uint32_t,2>,2> opposite_slot_payments{};
         for (uint8_t p=0;p<2;++p) {
+            exposed_mining_slot(p,false); exposed_mining_slot(p,true);
             guarded_salvage(p,false); guarded_salvage(p,true); guarded_salvage(p,true,3);
             far_side_guard(p,UnitKind::Strider); far_side_guard(p,UnitKind::Lancer);
             intercepted_salvage(p,Order::Hold,false); intercepted_salvage(p,Order::AttackMove,false);

@@ -107,6 +107,7 @@ public:
     uint8_t visibility(uint8_t player, int x, int z) const;
     bool knows_depleted(uint8_t player,const Deposit& deposit) const;
     nav::Point last_salvage_guard_cell(uint8_t player) const { return salvage_guard_cell_.at(player); }
+    bool waiting_for_mining_slot(uint32_t worker) const;
     const std::vector<uint8_t>& vision(uint8_t player) const { return vision_[player]; }
     uint64_t hash() const;
     // Executed authoritative state only; independent of future input arrival order.
@@ -143,6 +144,15 @@ private:
     void set_goal(Unit& unit,nav::Point goal);
     nav::Point service_point(const Unit& unit,int32_t x,int32_t z,int32_t extent,const nav::World* world=nullptr) const;
     nav::World navigation_;
+    struct MiningRetreat {
+        uint32_t worker,guard;
+        nav::Point slot,post;
+        int range;
+        uint32_t last_seen;
+    };
+    std::vector<MiningRetreat> mining_retreats_;
+    void remember_mining_retreat(const Unit& miner);
+    void update_mining_retreats();
 };
 std::vector<uint8_t> serialize_command(const Command& command);
 bool deserialize_command(std::span<const uint8_t> bytes, Command& command);

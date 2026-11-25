@@ -37,6 +37,7 @@ nav::Point home_salvage(uint8_t player) {
 }
 nav::Rect terrain_bounds(Map map) { return {kScale,kScale,(map_width(map)-1)*kScale,(map_height(map)-1)*kScale}; }
 constexpr int unit_radius = 64, movement_speed = 32, strider_range_tiles = 3, strider_acquire_tiles = 6;
+constexpr int worker_sight_tiles=7;
 int64_t distance2(const Unit& a, const Unit& b) {
     const int64_t dx = a.x - b.x, dz = a.z - b.z;
     return dx * dx + dz * dz;
@@ -149,13 +150,14 @@ void Sim::update_vision() {
             }
     };
     // Shared circular team vision. Ridges block movement, not sight in this increment.
-    for (const auto& u:units_) if (u.hp>0) reveal(u.player,u.x,u.z,u.kind==UnitKind::Worker?7:9);
+    for (const auto& u:units_) if (u.hp>0) reveal(u.player,u.x,u.z,u.kind==UnitKind::Worker?worker_sight_tiles:9);
     for (const auto& b:structures_) if (b.hp>0) reveal(b.player,b.x,b.z,b.kind==StructureKind::Anchor?10:7);
     for (auto& d:deposits_) if (d.remaining==0)
         for (uint8_t p=0;p<2;++p) if (visibility(p,d.x/kScale,d.z/kScale)==2)
             d.depletion_seen_by|=static_cast<uint8_t>(1u<<p);
     for (uint8_t p=0;p<2;++p)
         if (knows_depleted(p,deposits_[p])) update_salvage_guard(p);
+    update_mining_retreats();
 }
 
 void Sim::update_salvage_guard(uint8_t player) {
@@ -280,7 +282,11 @@ void Sim::apply(const Command& c) {
         if (map_==Map::Economy) { results_[c.player]=CommandResult::Accepted; result_sequences_[c.player]=c.sequence; }
         apply_queued(c); return;
     }
-    if (static_cast<uint8_t>(c.order)>=4) { apply_economy(c); return; }
+    if (static_cast<uint8_t>(c.order)>=4) {
+        if (c.order==Order::ReturnCargo && map_==Map::Economy && knows_depleted(c.player,deposits_[c.player]))
+            for (const auto id:c.units) remember_mining_retreat(units_[id-1]);
+        apply_economy(c); return;
+    }
     if (map_==Map::Economy) { results_[c.player]=CommandResult::Accepted; result_sequences_[c.player]=c.sequence; }
     std::vector<nav::Point> slots;
     if (c.order==Order::Move || c.order==Order::AttackMove) slots=formation_slots(c.x,c.z,c.units.size(),map_==Map::Economy && c.player==1);
@@ -687,6 +693,10 @@ uint64_t Sim::state_hash() const {
     if (map_==Map::Economy) for (uint8_t p=0;p<2;++p) {
         add(salvage_guard_cell_[p].x); add(salvage_guard_cell_[p].z); add(salvage_guard_seen_tick_[p]);
     }
+    for (const auto& retreat:mining_retreats_) {
+        add(retreat.worker); add(retreat.guard); add(retreat.slot.x); add(retreat.slot.z);
+        add(retreat.post.x); add(retreat.post.z); add(retreat.range); add(retreat.last_seen);
+    }
     return h;
 }
 
@@ -704,6 +714,24 @@ struct ArmedContact {
     nav::Point position;
     int range;
 };
+nav::Point observed_service_slot(const Sim& sim,const Unit& miner,const std::array<nav::Point,8>& slots) {
+    const nav::Point goal{miner.goal_x,miner.goal_z};
+    if (std::find(slots.begin(),slots.end(),goal)!=slots.end()) return goal;
+    for (const auto slot:slots) {
+        if (std::none_of(sim.units().begin(),sim.units().end(),[&](const Unit& u) {
+            return u.hp>0 && u.id!=miner.id && sim.visibility(miner.player,u.x/kScale,u.z/kScale)==2 &&
+                std::abs(u.x-slot.x)<2*unit_radius && std::abs(u.z-slot.z)<2*unit_radius;
+        })) return slot;
+    }
+    return slots.front();
+}
+int acquisition_radius(const Unit& unit) {
+    return (unit.kind==UnitKind::Lancer?kLancerAcquireTiles:strider_acquire_tiles)*kScale;
+}
+bool within_worker_sight(nav::Point position,nav::Point slot) {
+    const int64_t dx=slot.x/kScale*kScale+kScale/2-position.x,dz=slot.z/kScale*kScale+kScale/2-position.z;
+    return dx*dx+dz*dz<=int64_t(worker_sight_tiles*kScale)*(worker_sight_tiles*kScale);
+}
 bool crosses_acquisition(nav::Point from,nav::Point to,const ArmedContact& contact) {
     const int64_t dx=to.x-from.x,dz=to.z-from.z;
     const int64_t x=contact.position.x-from.x,z=contact.position.z-from.z;
@@ -722,29 +750,20 @@ nav::Point salvage_flank(const Sim& sim,const Unit& miner,nav::Point patch,nav::
     for (const auto& enemy:sim.units()) {
         if (enemy.player==miner.player || enemy.hp<=0 || enemy.kind==UnitKind::Worker ||
             sim.visibility(miner.player,enemy.x/kScale,enemy.z/kScale)!=2) continue;
-        const int reach=(enemy.kind==UnitKind::Lancer?kLancerAcquireTiles:strider_acquire_tiles)*kScale;
-        contacts.push_back({{enemy.x,enemy.z},reach});
+        contacts.push_back({{enemy.x,enemy.z},acquisition_radius(enemy)});
     }
     if (contacts.empty()) return {-1,-1};
 
     // The center of the field may be safe while the worker's slot is exposed.
     // Before Gather assigns a goal, estimate the slot using only observed units.
     const auto slots=sim.service_slots(miner,destination,inbound?kScale/2:kScale);
-    const nav::Point goal{miner.goal_x,miner.goal_z};
-    auto end=slots.front();
-    if (std::find(slots.begin(),slots.end(),goal)!=slots.end()) end=goal;
-    else for (const auto slot:slots) {
-        if (std::none_of(sim.units().begin(),sim.units().end(),[&](const Unit& u) {
-            return u.hp>0 && u.id!=miner.id && sim.visibility(miner.player,u.x/kScale,u.z/kScale)==2 &&
-                std::abs(u.x-slot.x)<2*unit_radius && std::abs(u.z-slot.z)<2*unit_radius;
-        })) { end=slot; break; }
-    }
+    auto end=observed_service_slot(sim,miner,slots);
     const auto dangerous=[&](nav::Point a,nav::Point b) {
         return std::any_of(contacts.begin(),contacts.end(),[&](const ArmedContact& c) {return crosses_acquisition(a,b,c);});
     };
     // Approach a safe side to inspect the field when the preferred slot is
     // still unseen. Gather will assign the actual slot once the miner arrives.
-    if (inbound && dangerous(end,end) && sim.visibility(miner.player,end.x/kScale,end.z/kScale)!=2) {
+    if (inbound && dangerous(end,end) && !within_worker_sight(start,end)) {
         const auto safe=std::find_if(slots.begin(),slots.end(),[&](nav::Point slot) {
             return !dangerous(slot,slot);
         });
@@ -830,6 +849,68 @@ nav::Point salvage_flank(const Sim& sim,const Unit& miner,nav::Point patch,nav::
     for (const auto& candidate:candidates) if (useful(candidate.point)) return candidate.point;
     return {-1,-1};
 }
+bool guards_edge_slot(const Sim& sim,const Unit& enemy,uint8_t player,nav::Point patch,nav::Point slot) {
+    if (enemy.player==player || enemy.hp<=0 || enemy.kind==UnitKind::Worker ||
+        sim.visibility(player,enemy.x/kScale,enemy.z/kScale)!=2) return false;
+    const ArmedContact contact{{enemy.x,enemy.z},acquisition_radius(enemy)};
+    // A defender outside the field itself can cover just its near perimeter.
+    const int64_t dx=patch.x-enemy.x,dz=patch.z-enemy.z;
+    return dx*dx+dz*dz>=int64_t(contact.range)*contact.range && crosses_acquisition(slot,slot,contact);
+}
+// When a new miner could be funded, inspect the reserve before leaving. Look
+// at most one tile farther along the current navigation leg; stay outside the
+// guard's acquisition with both the post and field in sight.
+bool can_survey_on_flank(const Unit& worker,nav::Point patch,const Unit& guard) {
+    const nav::Point start{worker.x,worker.z},post{guard.x,guard.z};
+    const ArmedContact contact{post,acquisition_radius(guard)};
+    const int64_t dx=worker.next_x-start.x,dz=worker.next_z-start.z;
+    const int length=static_cast<int>(nav::ceil_sqrt(dx*dx+dz*dz));
+    for (int d=movement_speed/2;d<=std::min(length,kScale);d+=movement_speed/2) {
+        const nav::Point point{start.x+static_cast<int>(d*dx/length),start.z+static_cast<int>(d*dz/length)};
+        if (within_worker_sight(point,patch) && within_worker_sight(point,post) &&
+            !crosses_acquisition(start,point,contact)) return true;
+    }
+    return false;
+}
+}
+
+bool Sim::waiting_for_mining_slot(uint32_t worker) const {
+    return std::any_of(mining_retreats_.begin(),mining_retreats_.end(),[&](const MiningRetreat& r) {return r.worker==worker;});
+}
+
+void Sim::remember_mining_retreat(const Unit& miner) {
+    if (miner.hp<=0 || miner.kind!=UnitKind::Worker || miner.cargo || waiting_for_mining_slot(miner.id)) return;
+    const auto patch=home_salvage(1-miner.player);
+    const auto slot=observed_service_slot(*this,miner,service_slots(miner,patch,kScale/2));
+    if (!within_worker_sight({miner.x,miner.z},slot)) return;
+    for (const auto& guard:units_) if (guards_edge_slot(*this,guard,miner.player,patch,slot))
+        mining_retreats_.push_back({miner.id,guard.id,slot,{guard.x,guard.z},acquisition_radius(guard),tick_});
+}
+
+void Sim::update_mining_retreats() {
+    for (auto& r:mining_retreats_) {
+        const auto& worker=units_[r.worker-1];
+        const auto& guard=units_[r.guard-1];
+        bool cleared=worker.hp<=0;
+        if (guard.hp>0 && visibility(worker.player,guard.x/kScale,guard.z/kScale)==2) {
+            r.post={guard.x,guard.z};
+            r.last_seen=tick_;
+            cleared=cleared || !crosses_acquisition(r.slot,r.slot,{r.post,r.range});
+        } else {
+            cleared=cleared || visibility(worker.player,r.post.x/kScale,r.post.z/kScale)==2 ||
+                tick_-r.last_seen>=30*kTicksPerSecond;
+        }
+        if (!cleared && worker.order!=Order::ReturnCargo && tick_%kTicksPerSecond==0 &&
+            visibility(worker.player,r.slot.x/kScale,r.slot.z/kScale)==2) {
+            // A parked unit can make Gather assign a different, safe slot.
+            const auto patch=home_salvage(1-worker.player);
+            const auto next=observed_service_slot(*this,worker,service_slots(worker,patch,kScale/2));
+            cleared=next!=r.slot && visibility(worker.player,next.x/kScale,next.z/kScale)==2 &&
+                !crosses_acquisition(next,next,{r.post,r.range});
+        }
+        if (cleared) r.worker=0;
+    }
+    std::erase_if(mining_retreats_,[](const MiningRetreat& r) {return !r.worker;});
 }
 
 std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& sequence) {
@@ -858,8 +939,12 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         for (const auto& u:sim.units()) {
             if (!home_depleted || guarded) break;
             if (u.player!=player || u.hp<=0 || u.kind!=UnitKind::Worker) continue;
+            if (sim.waiting_for_mining_slot(u.id)) continue;
             const bool collecting=u.order==Order::Gather && u.resource_id==sim.deposits()[1-player].id;
             const bool scouting=u.order==Order::Move && u.goal_x==alternate.x && u.goal_z==approach_z;
+            const int dx=u.goal_x-alternate.x,dz=u.goal_z-alternate.z;
+            const bool flanking=u.order==Order::Move && !scouting && dx*dx+dz*dz<=7*kScale*7*kScale &&
+                u.blocked_ticks<kTicksPerSecond;
             if (!decision) {
                 // Between regular economy decisions a newly sighted contact
                 // can cross acquisition range. Check active approaches
@@ -869,13 +954,30 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
                 const bool approaching=(scouting || (collecting && !u.returning && !u.cargo)) &&
                     x*x+z*z<=int64_t(local_range)*local_range;
                 const bool leaving=collecting && u.returning && u.cargo && u.goal_x==u.x && u.goal_z==u.z;
-                if (!approaching && !leaving) continue;
+                if (!approaching && !leaving && !flanking) continue;
             }
-            const int dx=u.goal_x-alternate.x,dz=u.goal_z-alternate.z;
-            if (u.order==Order::Move && !scouting && dx*dx+dz*dz<=7*kScale*7*kScale &&
-                u.blocked_ticks<kTicksPerSecond) {
-                // Finish the approach to the observed flank even if the
-                // contact goes dark along the way.
+            if (!u.cargo && (flanking || scouting || (collecting && !u.returning) || u.order==Order::Hold)) {
+                const auto slot=observed_service_slot(sim,u,sim.service_slots(u,alternate,kScale/2));
+                if (within_worker_sight({u.x,u.z},slot)) {
+                    const auto guard=std::find_if(sim.units().begin(),sim.units().end(),[&](const Unit& enemy) {
+                        return guards_edge_slot(sim,enemy,player,alternate,slot);
+                    });
+                    if (guard!=sim.units().end()) {
+                        const bool can_recruit=flanking && sim.salvage(player)>=kWorkerCost &&
+                            std::count_if(sim.units().begin(),sim.units().end(),[&](const Unit& other) {
+                                return other.hp>0 && other.player==player && other.kind==UnitKind::Worker;
+                            })+anchor->production_queue<3;
+                        const bool sees_stock=sim.visibility(player,alternate.x/kScale,alternate.z/kScale)==2;
+                        if (can_recruit && sees_stock && !decision) emit(Order::Hold,{u.id});
+                        else if (!(can_recruit && !sees_stock && can_survey_on_flank(u,alternate,*guard)))
+                            emit(Order::ReturnCargo,{u.id});
+                        routing.push_back(u.id);
+                        continue;
+                    }
+                }
+            }
+            if (flanking) {
+                // Finish a safe flank even if the contact goes dark along it.
                 routing.push_back(u.id);
                 continue;
             }
@@ -899,7 +1001,8 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
             return dx*dx+dz*dz<=int64_t(9*kScale)*(9*kScale);
         };
         const auto reserved_for_recall=[&](const Unit& u) {
-            return routing_worker(u) || (home_depleted && u.order==Order::ReturnCargo && (guarded || u.cargo>0)) || needs_recall(u);
+            return routing_worker(u) || (home_depleted && u.order==Order::ReturnCargo &&
+                (guarded || u.cargo>0 || sim.waiting_for_mining_slot(u.id))) || needs_recall(u);
         };
         const Unit* builder=nullptr;
         bool constructing=false;
@@ -974,7 +1077,8 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         if (needs_scout && routing.empty()) {
             for (const auto& u:sim.units()) {
                 if (u.hp<=0 || u.player!=player || u.kind!=UnitKind::Worker || u.id==assigned_builder ||
-                    u.order==Order::Build || u.order==Order::ReturnCargo || u.returning || u.cargo>0) continue;
+                    u.order==Order::Build || u.order==Order::ReturnCargo || u.returning || u.cargo>0 ||
+                    sim.waiting_for_mining_slot(u.id)) continue;
                 // A worker already on a valid salvage trip provides its own sight.
                 if (u.order==Order::Gather && u.resource_id && sim.deposits()[u.resource_id-1].kind==0) continue;
                 if (!scout) scout=&u;
@@ -1011,7 +1115,7 @@ std::vector<Command> make_ai_commands(const Sim& sim, uint8_t player, uint32_t& 
         // site in view. A worker carrying ore finishes its return to the bank.
         const bool alternate_open=home_depleted && !guarded && !visible_salvage.empty();
         for (const auto& u:sim.units()) if (u.hp>0 && u.player==player && u.kind==UnitKind::Worker &&
-            &u!=scout && !routing_worker(u) && u.id!=assigned_builder && u.id!=flux_worker && u.order!=Order::Build &&
+            &u!=scout && !routing_worker(u) && !sim.waiting_for_mining_slot(u.id) && u.id!=assigned_builder && u.id!=flux_worker && u.order!=Order::Build &&
             (u.order!=Order::ReturnCargo || (alternate_open && !u.cargo))) {
             if (needs_recall(u)) {
                 emit(Order::ReturnCargo,{u.id});
