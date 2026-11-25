@@ -111,7 +111,6 @@ func _process(_delta: float) -> void:
 	var profile_start := Time.get_ticks_usec() if game.presentation_profiler else 0
 	var view := get_viewport_rect().size
 	var workers := 0
-	var cargo := 0
 	var detail := ""
 	var actions := ""
 	selection.position.y = view.y - (144 if game.economy else 112)
@@ -187,7 +186,6 @@ func _process(_delta: float) -> void:
 		if lancers > 0: roster.append("Lancer" if lancers == 1 else "%d Lancers" % lancers)
 		selection.text = "Select a unit or structure" if roster.is_empty() else "  /  ".join(roster)
 		if workers > 0:
-			cargo = salvage_load + flux_load
 			var loads := PackedStringArray()
 			if salvage_load: loads.append("%d salvage" % salvage_load)
 			if flux_load: loads.append("%d flux" % flux_load)
@@ -195,9 +193,12 @@ func _process(_delta: float) -> void:
 				selection.text += "   ·   %d/%d HP" % [weakest_worker.hp, weakest_worker.max_hp]
 			elif weakest_worker.hp < weakest_worker.max_hp:
 				selection.text += "   ·   Lowest worker HP %d/%d" % [weakest_worker.hp, weakest_worker.max_hp]
-			selection.text += "   ·   " + ("Empty cargo" if loads.is_empty() else " + ".join(loads))
-			if returning_workers:
-				selection.text += "   ·   Returning to anchor" if game.selected.size() == 1 else "   ·   %d returning to anchor" % returning_workers
+			var load_text := "Empty cargo" if loads.is_empty() else " + ".join(loads)
+			if returning_workers and game.selected.size() == 1:
+				load_text = "Returning empty to anchor" if loads.is_empty() else "Returning %s to anchor" % load_text
+			elif returning_workers:
+				load_text += "   ·   %d returning to anchor" % returning_workers
+			selection.text += "   ·   " + load_text
 		if not game.selected_entity.is_empty():
 			var entity: Dictionary = game.selected_entity
 			if entity.category == "deposit": selection.text = "%s DEPOSIT   /   %d REMAINING" % ["FLUX (CONTESTED)" if int(entity.get("kind", 0)) == 1 else "SALVAGE", entity.remaining]
@@ -240,7 +241,7 @@ func _process(_delta: float) -> void:
 	if not game.option_error.is_empty():
 		result.text = "INVALID LAUNCH OPTIONS\nR  /  start offline skirmish"
 		connection.text = game.option_error
-	command_card.refresh(game, selection.text, workers, cargo)
+	command_card.refresh(game, selection.text, workers)
 	setup.visible = game.setup_open
 	if game.setup_open:
 		if game.lobby:

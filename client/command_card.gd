@@ -8,7 +8,7 @@ enum Action { STOP, MOVE, ATTACK, HOLD, GATHER, RETURN_CARGO, BUILD, STRIDER, CA
 const LABELS := {
 	Action.MOVE: "Move", Action.ATTACK: "Attack-move  [A]",
 	Action.STOP: "Stop  [S]", Action.HOLD: "Hold  [H]",
-	Action.GATHER: "Gather", Action.RETURN_CARGO: "Return cargo",
+	Action.GATHER: "Gather", Action.RETURN_CARGO: "Return to anchor",
 	Action.BUILD: "Build Foundry  [B]", Action.STRIDER: "Train Strider  [T]",
 	Action.LANCER: "Train Lancer  [L]", Action.PLATING: "Hardened Plating  [G]",
 	Action.WORKER: "Train Worker  [W]", Action.CANCEL_UNIT: "Cancel last unit  [X]",
@@ -61,6 +61,7 @@ func _ready() -> void:
 		button.pressed.connect(command_pressed.emit.bind(action))
 		grid.add_child(button)
 		buttons[action] = button
+	buttons[Action.RETURN_CARGO].tooltip_text = "Send selected workers to your anchor. They deliver any cargo and stop."
 	feedback.add_theme_font_size_override("font_size", 14)
 	feedback.add_theme_color_override("font_color", Color("c4d9d4"))
 	feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -80,7 +81,7 @@ func _style(fill: Color, edge: Color) -> StyleBoxFlat:
 	box.set_corner_radius_all(3)
 	return box
 
-func refresh(game, title: String, workers: int, cargo: int) -> void:
+func refresh(game, title: String, workers: int) -> void:
 	var entity: Dictionary = game.selected_entity
 	var structure: bool = entity.get("category", "") == "structure" and entity.get("player", -1) == game.local_player
 	visible = game.commands_available() and (structure or not game.selected.is_empty())
@@ -110,7 +111,6 @@ func refresh(game, title: String, workers: int, cargo: int) -> void:
 			columns = 3
 			actions.append_array([Action.GATHER, Action.RETURN_CARGO, Action.BUILD])
 			_set_button(Action.BUILD, "%d salvage" % game.current.foundry_cost, "", "Choose a site or resume an unfinished Foundry.")
-			_set_button(Action.RETURN_CARGO, "", "No cargo to return." if cargo == 0 else "", "Deliver carried resources to your anchor.")
 	grid.columns = columns
 	for action in buttons:
 		buttons[action].visible = action in actions

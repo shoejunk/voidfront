@@ -89,6 +89,19 @@ func run() -> void:
 	var worker: Dictionary = initial.units[0]
 	await mouse(MOUSE_BUTTON_LEFT, Vector3(worker.x / 256.0, 0.5, worker.z / 256.0))
 	check(game.selected == [worker.id] and game.selected_entity.is_empty(), "Worker click selects worker and clears deposit readout")
+	label = "empty_worker_return"
+	var recall: Button = game.hud.command_card.buttons[game.Action.RETURN_CARGO]
+	check(recall.is_visible_in_tree() and not recall.disabled and carried() == 0, "Empty worker can withdraw from the command card")
+	await capture("recall-ready")
+	var button_center := recall.get_global_rect().get_center()
+	game._smoke_mouse(MOUSE_BUTTON_LEFT, button_center, true)
+	game._smoke_mouse(MOUSE_BUTTON_LEFT, button_center, false)
+	await frames()
+	check(await until(func(): return game.current.units[0].order == game.Action.RETURN_CARGO, game.current.tick + 20), "Card click sends the empty worker back")
+	await capture("recalling")
+	check(await until(func(): return game.current.units[0].order == game.Action.STOP, game.current.tick + 120), "Recalled worker stops")
+	var recalled: Dictionary = game.current.units[0]
+	check(maxi(absi(recalled.x - anchor.x), absi(recalled.z - anchor.z)) == 352 and game.current.salvage[0] == initial.salvage[0], "Empty worker reaches its anchor without changing the bank")
 	await key(KEY_F1)
 	check(game.selected.size() == 3 and game._selected_workers() == 3 and game.selected_entity.is_empty(), "Input selects own workers")
 	label = "gather_for_return"

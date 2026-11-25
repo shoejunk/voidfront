@@ -9,6 +9,7 @@ import struct
 import subprocess
 from datetime import datetime, timezone
 from verify_navigation import segment_clear, midpoint_enters_open_rect
+from verify_net_match import compare_snapshot, prefix
 
 ROOT = Path(__file__).resolve().parents[1]
 BOUNDS = (320, 320, 31 * 256 - 64, 23 * 256 - 64)
@@ -120,16 +121,60 @@ def replay_commands(raw, report):
     return commands
 
 
+def audit_empty_recall(report, commands):
+    ledger = report['snapshots']
+    inputs = [event for event in report['inputs'] if event['accepted']]
+    matches = [i for i, event in enumerate(inputs) if event['label'] == 'empty_worker_return']
+    require(len(matches) == 1 and matches[0] + 1 < len(commands), 'missing isolated empty recall')
+    index = matches[0]
+    recall = commands[index]
+    selection = recall['units']
+    require(len(selection) == 1 and recall['order'] == 5, 'expected a single worker recall')
+    start = ledger[recall['tick']]
+    anchor, = [s for s in start['structures'] if s['player'] == 0 and s['kind'] == 0]
+    require((recall['x'], recall['z']) == (anchor['x'], anchor['z']), 'recall targeted the wrong anchor')
+    actor = selection[0] - 1
+    worker = start['units'][actor]
+    require(worker['hp'] > 0 and worker['kind'] == 1 and worker['player'] == 0 and worker['cargo'] == 0
+            and worker['order'] == 0 and not worker['returning'], 'recall requires an idle empty worker')
+    next_tick = commands[index + 1]['tick']
+    arrival = stopped = None
+    for row in ledger[start['tick'] + 1:next_tick + 1]:
+        unit = row['units'][actor]
+        require(row['salvage'] == start['salvage'] and row['flux'] == start['flux']
+                and unit['cargo'] == 0 and unit['hp'] == worker['hp'], 'empty recall changed resources or health')
+        require(all(u == v for k, (u, v) in enumerate(zip(row['units'], start['units'], strict=True)) if k != actor),
+                'empty recall affected another unit')
+        if unit['order'] == 5:
+            require(arrival is None and unit['returning'], 'unexpected return after arrival')
+            if (unit['x'], unit['z']) == (unit['goal_x'], unit['goal_z']):
+                arrival = row['tick']
+            continue
+        dx, dz = abs(unit['x'] - anchor['x']), abs(unit['z'] - anchor['z'])
+        require(unit['order'] == 0 and not unit['returning'] and max(dx, dz) == 352
+                and min(dx, dz) in (0, 352), 'empty worker failed to stop at an anchor service position')
+        if stopped is None:
+            stopped = row['tick']
+    require(arrival is not None and stopped == arrival + 1 and arrival > start['tick'] + 1
+            and (worker['x'], worker['z']) != (ledger[arrival]['units'][actor]['x'], ledger[arrival]['units'][actor]['z']),
+            'missing empty return trip')
+    return {'worker': worker['id'], 'order_tick': start['tick'], 'arrival_tick': arrival, 'stop_tick': stopped}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('report', type=Path)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--require-empty-recall', action='store_true',
+                        help='Check the command-card withdrawal of an empty worker through anchor arrival.')
     args = parser.parse_args()
     require(not (ROOT/'.voidfront-agent/STOP').exists(), 'STOP present')
     report = json.loads(args.report.read_text(encoding='utf-8'))
     summary = audit(report)
     raw = Path(report['replay_path']).read_bytes()
     summary['commands'] = replay_commands(raw, report)
+    if args.require_empty_recall:
+        summary['empty_recall'] = audit_empty_recall(report, summary['commands'])
     rejected = []
     for name in ('trace-gap','ledger-gap','resource-created','cargo-overflow','deposit-refill','progress-jump','worker-overlap'):
         bad = copy.deepcopy(report)
@@ -153,6 +198,17 @@ def main():
     digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
     binaries = {c: ROOT/f'build/windows/sim/{c}/voidfront_headless.exe' for c in ('Debug','Release')}
     fingerprints = {c:digest(p) for c,p in binaries.items()}
+    if args.require_empty_recall:
+        recall = summary['empty_recall']
+        commands = [dict(c, player=0) for c in summary['commands']]
+        for t in sorted({recall['order_tick'] + 1, recall['arrival_tick'] - 1, recall['arrival_tick'], recall['stop_tick']}):
+            recording = args.out/f'recall-{t}.vfr'
+            recording.write_bytes(prefix(raw, commands, t))
+            for config, exe in binaries.items():
+                metrics = args.out/f'recall-{t}-{config}.json'
+                subprocess.run([exe, '--replay', recording, '--metrics', metrics], check=True,
+                               capture_output=True, timeout=60)
+                compare_snapshot(report['snapshots'][t], json.loads(metrics.read_text()), f'{config} recall {t}')
     summary.update(started_utc=datetime.now(timezone.utc).isoformat(), report_sha256=digest(args.report),
                    replay_sha256=digest(replay), binaries=fingerprints, rejected_corruptions=rejected, runs=[])
     for config,repeats in (('Debug',1),('Release',10)):
