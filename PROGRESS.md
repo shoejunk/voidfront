@@ -1,5 +1,87 @@
 # Voidfront progress
 
+## 2026-11-24 America/Los_Angeles — withdrawal from an exposed mining position
+
+Start from clean `dev` at `6bf8c72`. The middle worker on either side of
+Glass Reach dies at its open mining position beside the offset defender.
+Reproduce the loss and the supervised withdrawal, then verify autonomous
+withdrawal, safe waiting and renewed income after observed clearance.
+Check workers with safe positions, ordinary paid openings and native replay.
+
+Independent runs reproduced both deaths. A supervised ReturnCargo at first
+sight (384) brought the miner home at full health at 788. After a hidden
+guard departure and a supervised restart, both sides delivered ten at 2,370.
+The baseline Godot bridge also lost player 1's middle worker at 1,031.
+
+The worker card had disabled Return cargo whenever the hold was empty.
+A 720p project run reproduced the disabled button and the failed click.
+The card now offers Return to anchor for empty and loaded workers. On the
+first corrected run a click at 5 sent worker 1 home, it reached the
+service position at 43 and stopped at 44. The bank stayed at zero.
+The other five units held their original state. Native replay prefixes
+confirmed the movement and arrival. Independent review caught an audit
+which accepted a forged stop tick. The revised verifier rejects that
+case and three mutations of moving-worker health or bystander state.
+
+The first AI change saved the lone miner but interrupted workers that
+were already earning income. In a funded group opening four workers died,
+including a recruit, and only 40 salvage came home. The previous build
+lost one and delivered 80. The independent critic traced a premature
+Gather order to teammates having sight of the field before the returning
+scout could inspect its own mining position. That case and the decision
+to spend the last 50 salvage now have separate controlled trials.
+
+The user approved publication of the accumulated source and evidence.
+The previous 17 commits reached GitHub `dev` at `6bf8c72`.
+
+The final policy remembers the worker's exposed position and its observed
+defenders. An empty worker withdraws while other workers with safer
+positions keep mining. The team can reopen the trip after seeing the
+defender leave, seeing a safe alternative slot, or scouting again after
+the last observation expires. When a hire could pay for itself the
+worker can inspect the reserve from outside the defender's reach.
+
+Both spawns now recover in an ordinary-command match with a purchased
+Strider still guarding the field. The survivor comes home with full HP.
+The recruit banks ten at 93,100. Total alternate deliveries reach 240
+and the mining player wins at 116,438. Previously, both miners died
+and the side had earned ten by the 120,000-tick cap. The two hidden
+departure games also won. Debug and Release reproduced 449,092 state
+hashes across the four games. The 14 shorter opening controls and both
+12/12 native test suites passed. Two of the long recordings are now
+versioned in `.voidfront-agent/replays` for use with this revision.
+
+In the three-worker opening that failed during review, giving the team a
+group Gather with an empty bank now delivers 100 through 6,500 ticks
+with all three at full health, up from 30 and three deaths before this
+run. Some other guard positions still lose workers or income. The
+controlled matrix, timings and isolated Godot bridge traces are in the
+November 24 TESTING entry. Source checkpoints are `b89eb64` for the
+simulation and `92bd341` for the worker card and recall audit.
+
+The next movement fix has a one-worker reproduction. In the long
+departure match the original survivor gets a valid Gather, then spends
+10,646 ticks stuck at the edge of a flux obstacle. A single repeat of
+the same order restores movement and payment. The short fixture
+reaches the same stall at 703 without other moving units. Route
+geometry first fails at 634. The dated roadmap records the coordinates
+and the controls for both spawns.
+
+The frozen Windows build is `artifacts/unsafe-package-2026-11-24/Voidfront.exe`.
+The empty worker reached home at 44 and stopped at 45 after a packaged
+card click at 6. A scripted player victory at 4,512 and ordinary-clock
+AI victory at 3,228 both restarted. Two packaged clients completed a
+contested match at 7,180 with hash `ab3c9c9c400bcbda` and returned
+offline. Short rematch and disconnect checks also passed. At 80 ms
+simulated RTT the native clients measured 102.25/101.61 ms generated
+command p95. Human play, physical networks, representative hardware,
+crowd movement and production art remain open.
+
+The contested replay audit matched 22 native runs, 148 prefixes and ten
+offline returns. It checked 82 phases, 32 cargo views and rejected 39
+deliberate corruptions. Reproduction commands, the frozen package
+fingerprints and independent critic findings are in TESTING.md.
+
 ## 2026-11-23 America/Los_Angeles — mining around an offset defender
 
 Starting from clean `dev` at `e2be10e`, reproduce the worker loss at the

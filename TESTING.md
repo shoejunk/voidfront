@@ -1,5 +1,171 @@
 # Verification ledger
 
+## 2026-11-24 — worker withdrawal and funded recovery
+
+### A survivor in a game started from normal Glass Reach setup
+
+The driver under `artifacts/unsafe-opening-2026-11-24/casualties` uses
+ordinary commands. The mining player earns 50 salvage. The opponent
+builds a Foundry, buys a Strider, kills the first and third workers,
+then sends miners to exhaust the remaining 1,950 home salvage. The
+middle worker survives. Rotation exchanges the players. The held-post
+and hidden-departure games share the same opening.
+
+| Event in the held-post game | Tick |
+| --- | ---: |
+| Home field runs dry | 91,434 |
+| Survivor first sees the offset Strider | 91,851 |
+| Survivor can see its exposed mining position | 91,882 |
+| Survivor holds to inspect the reserve | 91,886 |
+| Return order and 50-salvage hire | 91,900 |
+| Survivor reaches home with 100 HP | 92,333 |
+| Recruit first extracts alternate salvage | 92,522 |
+| Recruit delivers ten at the anchor | 93,100 |
+
+The player-view stills at 93,099 and 93,100 show the same selected recruit
+at its anchor. Its ten salvage disappear as the bank rises from zero to
+ten. At 91,901 the survivor's card shows full HP and an empty return,
+and the anchor has one paid job. The 720p project renders and their
+native prefix traces are under `artifacts/unsafe-survivor-views-p0-2026-11-24`.
+The card is readable at this size. The bright cargo block covers much
+of the recruit's silhouette, and the two workers at the dry home field
+are hard to distinguish from the deposit.
+
+Two recordings are checked into `.voidfront-agent/replays` so a fresh
+checkout of this revision can play the held-post and hidden-departure
+games. Their VFR3 content identity is `392287b032a0b6d2`.
+
+```powershell
+./build/windows/sim/Release/voidfront_headless.exe --replay .voidfront-agent/replays/2026-11-24-worker-guard-held-p0.vfr --hash-mode state --trace artifacts/miner-stay.trace
+```
+
+### Player recall
+
+An empty selected worker now has the same Return to anchor card action
+as a loaded worker. The economy fixture clicks it before mining, then
+exercises the existing loaded group return via right click. Use a fresh
+evidence directory when repeating the packaged check.
+
+```powershell
+./tools/capture.ps1 -Packaged -Economy -Ticks 1600 -Name worker-recall -Resolution 1280x720
+python tools/verify_economy_capture.py artifacts/worker-recall.json --require-empty-recall --out artifacts/worker-recall-audit
+```
+
+The verifier checks the actual replay command, selected actor, anchor,
+unchanged bystanders and bank, physical arrival and the following Stop
+tick. Both native readers reconstruct snapshots at the first return tick,
+one tick before arrival, arrival and Stop. The previous card failed the
+empty click. An early verifier accepted a falsified stop time and changes
+to intermediate worker health or a bystander's return state. Independent
+retests are in `artifacts/unsafe-review-2026-11-24/visual-audit-retest.log`.
+
+### Native results and independent review
+
+All four canonical survivor games reproduced every state in stock Debug
+and Release (449,092 tick positions). Forty-eight native prefixes checked
+the guard and mining position becoming visible, the debit, cargo,
+anchor position, deposit and bank. Each held-post game ended at 116,438
+with a win for the mining player and 240 alternate salvage delivered.
+Previously, that side lost both the survivor and its recruit, banked ten
+and had no winner at 120,000. When the guard departed, both sides now
+won at 108,108 with 250 delivered. The previous departure games already
+won at 108,128. See `casualties/verified.json` in the opening evidence.
+
+Fourteen shorter opening controls matched across 208,712 native tick
+positions and 64 payment prefixes. All six fixed garrisons kept their
+command streams and endpoint hashes. Offset AttackMove still paid at
+14,603. Offset Hold and both centerline controls paid seven ticks later
+than before (14,605 and 14,632). All eight approach games ended without
+a worker death, hit or replacement order.
+
+The original isolated miner died at 1,032 or 1,031. On the final policy,
+an unfunded solo worker saw the exposed position and ordered a return at
+416, reached home at 845 and stayed unharmed against a stationary guard.
+With an unseen departure it saw the post clear at 1,443, mined at 1,535
+and delivered at 2,110. Eight funded trials distinguished 49 from 50,
+51 and 2,000 alternate salvage. The latter three supported one hire and
+40 delivered through 5,000 ticks. A separate friendly-observer trial kept
+the guard visible past the memory timeout. The miner waited until its
+team saw the guard actually clear, then earned ten.
+
+The controlled Godot bridge ran both branches for 5,000 ticks from the
+same injected survivor state. In each branch all 5,001 snapshot hashes and
+serialized commands matched the independent native caller. The old
+bridge trace records all 13 hits through death. See
+`artifacts/unsafe-bridge-2026-11-24`. Review tested 356 group, guard,
+finite-stock, occupancy and paired-fog cases with the official Release
+library. Eight individual changes to the stored retreat fields and removal
+of either of two guard observations changed the state hash. The
+payment delay at a departing far-side defender, the remaining six lethal
+posts out of 18 per spawn and the group outcomes are detailed in
+`artifacts/unsafe-review-2026-11-24/review.md`.
+
+Each frozen MSVC configuration passed 12/12 CTest, 15 malformed replay
+cases and seven alias checks. All 2,000 cross-build hashes and ten
+repetitions matched. A sandboxed Debug build hit C1902. The first local
+retry overlapped a change to the simulation class layout and five
+intermediate Debug tests crashed. Rebuilding all consumers from the
+frozen headers passed in both configurations. The compiler reported C4456
+for a locally shadowed guard name in the AI. See
+`artifacts/unsafe-final-verify-2026-11-24.log`.
+
+In 4,708 post-depletion samples per profile and revision on the development
+host, whole-tick p95/p99 for one purchased offset guard went from
+88.6/142.0 to 95.5/173.9 microseconds. The eight-guard case went from
+108.8/144.0 to 93.8/127.7. Other verification jobs shared the machine.
+In the controlled first-sight trial the reviewer measured about 255
+microseconds per policy call on each side. See
+`artifacts/unsafe-performance-2026-11-24/generated-perf-final/summary.json`.
+
+Six native 240-tick loopback profiles passed. Generated-command p95 at
+80 ms RTT was 102.25/101.61 ms. At 160 ms with four buffered ticks the
+peers ran at 19.37/19.28 Hz and p95 reached 252.08/249.51 ms.
+Four mixed-revision peer pairs rejected each other before executing
+commands, and both generations' native readers rejected the other
+generation's recordings. See `artifacts/unsafe-network-2026-11-24`.
+
+### Windows package and match results
+
+The frozen export is `artifacts/unsafe-package-2026-11-24/Voidfront.exe`.
+All five playable files match the default export. Package SHA256 is
+`723a28337377ef68b9b82d3b8b7c84663d5b773fa3d24c741333eae527505242`
+for the PCK and
+`f2a8ab14a49dd3c3e24196553433f761b28f98693f5439681c23ff06f436f651`
+for the DLL.
+
+In the 720p packaged economy fixture, worker 1 received the card order
+at 6, reached the anchor at 44 and stopped at 45. The fixture also
+returned loaded workers, built a Foundry and restarted. Its 1,107 ticks
+matched eleven native replays. Eight native snapshots checked the recall
+transition; an additional independent set of ten prefixes and seven
+targeted mutations is in `artifacts/unsafe-ui-2026-11-24`.
+
+The accelerated scripted player victory reached 4,512, hash
+`626b249259694a35`. The ordinary-clock economic opponent won at 3,228,
+hash `c6eb050f1aa74eae`. Both restarted and matched eleven native
+replays each, with 13 and 11 corrupted ledgers rejected. The 289-frame
+1600×900 movie is `artifacts/unsafe-victory-2026-11-24.mp4`. At the
+counterattack five Striders are selected offscreen over dark ground.
+The SC2 reference gives its victory title and emblem more prominence
+than the buttons below. In the current export the victory title and
+restart instruction still carry equal visual weight.
+
+Two rendered clients also confirmed capped rounds of 32 and 64 ticks.
+The guest observed its lobby disconnect with 63 ticks confirmed, and
+both peers archived the final state. All eight archive replays matched.
+See `artifacts/unsafe-peer-2026-11-24/summary.json`.
+
+Both clients also completed a full contested economy match and returned
+to offline play. They confirmed winner 0 at 7,180, hash
+`ab3c9c9c400bcbda`. Their byte-identical recordings contained 44
+commands. The audit matched 22 full native runs, 148 prefixes and ten
+offline-return runs. It checked 82 phases and 32 rendered cargo views,
+and rejected all 39 deliberate corruptions. The reports, captures and
+replays are in `artifacts/unsafe-contested-2026-11-24` and
+`artifacts/unsafe-contested-audit-2026-11-24`. These were scripted
+matches on one development computer. Human play, LAN/Internet,
+reference performance, balance and shipping review remain open.
+
 ## 2026-11-23 — the offset salvage defender and worker selection
 
 Start a normal Glass Reach opening with a purchased Strider one tile to

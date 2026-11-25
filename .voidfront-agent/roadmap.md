@@ -1,5 +1,46 @@
 # Continuing roadmap
 
+## 2026-11-24 — a miner stops beside the central flux field
+
+Start with the hidden-departure recording in `.voidfront-agent/replays`.
+After the survivor withdraws safely, the opponent moves its guard in
+fog. The mining team later sees the post empty. Gather at 92,460 sends
+the survivor back out, but it stalls one fixed-point unit from the central
+flux obstacle. On the northwest side it sits at (7710,6079) with goal
+(14464,10144). Its blocked-tick counter stays at zero. By 103,339 it
+has spent 10,646 ticks idle. The southeast case rotates the position
+to (8674,6209). The recruit continues earning income in both games.
+
+Reproduce the stall in both stock builds. Inspect the route, current
+waypoint, movement proposal, collision rejection and replan trigger
+at the first missed step. In the recorded control, repeating the same
+canonical Gather just once at 92,800 made the original survivor mine at
+93,061 and deliver at 93,636 on both sides. A short intermediate Move
+also restored income. Fix the movement or route lifecycle indicated by
+that evidence. Preserve the cargo, destination, collision clearance,
+guarded withdrawal and mirrored paid openings. The six-unit reversed
+goals and the 500-unit stress case remain separate acceptance tests.
+
+A second field trial isolates a moving defender at offset (-3,+6). An
+unnecessary retreat delays payment from 1,061 to 2,188 when the defender
+leaves. Continuing to mine becomes lethal if it turns back. An ordinary
+sidestep at 471 let both miners bank ten at 1,080 on departure and survive
+reversals at 472, 473 and 477. See `artifacts/unsafe-review-2026-11-24`.
+
+The short movement reproduction is
+`artifacts/unsafe-tests-2026-11-24/final/isolated_stall.cpp`. With one
+living worker, no opponent units and no AI, recall reaches home at 470.
+Immediate Gather stalls at the same tangent at 703, earning nothing by
+5,001. Repeat Gather at 803 and the worker mines at 1,064 and delivers
+at 1,639 in both orientations. Use this case to instrument the earliest
+failed step before modifying movement.
+
+The straight segment to the cached waypoint is clear at 633 at
+(5820,4916). After a fixed-point step of (27,17) it is obstructed at
+634. From the eventual stopped position the navigation query returns
+corner (7744,6080), then the original goal. The rotated corner is
+(8640,6208). See `route_geometry.log` beside the short reproduction.
+
 ## 2026-11-23 — an exposed mining position
 
 The first and third starting workers can repeatedly bank salvage past
