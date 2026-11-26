@@ -46,3 +46,14 @@ without obvious detached limbs. Independent visual review confirms basic motion,
 team/wreck distinction and improved lighting. Close attack/hit/death distinction,
 foot contact and full transitions remain unverified; this is not production art
 approval. See artifacts/packaged-animation.mp4 and .voidfront-agent/review-visual-2026-09-03.md.
+
+## Glass Reach mineral deposits
+
+`deposits.blend` contains two editable, ground-centered scenes. Salvage uses a
+broken brass flywheel and ingots. Flux uses a fan of folded cyan plates. Both
+fit one map cell and export as static meshes with UVs, normals and three PBR
+materials. The simulation owns each deposit's position, stock and obstacle.
+
+Edit either scene and run `tools/export_assets.ps1 -DepositsOnly` to export both
+GLBs into `client/assets`. To deliberately replace the editable scenes with the
+procedural originals, use `-DepositsOnly -RecreateDeposits`.

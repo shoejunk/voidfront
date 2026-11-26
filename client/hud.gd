@@ -198,6 +198,14 @@ func _process(_delta: float) -> void:
 				load_text = "Returning empty to anchor" if loads.is_empty() else "Returning %s to anchor" % load_text
 			elif returning_workers:
 				load_text += "   ·   %d returning to anchor" % returning_workers
+			elif game.selected.size() == 1 and weakest_worker.player == game.local_player and weakest_worker.order == game.Action.GATHER:
+				for deposit in game.current.deposits:
+					if deposit.id != weakest_worker.resource_id: continue
+					var tile := Vector2i(floori(deposit.x / game.SCALE), floori(deposit.z / game.SCALE))
+					if game._vision_at(tile.x, tile.y) > 0:
+						var resource := "Flux" if deposit.kind == 1 else "Salvage"
+						load_text += "  →  %s (%d, %d)" % [resource, tile.x, tile.y]
+					break
 			selection.text += "   ·   " + load_text
 		if not game.selected_entity.is_empty():
 			var entity: Dictionary = game.selected_entity
@@ -271,20 +279,24 @@ func _process(_delta: float) -> void:
 	queue_redraw()
 	if game.presentation_profiler: game.presentation_profiler.record("hud_process", Time.get_ticks_usec() - profile_start)
 
-func _draw() -> void:
-	var profile_start := Time.get_ticks_usec() if is_instance_valid(game) and game.presentation_profiler else 0
-	var view := get_viewport_rect().size
-	if is_instance_valid(game) and game.setup_open:
-		draw_rect(Rect2(Vector2.ZERO, view), Color(0.01, 0.02, 0.025, 0.72))
-		return
+func _status_panel_rect() -> Rect2:
 	var network_panel: bool = is_instance_valid(game) and (game.network or game.economy or not game.option_error.is_empty())
 	var panel_size := Vector2(920, 128) if network_panel else Vector2(548, 80)
 	if is_instance_valid(game) and game.economy and not game.network and connection.text.is_empty():
 		panel_size = Vector2(380, 80)
 	if is_instance_valid(game) and game.network:
 		panel_size.y += maxi(0, connection.get_line_count() - 2) * 18
-	draw_rect(Rect2(Vector2(16, 12), panel_size), Color(0.025, 0.047, 0.055, 0.94))
-	draw_rect(Rect2(16, 12, 3, panel_size.y), Color("61c9c6"))
+	return Rect2(Vector2(16, 12), panel_size)
+
+func _draw() -> void:
+	var profile_start := Time.get_ticks_usec() if is_instance_valid(game) and game.presentation_profiler else 0
+	var view := get_viewport_rect().size
+	if is_instance_valid(game) and game.setup_open:
+		draw_rect(Rect2(Vector2.ZERO, view), Color(0.01, 0.02, 0.025, 0.72))
+		return
+	var panel := _status_panel_rect()
+	draw_rect(panel, Color(0.025, 0.047, 0.055, 0.94))
+	draw_rect(Rect2(panel.position, Vector2(3, panel.size.y)), Color("61c9c6"))
 	var extra_help_height := 32 if is_instance_valid(game) and game.economy else 0
 	if selection.visible:
 		draw_rect(Rect2(16, view.y - 131 - extra_help_height, 965, 114 + extra_help_height), Color(0.025, 0.047, 0.055, 0.96))
@@ -349,14 +361,21 @@ func _economy_label_rects() -> Array[Rect2]:
 	for entry in game.economy_actors.values():
 		var label: Label3D = entry.label
 		if not label.is_visible_in_tree() or camera.is_position_behind(label.global_position): continue
-		# These single-line billboards are centered on their world anchors.
-		var font := label.font if label.font else ThemeDB.fallback_font
-		var text_size := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size)
-		var text_scale := label.pixel_size * pixels_per_unit
-		var screen_size := text_size * text_scale
-		var at := camera.unproject_position(label.global_position)
-		rects.append(Rect2(at - screen_size * 0.5, screen_size).grow(label.outline_size * text_scale + 2.0))
+		rects.append(_world_label_rect(label, pixels_per_unit))
 	return rects
+
+func _world_label_rect(label: Label3D, pixels_per_unit: float) -> Rect2:
+	var font := label.font if label.font else ThemeDB.fallback_font
+	var text_size := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size)
+	var text_scale := label.pixel_size * pixels_per_unit
+	var screen_size := text_size * text_scale
+	var at: Vector2 = game.camera.unproject_position(label.global_position)
+	return Rect2(at - screen_size * 0.5, screen_size).grow(label.outline_size * text_scale + 2.0)
+
+func status_covers_label(label: Label3D) -> bool:
+	# The RTS camera keeps its vertical extent when the window changes shape.
+	var pixels_per_unit: float = get_viewport_rect().size.y / game.camera.size
+	return is_visible_in_tree() and _status_panel_rect().intersects(_world_label_rect(label, pixels_per_unit))
 
 func _place_health_bar(desired: Rect2, labels: Array[Rect2], view_height: float) -> Rect2:
 	var above := desired

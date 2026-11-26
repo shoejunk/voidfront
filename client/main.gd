@@ -4,6 +4,8 @@ const STEP := 1.0 / 20.0
 const SCALE := 256.0
 const CAMERA_OFFSET := Vector3(0, 25, 21)
 const WALKER = preload("res://assets/cairn_walker.glb")
+const SALVAGE_DEPOSIT = preload("res://assets/salvage_deposit.glb")
+const FLUX_DEPOSIT = preload("res://assets/flux_deposit.glb")
 const HUD = preload("res://hud.gd")
 const Action = preload("res://command_card.gd").Action
 var bridge: RefCounted
@@ -156,12 +158,14 @@ var terminal_loss_fixture: RefCounted
 
 func _ready() -> void:
 	var ticks_specified := false
+	var worker_route_smoke := false
 	var profile_options := false
 	var controlled_profile := false
 	var profile_tick_specified := false
 	var profile_camera_specified := false
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--smoke": smoke = true
+		elif argument == "--worker-route-smoke": worker_route_smoke = true
 		elif argument == "--skirmish": skirmish = true
 		elif argument == "--economy": economy = true
 		elif argument == "--queue-smoke":
@@ -333,6 +337,8 @@ func _ready() -> void:
 	_reset()
 	# Only bare interactive launches show the skirmish setup; every fixture starts directly.
 	setup_open = economy and not (economy_smoke or production_smoke or match_smoke or exploration_smoke or camera_edge_smoke or queue_smoke or network)
+	if worker_route_smoke:
+		add_child(preload("res://worker_route_test.gd").new())
 	if rematch_smoke:
 		rematch_fixture = preload("res://net_rematch_smoke.gd").new(self)
 		rematch_fixture.run.call_deferred()
@@ -736,9 +742,9 @@ func _spawn_actor(unit: Dictionary) -> void:
 		model.scale = Vector3(0.65, 0.7, 0.65)
 		var cargo := MeshInstance3D.new()
 		var cargo_mesh := BoxMesh.new()
-		cargo_mesh.size = Vector3(0.52, 0.28, 0.52)
+		cargo_mesh.size = Vector3(0.30, 0.16, 0.27)
 		cargo.mesh = cargo_mesh
-		cargo.position = Vector3(0, 0.95, 0)
+		cargo.position = Vector3(0, 0.79, 0.19)
 		_present_worker_cargo(cargo, unit)
 		cargo.name = "SalvageCargo"
 		root.add_child(cargo)
@@ -790,8 +796,11 @@ func _economy_entity_at(screen: Vector2) -> Dictionary:
 
 func _present_economy() -> void:
 	# Tombstones stay in authoritative snapshots; selection must not retain them.
+	var selected_workers: Array[Vector2] = []
 	for unit in current.units:
 		if unit.hp <= 0: selected.erase(unit.id)
+		elif unit.kind == 1 and unit.player == local_player and unit.id in selected:
+			selected_workers.append(Vector2(unit.x, unit.z) / SCALE)
 	if selected_entity.get("category", "") == "structure":
 		for structure in current.structures:
 			if structure.id == selected_entity.id and structure.hp <= 0:
@@ -830,22 +839,27 @@ func _present_economy() -> void:
 				var root := Node3D.new()
 				add_child(root)
 				root.position = Vector3(entity.x / SCALE, 0, entity.z / SCALE)
-				var color := (Color("5cc8ff") if int(entity.get("kind", 0)) == 1 else Color("d6b869")) if deposit else (Color("438d97") if entity.player == 0 else Color("ae684e"))
-				var mesh := BoxMesh.new()
-				mesh.size = Vector3(0.94, 0.65, 0.94) if deposit else Vector3(1.94, 1.4 if anchor else 0.9, 1.94)
-				var body := MeshInstance3D.new()
-				body.mesh = mesh
-				body.material_override = _material(color, 0.3)
-				body.position.y = mesh.size.y / 2.0
+				var body: Node3D
+				if deposit:
+					body = (FLUX_DEPOSIT if entity.kind == 1 else SALVAGE_DEPOSIT).instantiate()
+				else:
+					var color := Color("438d97") if entity.player == 0 else Color("ae684e")
+					var mesh := BoxMesh.new()
+					mesh.size = Vector3(1.94, 1.4 if anchor else 0.9, 1.94)
+					var structure := MeshInstance3D.new()
+					structure.mesh = mesh
+					structure.material_override = _material(color, 0.3)
+					structure.position.y = mesh.size.y / 2.0
+					body = structure
+					if anchor:
+						var mast := MeshInstance3D.new()
+						var mast_mesh := BoxMesh.new()
+						mast_mesh.size = Vector3(0.4, 1.4, 0.4)
+						mast.mesh = mast_mesh
+						mast.position.y = 1.8
+						mast.material_override = _material(color.lightened(0.2), 0.4)
+						root.add_child(mast)
 				root.add_child(body)
-				if anchor:
-					var mast := MeshInstance3D.new()
-					var mast_mesh := BoxMesh.new()
-					mast_mesh.size = Vector3(0.4, 1.4, 0.4)
-					mast.mesh = mast_mesh
-					mast.position.y = 1.8
-					mast.material_override = _material(color.lightened(0.2), 0.4)
-					root.add_child(mast)
 				var label := Label3D.new()
 				label.font_size = 36
 				label.pixel_size = 0.012
@@ -868,6 +882,14 @@ func _present_economy() -> void:
 				selected_entity["category"] = "deposit" if deposit else "structure"
 			if deposit:
 				entry.label.text = "%s  %d" % ["FLUX" if int(entity.get("kind", 0)) == 1 else "SALVAGE", entity.remaining]
+				entry.label.position = Vector3(0, 1.6, 0)
+				var site := Vector2(entity.x, entity.z) / SCALE
+				for worker in selected_workers:
+					if site.distance_squared_to(worker) <= 1.5 * 1.5:
+						entry.label.position.y = 3.1
+						if hud.status_covers_label(entry.label):
+							entry.label.position = Vector3(0, 0, 1.85)
+						break
 				entry.body.scale.y = 0.15 if entity.remaining == 0 else 1.0
 			else:
 				var progress := int(entity.build_ticks)
