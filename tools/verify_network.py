@@ -70,6 +70,7 @@ def replay(executable, record, trace):
     trace.with_suffix(".log").write_text(result.stdout + result.stderr)
     if result.returncode:
         raise AssertionError(f"replay rejected {record}: {result.stderr}")
+    return result.stdout
 
 
 def verify_timing(report):
@@ -129,7 +130,7 @@ def verify_timing(report):
             close(report[f"{prefix}_{suffix}_ms"], expected, f"{prefix} {suffix}")
 
 
-def verify_command_coverage(report, recording, player):
+def verify_command_coverage(report, recording, player, economy=False):
     """Every applied local command must have one unfiltered timing event."""
     data = recording.read_bytes()
     if len(data) < 32 or data[:4] not in (b"VFR\x02", b"VFR\x03"):
@@ -137,6 +138,9 @@ def verify_command_coverage(report, recording, player):
     u32 = lambda offset: int.from_bytes(data[offset:offset + 4], "little")
     if u32(16) != report["ticks"]:
         raise AssertionError("recorded prefix differs from timed execution")
+    if economy and (data[:4] != b"VFR\x03" or u32(8) != 9 or u32(12) != 3 or u32(32) != 2 or
+                    str(int.from_bytes(data[24:32], "little")) != report["content_id"]):
+        raise AssertionError("wrong economy replay setup or content identity")
     expected, offset = [], 36 if data[:4] == b"VFR\x03" else 32
     for _ in range(u32(20)):
         if offset + 4 > len(data):
@@ -158,28 +162,121 @@ def verify_command_coverage(report, recording, player):
         raise AssertionError(f"timing events omit, duplicate or reorder applied player {player} commands")
 
 
+def read_peer_reports(case, folder):
+    reports = [json.loads((folder / f"peer{p}.json").read_text()) for p in range(2)]
+    for player, report in enumerate(reports):
+        if report["player"] != player:
+            raise AssertionError(f"{case.name}: wrong player in peer{player} report")
+        verify_timing(report)
+        verify_command_coverage(report, folder / f"peer{player}.vfr", player, case.economy)
+    return reports
+
+
+def verify_completed_pair(case, build, folder, output, tick_limit):
+    """Validate saved peer evidence independently of live relay observations and exit codes."""
+    reports = read_peer_reports(case, folder)
+    ticks = reports[0]["ticks"]
+    if not 0 < ticks <= tick_limit or reports[1]["ticks"] != ticks:
+        raise AssertionError(f"{case.name}: invalid or disagreeing peer tick counts")
+    if ticks != tick_limit and (not case.economy or case.fault):
+        raise AssertionError(f"{case.name}: peers stopped before requested tick cap")
+    for r in reports:
+        if r["status"] != "complete" or r["error"] or r["first_divergent_tick"] is not None:
+            raise AssertionError(f"{case.name}: peer {r['player']} did not complete cleanly")
+        if r["confirmed_ticks"] != ticks:
+            raise AssertionError(f"{case.name}: completed without confirming every executed checksum")
+        if r["max_verification_lag_ticks"] > r["verification_lag_limit"]:
+            raise AssertionError(f"{case.name}: exceeded declared verification bound")
+        if r["input_delay_ticks"] != case.input_delay or r["verification_lag_limit"] != 16:
+            raise AssertionError(f"{case.name}: unexpected scheduling/bound contract")
+        if r["max_unacked_checksums"] > 16 or r["max_unacked_frames"] > 16 + case.input_delay + 1:
+            raise AssertionError(f"{case.name}: retry backlog exceeded the pipeline window")
+        if r["command_count"] < 1 or r["command_latency_max_ms"] < r["command_latency_p95_ms"]:
+            raise AssertionError(f"{case.name}: missing or invalid command-response measurement")
+        if r["command_timings"][0]["source_tick"] != 0 or r["command_timings"][0]["sequence"] != 1:
+            raise AssertionError(f"{case.name}: source-zero input timing was discarded")
+    traces = [read_trace(folder / f"peer{p}.trace", ticks) for p in range(2)]
+    compare(*traces, f"{case.name}: communicating peers")
+    final_hash = traces[0][-1].split()[1]
+    if any(r["final_hash"] != final_hash for r in reports):
+        raise AssertionError(f"{case.name}: peer report final hash differs from confirmed trace")
+    if case.economy and (folder / "peer0.vfr").read_bytes() != (folder / "peer1.vfr").read_bytes():
+        raise AssertionError(f"{case.name}: economy peers recorded different canonical inputs")
+    winners = []
+    for player in range(2):
+        target = output / f"replayed{player}.trace"
+        executable = build / "sim" / case.configs[1 - player] / "voidfront_headless.exe"
+        stdout = replay(executable, folder / f"peer{player}.vfr", target)
+        compare(traces[player], read_trace(target, ticks), f"{case.name}: replay {player}")
+        if case.economy:
+            fields = dict(word.split("=", 1) for word in stdout.split() if "=" in word)
+            winner = int(fields["winner"])
+            # Headless counts steps that began without a winner. A frozen tick
+            # after an outcome would make the active count smaller than ticks.
+            if int(fields["ticks"]) != ticks or int(fields["active_ticks"]) != ticks:
+                raise AssertionError(f"{case.name}: native replay length or first outcome tick differs")
+            if winner not in (-1, 0, 1, 2) or (ticks < tick_limit and winner == -1):
+                raise AssertionError(f"{case.name}: native replay ended without a valid outcome at tick {ticks}")
+            winners.append(winner)
+    outcome = {"ticks": ticks, "requested_ticks": tick_limit}
+    if case.economy:
+        if winners[0] != winners[1]:
+            raise AssertionError(f"{case.name}: native outcomes disagree")
+        outcome["winner"] = winners[0]
+    return reports, outcome
+
+
 def run_economy_suite(args, started, fingerprints):
     """Economy-map lockstep over the impairment relay: the same canonical AI commands
     (gather/build/train/attack) at every impairment, so traces must be identical."""
     cases = [Case("economy-clean", ("Release", "Debug"), 0, 0, 0, economy=True),
              Case("economy-80ms", ("Debug", "Release"), 80, 20, .01, economy=True),
              Case("economy-160ms", ("Release", "Debug"), 160, 20, .01, economy=True)]
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        futures = [pool.submit(run_case, c, args.build, args.out, args.ticks) for c in cases]
-        results = [future.result() for future in futures]
-    baseline = read_trace(args.out / "economy-clean/peer0.trace", args.ticks)
-    for case in cases:
+    source = args.economy_capture or args.out
+    if args.economy_capture:
+        manifest = json.loads((source / "run.json").read_text())
+        if manifest["binary_sha256"] != fingerprints:
+            raise AssertionError("recorded peer and headless binaries differ from supplied build")
+        if manifest.get("requested_ticks", args.ticks) != args.ticks or manifest.get("suite", "economy") != "economy":
+            raise AssertionError("capture is from a different suite or tick cap")
+        cap_source = ("capture manifest" if "requested_ticks" in manifest
+                      else "caller supplied the original command cap; legacy manifest omits it")
+        results = []
+        for case in cases:
+            target = args.out / case.name
+            target.mkdir()
+            reports, outcome = verify_completed_pair(case, args.build, source / case.name, target, args.ticks)
+            results.append({"case": case.name, **outcome, "configurations": case.configs,
+                            "peers": [{key: r[key] for key in ("player", "status", "confirmed_ticks", "final_hash")}
+                                      for r in reports]})
+        scope = "saved economy peer and replay evidence; excludes process exit codes and relay measurements"
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
+            futures = [pool.submit(run_case, c, args.build, args.out, args.ticks) for c in cases]
+            results = [future.result() for future in futures]
+        scope = "paced loopback UDP economy AI vs AI with per-peer timings and relay measurements"
+        cap_source = "live peer command"
+    ticks, winner = results[0]["ticks"], results[0]["winner"]
+    baseline = read_trace(source / "economy-clean/peer0.trace", ticks)
+    canonical = (source / "economy-clean/peer0.vfr").read_bytes()
+    for case, result in zip(cases, results):
+        if (result["ticks"], result["winner"]) != (ticks, winner):
+            raise AssertionError(f"{case.name}: economy endpoint differs from clean")
+        if (source / case.name / "peer0.vfr").read_bytes() != canonical:
+            raise AssertionError(f"{case.name}: economy command recording differs from clean")
         for p in range(2):
-            compare(baseline, read_trace(args.out / case.name / f"peer{p}.trace", args.ticks), f"{case.name} peer{p} vs clean")
+            compare(baseline, read_trace(source / case.name / f"peer{p}.trace", ticks), f"{case.name} peer{p} vs clean")
     replay_exe = args.build / "sim/Release/voidfront_headless.exe"
     for repeat in range(10):
         target = args.out / f"economy-repeat-{repeat}.trace"
-        replay(replay_exe, args.out / "economy-clean/peer0.vfr", target)
-        compare(baseline, read_trace(target, args.ticks), f"economy repeat {repeat}")
-    summary = {"verified": True, "suite": "economy", "ticks": args.ticks, "binary_sha256": fingerprints, "cases": results,
-               "scope": "loopback UDP economy-map AI vs AI through the impairment relay; no human/client latency or soak"}
+        replay(replay_exe, source / "economy-clean/peer0.vfr", target)
+        compare(baseline, read_trace(target, ticks), f"economy repeat {repeat}")
+    summary = {"verified": True, "suite": "economy", "requested_ticks": args.ticks, "ticks": ticks, "winner": winner,
+               "binary_sha256": fingerprints, "cases": results, "scope": scope, "tick_cap_source": cap_source,
+               "capture": str(source.resolve()) if args.economy_capture else None}
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2))
-    print(f"PASS economy network suite: {len(cases)} cases, traces equal across impairments, 10 replays agree", flush=True)
+    print(f"PASS economy network suite: {len(cases)} cases, {ticks}/{args.ticks} ticks, winner={winner}, "
+          "traces equal across impairments, 10 replays agree", flush=True)
 
 
 def run_case(case, build, out, ticks):
@@ -340,39 +437,13 @@ def run_case(case, build, out, ticks):
                 counts["delays_ms"][source].append((now - enqueued) * 1000)
         for log in logs:
             log.flush()
-        reports = [json.loads((folder / f"peer{p}.json").read_text()) for p in range(2)]
-        for player, report in enumerate(reports):
-            verify_timing(report)
-            verify_command_coverage(report, folder / f"peer{player}.vfr", player)
         codes = [p.returncode for p in children]
         if positive:
-            if codes != [0, 0] or any(r["status"] != "complete" for r in reports):
-                raise AssertionError(f"{name}: peers did not complete: {codes} {reports}")
-            for r in reports:
-                if r["confirmed_ticks"] != ticks:
-                    raise AssertionError(f"{name}: completed without confirming every executed checksum")
-                if r["max_verification_lag_ticks"] > r["verification_lag_limit"]:
-                    raise AssertionError(f"{name}: exceeded declared verification bound")
-                if r["input_delay_ticks"] != input_delay or r["verification_lag_limit"] != 16:
-                    raise AssertionError(f"{name}: unexpected scheduling/bound contract")
-                if r["max_unacked_checksums"] > 16 or r["max_unacked_frames"] > 16 + input_delay + 1:
-                    raise AssertionError(f"{name}: retry backlog exceeded the pipeline window")
-                if r["command_count"] < 1 or r["command_latency_max_ms"] < r["command_latency_p95_ms"]:
-                    raise AssertionError(f"{name}: missing or invalid command-response measurement")
-                if r["command_timings"][0]["source_tick"] != 0 or r["command_timings"][0]["sequence"] != 1:
-                    raise AssertionError(f"{name}: source-zero input timing was discarded")
-            traces = [read_trace(folder / f"peer{p}.trace", ticks) for p in range(2)]
-            compare(*traces, f"{name}: communicating peers")
-            for player in range(2):
-                target = folder / f"replayed{player}.trace"
-                # Replay each process recording in the opposite configuration.
-                executable = build / "sim" / configs[1 - player] / "voidfront_headless.exe"
-                replay(executable, folder / f"peer{player}.vfr", target)
-                compare(traces[player], read_trace(target, ticks), f"{name}: replay {player}")
+            if codes != [0, 0]:
+                raise AssertionError(f"{name}: peers did not exit successfully: {codes}")
+            reports, outcome = verify_completed_pair(case, build, folder, folder, ticks)
             if loss and sum(counts["dropped"]) == 0:
                 raise AssertionError(f"{name}: configured loss never exercised")
-            if traces[0] == []:
-                raise AssertionError("empty network trace")
             if fault and sum(counts["forced_drops"]) == 0:
                 raise AssertionError(f"{name}: required forced impairment never exercised")
             if fault == "terminal-loss" and sum(counts["forced_drops"]) != 12:
@@ -386,6 +457,8 @@ def run_case(case, build, out, ticks):
             if fault == "startup-ack" and reports[0]["startup_duration_ms"] < 500:
                 raise AssertionError("withheld initial ACK did not delay explicit readiness")
         else:
+            reports = read_peer_reports(case, folder)
+            outcome = {"ticks": ticks}
             if any(code == 0 for code in codes):
                 raise AssertionError(f"{name}: fault incorrectly succeeded: {codes}")
             diagnostic = " ".join((folder / f"peer{p}.log").read_text() for p in range(2)).lower()
@@ -425,7 +498,7 @@ def run_case(case, build, out, ticks):
             values.sort()
             counts["delay_ms"].append({"min": min(values, default=0), "max": max(values, default=0),
                                        "p50": values[len(values) // 2] if values else 0})
-        result = {"case": name, "ticks": ticks, "configurations": configs, "rtt_ms": rtt,
+        result = {"case": name, **outcome, "configurations": configs, "rtt_ms": rtt,
                   "input_delay_ticks": input_delay, "fault": fault,
                   "one_way_jitter_ms": jitter, "loss_probability": loss,
                   "elapsed_seconds": time.monotonic() - start, "pids": [p.pid for p in children],
@@ -486,11 +559,15 @@ def main():
     parser.add_argument("--jobs", type=int, choices=range(1, 4), default=1)
     parser.add_argument("--suite", choices=("full", "delay-study", "economy"), default="full",
                         help="full fault regression or isolated matched input-delay profiles")
+    parser.add_argument("--economy-capture", type=Path, metavar="DIR",
+                        help="verify a saved economy run using its matching --build and original --ticks cap")
     args = parser.parse_args()
     if not 50 <= args.ticks <= 100000:
         parser.error("ticks must be 50..100000")
     if args.suite == "delay-study" and args.jobs != 1:
         parser.error("delay-study requires --jobs 1 for isolated timing")
+    if args.economy_capture and args.suite != "economy":
+        parser.error("--economy-capture requires --suite economy")
     allowed()
     started = datetime.now(timezone.utc)
     if args.out is None:
@@ -501,7 +578,8 @@ def main():
     binaries = [args.build / cfg / "voidfront_peer.exe" for cfg in ("Debug", "Release")]
     binaries += [args.build / "sim" / cfg / "voidfront_headless.exe" for cfg in ("Debug", "Release")]
     fingerprints = {str(p.relative_to(args.build)): hashlib.sha256(p.read_bytes()).hexdigest() for p in binaries}
-    (args.out / "run.json").write_text(json.dumps({"started_utc": started.isoformat(),
+    (args.out / "run.json").write_text(json.dumps({"started_utc": started.isoformat(), "suite": args.suite,
+                                                 "requested_ticks": args.ticks,
                                                  "binary_sha256": fingerprints}, indent=2))
     cases = [Case(*c) for c in [
         ("debug-clean", ("Debug", "Debug"), 0, 0, 0, None),
