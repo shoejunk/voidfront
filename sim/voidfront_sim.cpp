@@ -454,6 +454,12 @@ void Sim::step() {
             if (free) { u.x=candidate.x; u.z=candidate.z; u.moving=!(candidate==here); break; }
         }
         if (u.moving) { u.blocked_ticks=0; }
+        else if (!blocker && !navigation_.clear(here,waypoint)) {
+            // Rounded steps can drift off a terrain tangent. Once terrain
+            // rejects every step, replan the stale leg from the actual position.
+            u.path.clear(); u.detour.clear(); u.blocked_ticks=0;
+            u.route_goal={-1,-1}; u.next_x=u.x; u.next_z=u.z;
+        }
         else if (blocker && ++u.blocked_ticks>=2) {
             if (u.order==Order::Move) {
                 attempted_detours[u.id-1]=u.detour;

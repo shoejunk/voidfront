@@ -102,6 +102,67 @@ void occupied_service_goal() {
     check(units[1].x==prior.x && units[1].z==prior.z,"service recovery displaced held blocker");
     check(total(s)==6000,"service-slot recovery changed resource total");
 }
+
+// Three ordinary orders from an untouched start. From the middle worker's
+// anchor slot, integer steps toward the far salvage field graze the central flux.
+std::array<uint32_t,2> gather_across_flux(uint8_t player) {
+    Sim sim(42,3,Map::Economy);
+    const auto& miner=sim.units()[3*player+1];
+    const auto& patch=sim.deposits()[1-player];
+    const auto& anchor=sim.structures()[player];
+    const auto home=sim.service_slots(miner,{anchor.x,anchor.z},kScale).front();
+    const auto mine=sim.service_slots(miner,{patch.x,patch.z},kScale/2).front();
+    const nav::Point scout{patch.x+(player?3:-3)*kScale,patch.z};
+
+    // Reconstruct clearance independently of the worker's cached waypoints.
+    auto obstacles=map_terrain(sim.map());
+    const auto footprint=[&](int x,int z,int half_extent) {
+        obstacles.push_back({x-half_extent,z-half_extent,x+half_extent,z+half_extent});
+    };
+    for (const auto& b:sim.structures()) footprint(b.x,b.z,kScale);
+    for (const auto& d:sim.deposits()) footprint(d.x,d.z,kScale/2);
+    for (const auto& u:sim.units()) if (u.id!=miner.id) footprint(u.x,u.z,64);
+    const nav::World world({kScale,kScale,(sim.width()-1)*kScale,(sim.height()-1)*kScale},std::move(obstacles),64);
+    const auto position=[&]{return nav::Point{miner.x,miner.z};};
+    const auto advance=[&] {
+        const auto before=position();
+        sim.step();
+        const auto after=position();
+        const int dx=after.x-before.x,dz=after.z-before.z;
+        check(dx*dx+dz*dz<=32*32,"cross-field worker exceeded movement speed");
+        check(world.clear(before,after),"cross-field worker swept through an obstacle or idle worker");
+    };
+    const auto travel=[&](uint32_t sequence,Order order,nav::Point target,nav::Point arrival) {
+        check(sim.submit({sim.tick(),sequence,player,order,{miner.id},target.x,target.z}),"cross-field setup order rejected");
+        const auto start=sim.tick();
+        do { advance(); } while (miner.order!=Order::Stop && sim.tick()-start<1000);
+        check(miner.order==Order::Stop && position()==arrival,"cross-field setup failed to arrive");
+    };
+    travel(1,Order::Move,scout,scout);
+    check(sim.visibility(player,patch.x/kScale,patch.z/kScale)==2,"scout failed to see far salvage");
+    travel(2,Order::ReturnCargo,{},home);
+
+    const int initial_reserve=patch.remaining;
+    check(sim.submit({sim.tick(),3,player,Order::Gather,{miner.id},patch.x,patch.z}),"cross-field Gather rejected");
+    std::array<uint32_t,2> deliveries{};
+    for (auto& delivery:deliveries) {
+        const int bank=sim.salvage(player);
+        const auto start=sim.tick();
+        do {
+            const int load=miner.cargo;
+            advance();
+            check(miner.order==Order::Gather && miner.resource_id==patch.id,"cross-field Gather lost its target");
+            if (miner.cargo>load)
+                check(position()==mine && miner.cargo==load+1 && miner.cargo_kind==0,"worker mined outside its salvage slot");
+            check(patch.remaining+miner.cargo+sim.salvage(player)==initial_reserve,"cross-field salvage was lost or created");
+            if (sim.salvage(player)>bank)
+                check(position()==home && load==kCargoCapacity && miner.cargo==0,"worker paid outside its anchor slot");
+        } while (sim.salvage(player)==bank && sim.tick()-start<1500);
+        check(sim.salvage(player)==bank+kCargoCapacity,"one Gather failed to deliver a full load past the flux field");
+        delivery=sim.tick();
+    }
+    return deliveries;
+}
 void competing_purchases() {
     Sim s(42,3,Map::Economy);
     auto& reserves=const_cast<std::vector<Deposit>&>(s.deposits()); reserves[0].remaining=kFoundryCost;
@@ -508,6 +569,8 @@ void gather_through_fog(uint8_t player) {
 int main() {
     try {
         validation(); interruption_and_depletion(); construction_and_routes(); occupied_service_goal(); competing_purchases(); replay_and_apply_time();
+        const auto deliveries=gather_across_flux(0);
+        check(gather_across_flux(1)==deliveries,"cross-field salvage delivery timings differed by spawn");
         worker_replacement(0,0,kWorkerCost);
         worker_replacement(1,1,3*kWorkerCost);
         worker_replacement(1,0,kWorkerCost-kCargoCapacity);
