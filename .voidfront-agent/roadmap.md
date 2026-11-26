@@ -1,5 +1,39 @@
 # Continuing roadmap
 
+## 2026-11-25 — passing between two held workers and the flux field
+
+Use the two November 25 `two-holders` recordings in
+`.voidfront-agent/replays` with simulation content `a2147866b44eca01`.
+Both begin from ordinary seed-42 Glass Reach. Two friendly workers hold
+(7488,5888) and (7616,5760). At 442 the middle worker receives Move
+from its anchor to (14464,10144). At 662 it stops at (7359,5868) and
+it is still there at 2,942. Its assigned destination remains valid.
+The normal-start failure also rotates to the other spawn.
+
+First instrument the terrain and unit rejections at the first failed
+step and the chosen local detour. With both blockers immobile, a Move
+via (7168,5120) and a queued final leg arrives at 928. From the already
+stuck state a single repeat of the original Move at 912 arrives at
+1,182. Require automatic exact arrival, preserved swept clearance and
+unchanged Hold orders. Recheck the 1,214 two-holder placements. Currently
+1,036 arrive and 178 stall. Unconditionally replanning a failed terrain
+leg even with a unit blocker rescued only four more cases in a private
+experiment. The ordinary reproduction and controls are in
+`artifacts/tangent-review-2026-11-25`.
+
+Keep the 2,888 solo routes, 1,152 one-neighbor trips, mirrored paid
+mining matches and queued/Stop/Hold behavior as controls. The six-unit
+reversed destinations still finish five of six, and the 200/500-unit
+crossings still need their own crowd solution. The small-map result
+does not close the representative battle or input-response gates.
+
+For the next presentation pass, use the November 25 paid image where
+the selected miner returns behind the northwest anchor. Compare each
+anchor service position from both spawns. Preserve the corrected resource
+labels and cargo visibility at mining positions. The 500-unit 1080p
+opening also needs a separate performance investigation before large
+battles can be assessed.
+
 ## 2026-11-24 — a miner stops beside the central flux field
 
 Start with the hidden-departure recording in `.voidfront-agent/replays`.

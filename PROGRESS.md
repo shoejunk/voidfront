@@ -1,5 +1,84 @@
 # Voidfront progress
 
+## 2026-11-25 America/Los_Angeles — worker route past the central flux deposit
+
+Clean `dev` began at `3606799`. A single worker with a Gather order stops
+at the central flux obstacle on either side of Glass Reach. Reproduce the
+first failed step, restore progress without reissuing the command, and
+verify clearance, salvage delivery and replay in the isolated route and
+the ordinary departed-guard match. Check route quality and existing crowd
+fixtures separately, then exercise the Windows export and two peers.
+
+The stock worker could take a legal rounded step that put the remainder
+of its cached leg behind an obstacle. All seven subsequent step candidates
+eventually hit terrain, and the unit had no moving blocker to trigger
+recovery. At the northwest flux corner it stayed at (7710,6079). The
+simulation now invalidates that leg after a failed terrain-only step.
+On the next tick it plans from its current position to the same goal.
+Source checkpoint `7a50362` reached GitHub.
+
+In an untouched six-worker game on either spawn, one scout Move, one
+ReturnCargo and one Gather now produce ten salvage at 2,014 and another
+ten at 3,100. Both old builds earned zero. In the full paid-guard
+departure match, the original survivor now delivers 1,070 ticks after
+Gather, down from 13,134. The recruit takes 633 ticks in both versions.
+The mining player wins at 84,412 from either spawn. In the first 8,000 ticks after that Gather the
+team brings home 180 salvage, up from 90. The 14 shorter paid openings
+retain their command streams, state traces and outcomes.
+
+Independent review found 406 stalls in 2,888 reachable single-worker
+trips. Every trip now arrives with clear sweeps. Adding one stationary
+or moving worker also passed all 1,152 cases. Two workers holding near
+the flux corner still stop some trips. The dated roadmap and the small
+versioned recordings preserve the ordinary-command failure and bypass.
+
+Source checkpoint `c238c66` adds editable Blender deposits and a selected
+worker's observed destination to the command card. The low brass flywheel
+and cyan plates fit the same terrain footprint. Smaller cargo and a
+nearby label that moves clear of the worker raised measured visibility
+at the mining position from 27 to 201 equivalent pixels. The northwest
+HUD initially covered the adjusted home label. Independent renders of
+three affected mining positions confirmed the correction. The anchor
+still obscures the worker at its rear payment position.
+
+The frozen Windows export is `artifacts/tangent-windows-2026-11-25`.
+The normal game scene accepts the scout, empty recall and single context
+Gather through its controls. The selected worker clears the flux corner
+at 729, fills its load by 1,068 and banks ten at 1,563. The movie and
+the six event stills are in `artifacts/tangent-runtime-2026-11-25`.
+Each event records its screenshot digest. Eleven native prefixes per
+build tie the UI observations to that worker's route. Fourteen damaged copies
+were rejected in independent verification. A separate normal-clock
+offline defeat reaches tick 3,227. A scripted offline win reaches 4,512.
+Two separate exported clients completed the contested game at 7,227.
+They agreed on the player-0 win, archived it and returned to offline
+play. Twenty-two full native replays reproduced the match.
+
+Three pairs of separate native peers played the same seed-9 match
+through clean, 80 ms and 160 ms loopback relays. All six peers confirmed
+all 22,893 states. Both anchors went from eight HP to zero on the last
+tick, yielding a draw after 19.08–19.33 minutes of play. The requested
+36,000 ticks were a cap. The original network verifier incorrectly
+flagged the earlier draw. The native replay audit checks both sides of
+the drawing tick and all 180 commands in the retained sessions.
+The verifier now accepts early economy outcomes only when every applied
+tick was confirmed and replay first reaches the same result at that
+endpoint. An unfinished short session, an unconfirmed tail and a replay
+padded after the draw all failed the corrected checks. Verifier checkpoint
+`2426aab` passed the original 22-case protocol suite.
+
+At 200 and 500 units, native swept movement stayed clear but zero units
+reached their destinations in the opposing-crowd benchmark. The next
+movement change starts with the reachable, two-held-worker failure at
+tick 662 before tackling dense formations. Human input latency, a
+30-minute complete network match and reference-hardware performance
+remain open.
+
+On the development machine, the final Windows build's 1080p p99 frame
+intervals were 20.740 ms with 200 units and 69.799 ms with 500. Both
+miss the 16.67 ms target. The measured windows show opening formations.
+The full timing rows, screenshots and hardware context are in TESTING.md.
+
 ## 2026-11-24 America/Los_Angeles — withdrawal from an exposed mining position
 
 Start from clean `dev` at `6bf8c72`. The middle worker on either side of

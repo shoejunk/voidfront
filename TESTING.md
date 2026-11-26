@@ -1,5 +1,195 @@
 # Verification ledger
 
+## 2026-11-25 — terrain tangent, worker delivery and resource readability
+
+### Native movement and economy
+
+The stock Debug and Release probes agree. On the isolated route the
+integer step from (5820,4916) to (5847,4933) at 633–634 leaves the
+remaining leg obstructed. At 703 all seven local candidates hit terrain,
+with no unit blocker and zero blocked ticks. A single repeat Gather at
+803 could deliver at 1,639. With the fix, the original Gather mines at
+965 and pays at 1,540 on either spawn. The checked-in economy regression
+uses an untouched starting state with all six workers present. It failed
+against both stock libraries and now passes. Move arrives at 449, the
+empty recall finishes at 928, and first extraction is at 1,429. One
+Gather deposits ten at 2,014 and twenty cumulatively at 3,100. Each step
+checks speed, swept clearance and conservation of the bank, load and ore.
+The mirrored replays first differ from stock at 1,168. Twenty-four
+official native prefix snapshots verify the loads and both payments.
+
+Four full paid-guard games were regenerated with normal commands. The
+two held-post games finish at 97,118. The two hidden departures finish
+at 84,412. All 363,060 state positions match in MSVC Debug and Release.
+Forty-four native prefixes check observed clearance, the purchase,
+withdrawal, extraction and the individual workers' deposits. Home
+salvage also runs out sooner (72,103 vs 91,434) because the invader's
+middle worker recovers from the same terrain tangent. Relative to the
+survivor's new Gather, its first payment improves from 13,134 ticks to
+1,070. The recruit pays in 633 ticks on both revisions. The survivor
+brings home 70 in the next 8,000 ticks, up from zero. The shorter
+garrison, Hold and AttackMove controls retain all 208,712 state hashes
+across 14 openings. Sixty-four additional prefixes check 10-salvage
+payments. See `artifacts/tangent-{tests,review,implementation}-2026-11-25`.
+
+The pinned toolchain built the Windows bridge and both configurations
+passed all 12 CTests, 15 malformed-replay cases and seven file-alias
+checks per build, the 2,000-tick comparison and ten repeat playbacks.
+The sandboxed attempt failed with MSVC C1902. The verified build used
+the local compiler service. The existing C4456 guard-name warning
+remains. Four cross-revision native replay loads and four real peer
+pairs rejected incompatible content before executing input
+(`artifacts/tangent-runtime-2026-11-25/compatibility`).
+
+The static route oracle passed 51 cases ten times per build. Independent
+executed movement on Glass Reach arrived on 2,888/2,888 routes, up from
+2,482. The largest excess over a continuous shortest feasible route
+was 0.1743%. A further 1,152/1,152 one-neighbor trips arrived with clear
+terrain and unit-relative sweeps. With two held workers the same tests
+reached 1,036/1,214, up from 372. The canonical six-unit reversed-goal
+case still stops one unit at (2448,2928). All 17 mandatory crowd
+fixtures retained their expected outcomes in 20 executions, and the
+checker rejected 22 deliberately damaged ledgers. See
+`artifacts/tangent-{navigation,crowds}-2026-11-25`.
+
+### Exported worker, resource models and command card
+
+The frozen Windows build is in `artifacts/tangent-windows-2026-11-25`.
+To reproduce the route, launch its executable with
+`--resolution 1280x720 -- --worker-route-smoke --seed=42 --report=C:/dev/voidfront/artifacts/fresh-route`.
+The report directory must be new. Run
+`python tools/verify_worker_route.py artifacts/fresh-route --out artifacts/fresh-audit`
+from the repository with Python and FFmpeg. The fixture uses the normal game scene, setup keys,
+minimap, world picking and command-card button. It advances the game clock
+explicitly. The full trace and eleven prefixes per build bind both crossing
+thresholds, the observed worker, reserve, health and bank to native replay.
+The verifier decodes each distinct 720p image, checks its event digest
+and tests the actual HUD strings recorded at each transition.
+
+The observer scouts and the middle worker recalls, then receives one
+context Gather. At ticks 716 and 729 that worker reaches and passes the
+flux obstacle. It mines at 978, starts back with ten at 1,068 and delivers
+at 1,563. The 1,563 state hashes agree in the client, Debug and Release.
+Six 1280×720 stills and the 316-frame, 60 fps movie are under
+`artifacts/tangent-runtime-2026-11-25`. The movie container is 1600×900.
+Most of the trip is accelerated. At the flux crossing it shows three
+interpolated frames per simulation tick. Manual input latency was unmeasured.
+
+Blender 5.1.2 exported the editable Salvage and Flux scenes twice with
+identical GLBs. Changing only the brass material in a copied Blender file
+changed only the salvage GLB. Explicit regeneration restored both hashes.
+Both meshes have UVs, unit normals and three material surfaces. The 784
+salvage triangles and 32 flux triangles fit their one-cell footprints.
+A single selected worker's HUD shows its observed resource and tile
+through the Gather approach, then its return and load. The route checks
+the change from one to ten carried, then zero at payment.
+
+The independent fixed-pose masks measured 104 to 214 equivalent visible
+worker pixels at the flux tangent and 27 to 201 while mining. At all
+twelve sampled service positions coverage improved. An initial raised
+resource label disappeared behind the northwest status panel. Placing
+the label below the deposit in this case restored 590 high-contrast
+pixels at each of three affected positions. At payment the anchor still
+hides nearly the whole worker (0.9 of 240.5 unobstructed equivalent pixels).
+Far-side bars can align with resource silhouettes. See
+`artifacts/tangent-art-review-2026-11-25/review.md` and the implementation
+folder's `artist-edit`, `home-label` and `load-readability` captures.
+
+In Blizzard's mineral-line image, varied mineral silhouettes and ground
+shadows distinguish the workers and deposits without a persistent label
+over each patch. Voidfront's brass ring and cyan fan now separate by
+shape at RTS distance. Its flat terrain, stepped fog, block anchors and
+the worker's occluded return remain visible in the exported footage.
+[Blizzard mapmaking reference](https://news.blizzard.com/en-us/article/20521249/mastering-mapmaking-part-two)
+
+### Dense crossings and terminal network recovery
+
+At 200 and 500 units the 4,000-tick opposing crossings still finish
+with zero exact arrivals. The longest pending stationary tails are 3,653
+and 3,709 ticks. Independent checks validated the speed and full swept
+clearance over 800,200 and 2,000,500 unit rows. Compared with stock, 90,779
+and 261,366 trajectory rows changed. In alternating Release runs the
+current simulation took 1.918–1.941 ms p95 and 1.998–2.125 ms p99 for
+200 units, and 2.692–2.716 ms p95 and 2.952–2.985 ms p99 for 500. These
+were blocked crossings on the development host with concurrent work.
+Both dense Debug recordings reproduced all 4,000 Release state hashes.
+See `artifacts/tangent-runtime-2026-11-25/crossing-comparison.json`.
+
+The frozen export also ran ordinary 1920×1080 Scale128 games with 120
+warmup frames followed by 300 measured frames per size, after the two
+rendered multiplayer clients exited. Windows 10.0.26300, Ryzen 7 3700X,
+RTX 2070 SUPER, the compatibility renderer and VSync were in use.
+
+| Live units | Measured ticks | Frame interval p95 / p99 | Frames over 16.667 ms | Peak working set |
+| --- | --- | --- | --- | --- |
+| 200 | 46–152 | 19.382 / 20.740 ms | 240 / 300 | 305.4 MiB |
+| 500 | 128–493 | 66.770 / 69.799 ms | 300 / 300 | 278.7 MiB |
+
+All actors survived these windows. The inspected images show the near
+side in tight ranks and the enemy on the minimap. Some native replay
+work was concurrent. Neither ordinary window meets the frame target on
+this host. Data from these opening formations do not establish the cost
+of a representative battle or identify a CPU or GPU bottleneck. Ten
+corruptions per report were rejected. See
+`artifacts/tangent-frame-audit-2026-11-25.json` and its two input captures.
+
+Two copies of the frozen export played successive 32- and 64-tick
+sessions. The guest observed TCP EOF with 63 final ticks confirmed and
+no archive yet. Both peers confirmed the 64th tick over UDP and archived
+the round. Four archives and eight native replay traces matched. Both
+players' home screenshots show the full salvage label. See
+`artifacts/tangent-peer-2026-11-25/summary.json`.
+
+### Complete offline and loopback games
+
+Two rendered copies of the final export completed a contested match.
+Player 0 won at 7,227 with final state hash `4b60e451be629dca`. The two
+processes submitted 44 canonical commands. Both peers' recordings
+passed 22 full native replays and 119 selected prefix checks, including
+the first outcome. The audit checked 82 phases and 16 cargo captures per
+peer, the offline return from both clients, ten offline-return replays
+and 39 deliberate corruptions. See
+`artifacts/tangent-pair-audit-2026-11-25/summary.json`.
+
+In the final export, the offline victory occurs at 4,512 and the
+ordinary-clock loss at 3,227. Each recording matched one Debug and ten
+Release playbacks. The ledger audits inspect 39,164 and 21,600 unit rows
+and 151 and 188 structure/unit damage ticks respectively. Both conserve
+4,000 salvage and 2,000 flux. See `artifacts/tangent-win-audit-2026-11-25`
+and `artifacts/tangent-loss-audit-2026-11-25`. The visual outcome overlay
+still gives the replay instruction the same prominence as the result.
+
+The three separate native peer pairs negotiated a 36,000-tick ceiling.
+At 22,892 both anchors had eight HP and the match was active. At 22,893
+both had zero HP and the game ended in a draw. Every peer confirmed the
+same 22,893 per-tick hashes and wrote the same 180 canonical commands.
+Both native builds reproduced the endpoint and its predecessor, and ten
+additional Release replays matched the entire trace. The clean and 80 ms
+sessions took 19.08 minutes of active wall time. At 160 ms they took
+19.33 minutes. The two 80 ms command p95 measurements were 106.77 and
+101.85 ms for generated AI commands. At 160 ms, pacing was 19.737 and
+19.736 ticks/s and the peers recorded 12.34 and 11.87 seconds of stalls.
+The impaired relays were configured for 20 ms one-way jitter and 1% loss.
+The first verifier attempt discarded the relay counters on early match
+end. The original peer reports and timing audit are retained in
+`artifacts/tangent-soak-2026-11-25`. A 30-minute complete match, human
+input timing and physical-network coverage remain open.
+
+The checked-in recording is
+`.voidfront-agent/replays/2026-11-25-seed9-network-draw.vfr`. The saved
+peer reports can also be audited by running the economy suite with the
+original `--ticks 36000`, its matching `--build`, and
+`--economy-capture artifacts/tangent-soak-2026-11-25` into a fresh
+`--out` directory. Each native replay must reproduce every executed
+state and first reach its result on the last applied tick. A short
+live control hit its 100-tick cap with the game still active at all
+three impairments. The 80 ms and 160 ms relays dropped 27 and 45 packets
+respectively. The original 22-case protocol and fault suite also passed.
+Twenty corrupted captures or mismatched validation inputs were rejected, including a
+correctly replayed 22,894-tick stream whose draw happened one tick
+earlier. The archived and live controls are under
+`artifacts/tangent-network-audit-2026-11-25`.
+
 ## 2026-11-24 — worker withdrawal and funded recovery
 
 ### A survivor in a game started from normal Glass Reach setup

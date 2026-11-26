@@ -1,55 +1,46 @@
 {
-  "package": "C:/dev/voidfront/artifacts/package/Voidfront.exe",
-  "simulation_commit": "fb1d1e11e5ea6fdc851d298d6e3c4ce4fc533bcd",
+  "package": "C:/dev/voidfront/artifacts/tangent-windows-2026-11-25/Voidfront.exe",
+  "simulation_commit": "7a50362541e1aaf34761fca813bc1cab6983c1ff",
   "branch": "dev",
   "new_movie": true,
-  "crowd_report": "C:\\dev\\voidfront\\artifacts\\cooperative-crowd-verified-2026-09-26.json",
-  "movement_report": "C:\\dev\\voidfront\\artifacts\\cooperative-movement-verified-2026-09-26.json",
-  "run": "2026-11-23-offset-mining",
-  "state": "On both spawns the paid offset scout banked ten at 14603 with all three workers at full health. Worker cards show individual or lowest group health and separate salvage and flux totals.",
-  "checkpoint_utc": "2026-11-24T05:45:23.351062+00:00",
-  "source_commit": "f0e44054e07c34a4036c58e47b4bb41a602a5409",
-  "runtime_evidence_date": "2026-11-23",
-  "verification": "C:/dev/voidfront/artifacts/offset-final-verify-2026-11-23.log",
-  "runtime_report": "C:/dev/voidfront/artifacts/offset-victory-2026-11-23.json",
-  "client_report": "C:/dev/voidfront/artifacts/offset-victory-audit-2026-11-23/summary.json",
+  "crowd_report": "C:/dev/voidfront/artifacts/tangent-crowds-2026-11-25/summary.json",
+  "movement_report": "C:/dev/voidfront/artifacts/tangent-navigation-2026-11-25/summary.json",
+  "run": "2026-11-25-worker-terrain-tangent",
+  "state": "All 2,888 isolated routes arrived. The packaged worker delivered ten from one Gather at tick 1,563. Edited deposits, cargo and labels make the selected miner easier to see.",
+  "checkpoint_utc": "2026-11-26T05:43:57.322032+00:00",
+  "source_commit": "c238c667eea676417634e089fe4b5d4aacd8970b",
+  "runtime_evidence_date": "2026-11-25",
+  "verification": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/verify.log",
+  "runtime_report": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/delivery/report.json",
+  "client_report": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/delivery-audit/summary.json",
   "scale_reports": [
-    "C:\\dev\\voidfront\\artifacts\\cooperative-scale-2026-09-26\\summary.json",
-    "C:\\dev\\voidfront\\artifacts\\cooperative-scale-client-replays-2026-09-26\\summary.json"
+    "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/crossing-comparison.json",
+    "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/sweeps-100.json",
+    "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/sweeps-250.json"
   ],
   "reviews": [
-    "C:/dev/voidfront/artifacts/offset-review-2026-11-23/review.md",
-    "C:/dev/voidfront/artifacts/offset-tests-2026-11-23/review.md",
-    "C:/dev/voidfront/artifacts/offset-bridge-2026-11-23/review.md",
-    "C:/dev/voidfront/artifacts/offset-network-2026-11-23/review.md"
+    "C:/dev/voidfront/artifacts/tangent-review-2026-11-25/review.md",
+    "C:/dev/voidfront/artifacts/tangent-art-review-2026-11-25/review.md",
+    "C:/dev/voidfront/artifacts/tangent-art-review-2026-11-25/auditor/retest-ffmpeg-delivery/results.json"
   ],
   "profile_reports": [
-    "C:/dev/voidfront/artifacts/presentation-ordinary12-final-2026-09-25.json",
-    "C:/dev/voidfront/artifacts/presentation-ordinary200-final-2026-09-25.json",
-    "C:/dev/voidfront/artifacts/presentation-ordinary500-final-2026-09-25.json"
+    "C:/dev/voidfront/artifacts/tangent-frame200-2026-11-25.json",
+    "C:/dev/voidfront/artifacts/tangent-frame500-2026-11-25.json"
   ],
-  "profile_integrity": "C:/dev/voidfront/.voidfront-agent/presentation-results-2026-09-25.json",
-  "next": "Withdraw the sole middle worker from the visible guard when its actual free service slot is unsafe, retain fog-safe reassessment, and verify a subsequent delivery after observable clearance.",
-  "package_pck_sha256": "cc5a7ec4ffb9e413ae224dcf097e6912a509ad4769f6d41914d8f0605d590e0a",
-  "package_bridge_sha256": "f27c3f9b2adfbfb311eb97a4728a7cfc6bcee32fb7b018a486298a2f54ac1aee",
-  "remote_backup": false,
-  "remote_checkpoint": "8dffef2",
-  "pending_sync": "External GitHub dev publication awaits the explicit confirmation requested by an earlier automatic approval review. Source and evidence are local.",
-  "crowd_regressions": "C:/dev/voidfront/artifacts/economy-crowds-2026-09-26/summary.json",
+  "profile_integrity": "C:/dev/voidfront/artifacts/tangent-frame-audit-2026-11-25.json",
+  "next": "Recover the middle worker's ordinary Move between two held workers and the central flux field. Preserve swept clearance and Hold. Recheck all 1,214 placements from the dated roadmap.",
+  "package_pck_sha256": "84834616ad5288c2b3e2e3229c7792f11a82ae748c497e016e4e31517e7d3123",
+  "package_bridge_sha256": "24ecebe16600e7179fda2e6f2d427f1ed1ae24733c10a1cc35424e3f0c029f8d",
+  "remote_backup": true,
+  "remote_checkpoint": "2426aabac7c8269a6023b992ecf0100cebc52636",
+  "pending_sync": false,
+  "crowd_regressions": "C:/dev/voidfront/artifacts/tangent-crowds-2026-11-25/summary.json",
   "crowd_experiments": "C:/dev/voidfront/.voidfront-agent/crowd-recovery-results-2026-09-26.json",
   "new_package": true,
   "new_network_suite": true,
-  "current_pass_limits": "Six of 18 mobile defender positions remain lethal on each side. An unoccupied exposed service slot still kills the middle worker. Partial minimap occlusion, human play, 30-minute physical-network soak, reference performance, factions and production assets remain open.",
-  "presentation_profile_evidence_date": "2026-09-25",
+  "current_pass_limits": "178 two-holder stalls, zero 200/500 crossing arrivals, missed 1080p frame budget and occluded anchor returns. The active headless match lasted about 19 minutes. Physical-network, human input, reference performance, content and independent shipping gates remain open.",
+  "presentation_profile_evidence_date": "2026-11-25",
   "cooperative_results": "C:\\dev\\voidfront\\.voidfront-agent\\cooperative-results-2026-09-26.json",
-  "scripted_frame_p99_ms": {
-    "offline": 17.002,
-    "scale-controls": 118.716
-  },
-  "client_rtt80_execution_p95_ms": [
-    141.754,
-    150.161
-  ],
   "prior_ordinary_frame_interval_p99_ms": {
     "units500": 137.834,
     "foundry12": 17.336,
@@ -57,29 +48,60 @@
   },
   "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
   "economy_results": "C:/dev/voidfront/.voidfront-agent/economy-results-2026-09-26.json",
-  "next_checkpoint": "Withdraw the sole middle worker from the visible guard when its actual free service slot is unsafe, retain fog-safe reassessment, and verify a subsequent delivery after observable clearance.",
+  "next_checkpoint": "Recover the middle worker's ordinary Move between two held workers and the central flux field. Preserve swept clearance and Hold. Recheck all 1,214 placements from the dated roadmap.",
   "previous_scripted_frame_evidence_date": "2026-09-26 cooperative run; not rerun for scale this checkpoint",
-  "movie": "C:/dev/voidfront/artifacts/offset-victory-2026-11-23.mp4",
+  "movie": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/worker-delivery.mp4",
   "recovery_results": "C:/dev/voidfront/.voidfront-agent/recovery-results-2026-10-25.json",
   "new_paired_network_match": true,
-  "contested_results": "C:/dev/voidfront/artifacts/offset-contested-audit-2026-11-23/summary.json",
+  "contested_results": "C:/dev/voidfront/artifacts/tangent-pair-audit-2026-11-25/summary.json",
   "session_reuse_report": "C:\\dev\\voidfront\\artifacts\\session-reuse-final-2026-11-08\\summary.json",
-  "network_report": "C:/dev/voidfront/artifacts/offset-network-2026-11-23/delay/summary.json",
-  "next_step": "Withdraw the sole middle worker from the visible guard when its actual free service slot is unsafe, retain fog-safe reassessment, and verify a subsequent delivery after observable clearance.",
-  "historical_fields_note": "Retained scale/profile/other evidence fields refer to their explicitly dated prior artifacts.",
+  "network_report": "C:/dev/voidfront/artifacts/tangent-soak-2026-11-25/duration.json",
+  "next_step": "Recover the middle worker's ordinary Move between two held workers and the central flux field. Preserve swept clearance and Hold. Recheck all 1,214 placements from the dated roadmap.",
+  "historical_fields_note": "Older dated paths are prior evidence. remote_checkpoint is the published source and verifier preceding this ledger commit.",
   "rematch_results": "C:/dev/voidfront/.voidfront-agent/rematch-results-2026-11-15.json",
-  "terminal_loss_report": "C:/dev/voidfront/artifacts/offset-peer-2026-11-23/summary.json",
-  "offline_report": "C:/dev/voidfront/artifacts/offset-victory-audit-2026-11-23/summary.json",
-  "offline_defeat_report": "C:/dev/voidfront/artifacts/offset-defeat-audit-2026-11-23/summary.json",
-  "frozen_package": "C:/dev/voidfront/artifacts/offset-package-2026-11-23/Voidfront.exe",
+  "terminal_loss_report": "C:/dev/voidfront/artifacts/tangent-peer-2026-11-25/summary.json",
+  "offline_report": "C:/dev/voidfront/artifacts/tangent-win-audit-2026-11-25/summary.json",
+  "offline_defeat_report": "C:/dev/voidfront/artifacts/tangent-loss-audit-2026-11-25/summary.json",
+  "frozen_package": "C:/dev/voidfront/artifacts/tangent-windows-2026-11-25/Voidfront.exe",
   "finite_opening_report": "C:/dev/voidfront/artifacts/finite-opening-2026-11-19/project-render.json",
   "defended_opening_report": "C:/dev/voidfront/artifacts/defended-native-2026-11-21/summary.json",
   "interceptor_opening_report": "C:/dev/voidfront/artifacts/offset-opening-2026-11-23/summary.json",
   "bridge_interception_report": "C:/dev/voidfront/artifacts/offset-bridge-2026-11-23/candidate/summary.json",
-  "cargo_visibility_report": "C:/dev/voidfront/artifacts/cargo-view-2026-11-22/summary.json",
+  "cargo_visibility_report": "C:/dev/voidfront/artifacts/tangent-art-review-2026-11-25/coverage-release.json",
   "interceptor_performance_report": "C:/dev/voidfront/artifacts/offset-review-2026-11-23/review.md",
   "production_report": "C:/dev/voidfront/artifacts/offset-production-audit-2026-11-23/summary.json",
-  "worker_card_report": "C:/dev/voidfront/artifacts/offset-card-2026-11-23/frames.json",
+  "worker_card_report": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/delivery-audit/summary.json",
   "offset_payments": "C:/dev/voidfront/artifacts/offset-opening-2026-11-23/payments.json",
-  "compatibility_report": "C:/dev/voidfront/artifacts/offset-network-2026-11-23/final/summary.json"
+  "compatibility_report": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/compatibility/summary.json",
+  "baseline_commit": "3606799858f981e7fa633a30c53cf32ca79daf79",
+  "verifier_commit": "2426aabac7c8269a6023b992ecf0100cebc52636",
+  "ordinary_frame_interval_p99_ms": {
+    "units200": 20.74,
+    "units500": 69.799
+  },
+  "network_capture_audit": "C:/dev/voidfront/artifacts/tangent-network-audit-2026-11-25/archive-final/summary.json",
+  "network_fault_suite": "C:/dev/voidfront/artifacts/tangent-network-audit-2026-11-25/full/summary.json",
+  "network_mutations": "C:/dev/voidfront/artifacts/tangent-network-audit-2026-11-25/corruptions.json",
+  "network_replay_bindings": "C:/dev/voidfront/artifacts/tangent-network-audit-2026-11-25/bindings.json",
+  "native_generated_rtt80_command_p95_ms": [
+    106.7699,
+    101.8515
+  ],
+  "active_network_match_ticks": 22893,
+  "completed_network_result": "draw",
+  "two_holder_arrivals": [
+    1036,
+    1214
+  ],
+  "historical_client_rtt80_execution_p95_ms": {
+    "date": "2026-11-23",
+    "values": [
+      141.754,
+      150.161
+    ]
+  },
+  "historical_scripted_frame_p99_ms": {
+    "offline": 17.002,
+    "scale-controls": 118.716
+  }
 }
