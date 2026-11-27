@@ -1,96 +1,94 @@
 {
-  "package": "C:/dev/voidfront/artifacts/tangent-windows-2026-11-25/Voidfront.exe",
-  "simulation_commit": "7a50362541e1aaf34761fca813bc1cab6983c1ff",
+  "package": "C:/dev/voidfront/artifacts/voidfront-windows-2026-11-26/Voidfront.exe",
+  "simulation_commit": "6cea10f6b6493c0c2d228a3df9b25a325e45a828",
   "branch": "dev",
   "new_movie": true,
-  "crowd_report": "C:/dev/voidfront/artifacts/tangent-crowds-2026-11-25/summary.json",
-  "movement_report": "C:/dev/voidfront/artifacts/tangent-navigation-2026-11-25/summary.json",
-  "run": "2026-11-25-worker-terrain-tangent",
-  "state": "All 2,888 isolated routes arrived. The packaged worker delivered ten from one Gather at tick 1,563. Edited deposits, cargo and labels make the selected miner easier to see.",
-  "checkpoint_utc": "2026-11-26T05:43:57.322032+00:00",
-  "source_commit": "c238c667eea676417634e089fe4b5d4aacd8970b",
-  "runtime_evidence_date": "2026-11-25",
-  "verification": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/verify.log",
-  "runtime_report": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/delivery/report.json",
-  "client_report": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/delivery-audit/summary.json",
+  "crowd_report": "C:/dev/voidfront/artifacts/orbit-crowds-2026-11-26/summary.json",
+  "movement_report": "C:/dev/voidfront/artifacts/holders-review-2026-11-26/final-summary.json",
+  "run": "2026-11-26-stationary-group-detours",
+  "state": "All 1,214 flux trips completed. The open-ground orbit now stops after seven ticks on either side. Returning miners stay visible at the anchor.",
+  "checkpoint_utc": "2026-11-27T05:45:42.829750+00:00",
+  "source_commit": "6cea10f6b6493c0c2d228a3df9b25a325e45a828",
+  "runtime_evidence_date": "2026-11-26",
+  "verification": "C:/dev/voidfront/artifacts/orbit-runtime-2026-11-26/verify-final.log",
+  "runtime_report": "C:/dev/voidfront/artifacts/orbit-runtime-2026-11-26/passage/report.json",
+  "client_report": "C:/dev/voidfront/artifacts/orbit-runtime-2026-11-26/passage-audit/summary.json",
   "scale_reports": [
-    "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/crossing-comparison.json",
-    "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/sweeps-100.json",
-    "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/sweeps-250.json"
+    "C:/dev/voidfront/artifacts/holders-review-2026-11-26/final/scale-100-0-sweeps.json",
+    "C:/dev/voidfront/artifacts/holders-review-2026-11-26/final/scale-250-0-sweeps.json"
   ],
   "reviews": [
-    "C:/dev/voidfront/artifacts/tangent-review-2026-11-25/review.md",
-    "C:/dev/voidfront/artifacts/tangent-art-review-2026-11-25/review.md",
-    "C:/dev/voidfront/artifacts/tangent-art-review-2026-11-25/auditor/retest-ffmpeg-delivery/results.json"
+    "C:/dev/voidfront/artifacts/holders-review-2026-11-26/review.md",
+    "C:/dev/voidfront/artifacts/holders-independent-visual-2026-11-26/review.md",
+    "C:/dev/voidfront/artifacts/holders-visual-2026-11-26/review.md"
   ],
   "profile_reports": [
-    "C:/dev/voidfront/artifacts/tangent-frame200-2026-11-25.json",
-    "C:/dev/voidfront/artifacts/tangent-frame500-2026-11-25.json"
+    "C:/dev/voidfront/artifacts/orbit-frame200-2026-11-26.json",
+    "C:/dev/voidfront/artifacts/orbit-frame500-2026-11-26.json"
   ],
-  "profile_integrity": "C:/dev/voidfront/artifacts/tangent-frame-audit-2026-11-25.json",
-  "next": "Recover the middle worker's ordinary Move between two held workers and the central flux field. Preserve swept clearance and Hold. Recheck all 1,214 placements from the dated roadmap.",
-  "package_pck_sha256": "84834616ad5288c2b3e2e3229c7792f11a82ae748c497e016e4e31517e7d3123",
-  "package_bridge_sha256": "24ecebe16600e7179fda2e6f2d427f1ed1ae24733c10a1cc35424e3f0c029f8d",
+  "profile_integrity": "C:/dev/voidfront/artifacts/orbit-frame-audit-2026-11-26.json",
+  "next": "Give a requesting mover timely access to bounded local search. On ordinary Scale128, ID 258 receives Move at 1000, misses 123 search windows and arrives at 4820. The queued control arrives at 1006 and eligible-first instrumentation at 1007. See the two 2026-11-26-scale500-gap recordings and the dated roadmap.",
+  "package_pck_sha256": "f1805979cd36f91fd441985b8e62734b97686d0aa298f42f26b7bd444346a295",
+  "package_bridge_sha256": "7ab7b13f3eeac91e2a6c04968ca1a7d757901f9be4ab60b9574b698d9dc5803b",
   "remote_backup": true,
-  "remote_checkpoint": "2426aabac7c8269a6023b992ecf0100cebc52636",
+  "remote_checkpoint": "6cea10f6b6493c0c2d228a3df9b25a325e45a828",
   "pending_sync": false,
-  "crowd_regressions": "C:/dev/voidfront/artifacts/tangent-crowds-2026-11-25/summary.json",
+  "crowd_regressions": "C:/dev/voidfront/artifacts/orbit-crowds-2026-11-26/summary.json",
   "crowd_experiments": "C:/dev/voidfront/.voidfront-agent/crowd-recovery-results-2026-09-26.json",
   "new_package": true,
   "new_network_suite": true,
-  "current_pass_limits": "178 two-holder stalls, zero 200/500 crossing arrivals, missed 1080p frame budget and occluded anchor returns. The active headless match lasted about 19 minutes. Physical-network, human input, reference performance, content and independent shipping gates remain open.",
-  "presentation_profile_evidence_date": "2026-11-25",
+  "current_pass_limits": "500-unit local-search delay, stalled opposing traffic, incomplete formations, frame intervals above target on the development PC, human play, physical network, reference hardware and production content.",
+  "presentation_profile_evidence_date": "2026-11-26",
   "cooperative_results": "C:\\dev\\voidfront\\.voidfront-agent\\cooperative-results-2026-09-26.json",
   "prior_ordinary_frame_interval_p99_ms": {
-    "units500": 137.834,
-    "foundry12": 17.336,
-    "units200": 27.531
-  },
-  "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
-  "economy_results": "C:/dev/voidfront/.voidfront-agent/economy-results-2026-09-26.json",
-  "next_checkpoint": "Recover the middle worker's ordinary Move between two held workers and the central flux field. Preserve swept clearance and Hold. Recheck all 1,214 placements from the dated roadmap.",
-  "previous_scripted_frame_evidence_date": "2026-09-26 cooperative run; not rerun for scale this checkpoint",
-  "movie": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/worker-delivery.mp4",
-  "recovery_results": "C:/dev/voidfront/.voidfront-agent/recovery-results-2026-10-25.json",
-  "new_paired_network_match": true,
-  "contested_results": "C:/dev/voidfront/artifacts/tangent-pair-audit-2026-11-25/summary.json",
-  "session_reuse_report": "C:\\dev\\voidfront\\artifacts\\session-reuse-final-2026-11-08\\summary.json",
-  "network_report": "C:/dev/voidfront/artifacts/tangent-soak-2026-11-25/duration.json",
-  "next_step": "Recover the middle worker's ordinary Move between two held workers and the central flux field. Preserve swept clearance and Hold. Recheck all 1,214 placements from the dated roadmap.",
-  "historical_fields_note": "Older dated paths are prior evidence. remote_checkpoint is the published source and verifier preceding this ledger commit.",
-  "rematch_results": "C:/dev/voidfront/.voidfront-agent/rematch-results-2026-11-15.json",
-  "terminal_loss_report": "C:/dev/voidfront/artifacts/tangent-peer-2026-11-25/summary.json",
-  "offline_report": "C:/dev/voidfront/artifacts/tangent-win-audit-2026-11-25/summary.json",
-  "offline_defeat_report": "C:/dev/voidfront/artifacts/tangent-loss-audit-2026-11-25/summary.json",
-  "frozen_package": "C:/dev/voidfront/artifacts/tangent-windows-2026-11-25/Voidfront.exe",
-  "finite_opening_report": "C:/dev/voidfront/artifacts/finite-opening-2026-11-19/project-render.json",
-  "defended_opening_report": "C:/dev/voidfront/artifacts/defended-native-2026-11-21/summary.json",
-  "interceptor_opening_report": "C:/dev/voidfront/artifacts/offset-opening-2026-11-23/summary.json",
-  "bridge_interception_report": "C:/dev/voidfront/artifacts/offset-bridge-2026-11-23/candidate/summary.json",
-  "cargo_visibility_report": "C:/dev/voidfront/artifacts/tangent-art-review-2026-11-25/coverage-release.json",
-  "interceptor_performance_report": "C:/dev/voidfront/artifacts/offset-review-2026-11-23/review.md",
-  "production_report": "C:/dev/voidfront/artifacts/offset-production-audit-2026-11-23/summary.json",
-  "worker_card_report": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/delivery-audit/summary.json",
-  "offset_payments": "C:/dev/voidfront/artifacts/offset-opening-2026-11-23/payments.json",
-  "compatibility_report": "C:/dev/voidfront/artifacts/tangent-runtime-2026-11-25/compatibility/summary.json",
-  "baseline_commit": "3606799858f981e7fa633a30c53cf32ca79daf79",
-  "verifier_commit": "2426aabac7c8269a6023b992ecf0100cebc52636",
-  "ordinary_frame_interval_p99_ms": {
     "units200": 20.74,
     "units500": 69.799
   },
-  "network_capture_audit": "C:/dev/voidfront/artifacts/tangent-network-audit-2026-11-25/archive-final/summary.json",
-  "network_fault_suite": "C:/dev/voidfront/artifacts/tangent-network-audit-2026-11-25/full/summary.json",
+  "prior_presentation_timing_limit": "Fixed-pose same-native ABBA supports reduced submissions only; ordinary tick windows differ and scheduling uncontrolled. No general speedup, isolated CPU/GPU cause, human or reference acceptance.",
+  "economy_results": "C:/dev/voidfront/.voidfront-agent/economy-results-2026-09-26.json",
+  "next_checkpoint": "Give a requesting mover timely access to bounded local search. On ordinary Scale128, ID 258 receives Move at 1000, misses 123 search windows and arrives at 4820. The queued control arrives at 1006 and eligible-first instrumentation at 1007. See the two 2026-11-26-scale500-gap recordings and the dated roadmap.",
+  "previous_scripted_frame_evidence_date": "2026-09-26 cooperative run; not rerun for scale this checkpoint",
+  "movie": "C:/dev/voidfront/artifacts/orbit-runtime-2026-11-26/passage-film.mp4",
+  "recovery_results": "C:/dev/voidfront/.voidfront-agent/recovery-results-2026-10-25.json",
+  "new_paired_network_match": true,
+  "contested_results": "C:/dev/voidfront/artifacts/orbit-pair-audit-2026-11-26/summary.json",
+  "session_reuse_report": "C:\\dev\\voidfront\\artifacts\\session-reuse-final-2026-11-08\\summary.json",
+  "network_report": "C:/dev/voidfront/artifacts/orbit-network-2026-11-26/summary.json",
+  "next_step": "Give a requesting mover timely access to bounded local search. On ordinary Scale128, ID 258 receives Move at 1000, misses 123 search windows and arrives at 4820. The queued control arrives at 1006 and eligible-first instrumentation at 1007. See the two 2026-11-26-scale500-gap recordings and the dated roadmap.",
+  "historical_fields_note": "Earlier dated paths are evidence from earlier runs. remote_checkpoint identifies the pushed implementation preceding the ledger commit. The latest long headless economy-network match was the November 25 draw at 22893 ticks.",
+  "rematch_results": "C:/dev/voidfront/.voidfront-agent/rematch-results-2026-11-15.json",
+  "terminal_loss_report": "C:/dev/voidfront/artifacts/orbit-rematch-2026-11-26/summary.json",
+  "offline_report": "C:/dev/voidfront/artifacts/orbit-victory-audit-2026-11-26/summary.json",
+  "offline_defeat_report": "C:/dev/voidfront/artifacts/orbit-defeat-replay-2026-11-26/summary.json",
+  "frozen_package": "C:/dev/voidfront/artifacts/voidfront-windows-2026-11-26/Voidfront.exe",
+  "finite_opening_report": "C:/dev/voidfront/artifacts/finite-opening-2026-11-19/project-render.json",
+  "defended_opening_report": "C:/dev/voidfront/artifacts/defended-native-2026-11-21/summary.json",
+  "interceptor_opening_report": "C:/dev/voidfront/artifacts/orbit-runtime-2026-11-26/openings/summary.json",
+  "bridge_interception_report": "C:/dev/voidfront/artifacts/offset-bridge-2026-11-23/candidate/summary.json",
+  "cargo_visibility_report": "C:/dev/voidfront/artifacts/holders-independent-visual-2026-11-26/mask-check.json",
+  "interceptor_performance_report": "C:/dev/voidfront/artifacts/offset-review-2026-11-23/review.md",
+  "production_report": "C:/dev/voidfront/artifacts/offset-production-audit-2026-11-23/summary.json",
+  "worker_card_report": "C:/dev/voidfront/artifacts/orbit-runtime-2026-11-26/delivery-audit/summary.json",
+  "offset_payments": "C:/dev/voidfront/artifacts/orbit-runtime-2026-11-26/openings/payments.json",
+  "compatibility_report": "C:/dev/voidfront/artifacts/orbit-runtime-2026-11-26/compatibility/summary.json",
+  "baseline_commit": "82fa9e9f8ea50fe07cd9f6eee391a18ff384f7e6",
+  "verifier_commit": "6cea10f6b6493c0c2d228a3df9b25a325e45a828",
+  "ordinary_frame_interval_p99_ms": {
+    "units200": 21.538,
+    "units500": 67.426
+  },
+  "network_capture_audit": "C:/dev/voidfront/artifacts/holders-review-2026-11-26/net-review-orbit-network-2026-11-26/summary.json",
+  "network_fault_suite": "C:/dev/voidfront/artifacts/orbit-network-2026-11-26/summary.json",
   "network_mutations": "C:/dev/voidfront/artifacts/tangent-network-audit-2026-11-25/corruptions.json",
   "network_replay_bindings": "C:/dev/voidfront/artifacts/tangent-network-audit-2026-11-25/bindings.json",
   "native_generated_rtt80_command_p95_ms": [
-    106.7699,
-    101.8515
+    104.0418,
+    102.15
   ],
-  "active_network_match_ticks": 22893,
-  "completed_network_result": "draw",
+  "active_network_match_ticks": 7228,
+  "completed_network_result": "packaged contested match, player 0 victory",
   "two_holder_arrivals": [
-    1036,
+    1214,
     1214
   ],
   "historical_client_rtt80_execution_p95_ms": {
@@ -103,5 +101,49 @@
   "historical_scripted_frame_p99_ms": {
     "offline": 17.002,
     "scale-controls": 118.716
+  },
+  "presentation_commit": "1b78ba2443bf99ec39fd06cf8ba068a67892530e",
+  "initial_route_commit": "2f9d5beeee47b9cef0267914a5507290f01b5cc7",
+  "content_id": "936b292c1236b4ff",
+  "delivery_movie": "C:/dev/voidfront/artifacts/orbit-runtime-2026-11-26/delivery-film.mp4",
+  "full_six_slot_permutations": [
+    1221,
+    1440
+  ],
+  "scale_delayed_unit": 258,
+  "scale_move_ticks": 3820,
+  "development_host_frame_metrics": {
+    "200": {
+      "p95_ms": 19.278,
+      "p99_ms": 21.538,
+      "peak_resident_bytes": 237486080,
+      "samples": 300
+    },
+    "500": {
+      "p95_ms": 65.755,
+      "p99_ms": 67.426,
+      "peak_resident_bytes": 274862080,
+      "samples": 300
+    }
+  },
+  "guarded_long_matches": "C:/dev/voidfront/artifacts/orbit-long-2026-11-26/final-witnesses.json",
+  "rendered_network_report": "C:/dev/voidfront/artifacts/orbit-client-network-2026-11-26/summary.json",
+  "rendered_client_rtt80": {
+    "execution_p95_ms": [
+      141.84,
+      141.765
+    ],
+    "display_p95_ms": [
+      152.452,
+      152.527
+    ],
+    "feedback_p95_ms": [
+      2.972,
+      2.959
+    ],
+    "inputs_per_peer": [
+      3,
+      3
+    ]
   }
 }

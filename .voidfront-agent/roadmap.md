@@ -16,9 +16,10 @@ the local search is needed at relative ticks 1, 32, 63, 94 and so on.
 The eight-ID budget first admits 258 at 64–65, then 188–189. The first
 123 requests miss their slot. The 124th request qualifies at 3,814 and
 the walker arrives at 3,820. Granting just its first request recovers the
-isolated seven-tick trip. The nearby-unit query at each request contained
-two or three stationary neighbors. The recorded normal game and diagnostic
-fixtures are in `artifacts/holders-review-2026-11-26/final`.
+isolated seven-tick trip. The recorded 500-unit game had exactly two
+nearby stationary units at all 124 requests. The synthetic placements
+had two or three. The recorded game and diagnostic fixtures are in
+`artifacts/holders-review-2026-11-26/final`.
 
 Next, spend deterministic search work on units that actually need it.
 Measure time from request to service for one and many requesters. Verify

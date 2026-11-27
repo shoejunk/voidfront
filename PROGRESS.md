@@ -44,11 +44,19 @@ Two broader experiments sacrificed formations that had previously finished
 and were dropped. The integrated change preserved every arrival count in
 the 1,440 formations and improved completion time in 38.
 
-The large-roster control exposed a scheduling delay. With 499 stationary
-neighbors and one walker moving, its first 123 requests miss the rotating
+The large-roster control exposed a scheduling delay. With 499 units
+stationary and one walker moving, its first 123 requests miss the rotating
 search window. The ordinary Move takes 3,820 ticks, while a manually
 queued alignment takes six. Both recordings are checked in, and the
 November 26 roadmap gives the precise next experiment.
+
+The final Windows build played through an offline win and an offline loss.
+Two packaged clients agreed on victory at tick 7,228 and both returned to
+offline play. The 200- and 500-unit opposing crossings still had zero
+arrivals after 4,000 ticks. On the development PC, 1080p frame intervals
+at the 99th percentile were 21.54 and 67.43 ms against the 16.67 ms target.
+The runnable build is in `artifacts/voidfront-windows-2026-11-26`. The
+passage and delivery films are in `artifacts/orbit-runtime-2026-11-26`.
 
 ## 2026-11-25 America/Los_Angeles — worker route past the central flux deposit
 

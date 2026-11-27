@@ -175,6 +175,54 @@ Primary results are in `artifacts/orbit-runtime-2026-11-26`,
 The independent route and network audits are indexed by
 `artifacts/holders-review-2026-11-26/review.md`.
 
+### Final Windows build, matches and frame times at `6cea10f`
+
+All five exported files matched the frozen copy in
+`artifacts/voidfront-windows-2026-11-26`. The PCK SHA-256 was
+`f1805979cd36f91fd441985b8e62734b97686d0aa298f42f26b7bd444346a295`
+and the bridge SHA-256 was
+`7ab7b13f3eeac91e2a6c04968ca1a7d757901f9be4ab60b9574b698d9dc5803b`.
+`artifacts/orbit-runtime-2026-11-26/package.json` lists all five hashes.
+The packaged seven-input flux passage matched all 932 ticks and ten native
+prefix checks. Its recording is checked in as
+`.voidfront-agent/replays/2026-11-26-through-held-workers-p0.vfr`.
+The one-Gather trip matched 1,563 ticks and 22 prefix checks. The two
+MP4s in the runtime directory use interpolated frames for visual inspection.
+
+The offline win at tick 4,512 and defeat at 3,227 each passed restart
+and eleven native replays. Their auditors rejected 13 and 11 malformed
+records respectively. Requesting an extra AI recruitment witness on this
+ordinary defeat failed because the AI made no such purchase. The ordinary
+defeat audit passed. Paid recovery has separate guarded-opening evidence.
+See `artifacts/orbit-victory-audit-2026-11-26` and
+`artifacts/orbit-defeat-replay-2026-11-26`.
+
+Two packaged processes finished the contested match with player 0 winning
+at tick 7,228, hash `25c761d005eac6e5`. Both peers returned to offline
+play. The auditor checked 44 commands, 82 phases, 22 full replays, 121
+prefixes and ten offline-return runs. It rejected 39 corruptions.
+A second pair exercised a 32-tick round and a 64-tick rematch. The host
+closed the TCP connection with 63 ticks confirmed, the guest observed EOF,
+and both archived all 64 ticks. See `artifacts/orbit-pair-audit-2026-11-26`
+and `artifacts/orbit-rematch-2026-11-26`.
+
+The six short packaged transport cases covered clean play, emulated 80 and
+160 ms RTT, a held frame, mismatched input delay and disconnection. Ten
+repeats reproduced the clean recording. At 80 ms RTT, the three sampled
+inputs per peer had execution p95 of 141.840/141.765 ms, display p95 of
+152.452/152.527 ms and local feedback p95 of 2.972/2.959 ms. These results
+come from loopback emulation. Physical network and long-match latency
+remain open. See `artifacts/orbit-client-network-2026-11-26/summary.json`.
+
+The frozen build rendered at 1920×1080 on the Ryzen 7 3700X and RTX 2070
+SUPER development PC. After 120 warmup frames, each sample contained 300
+frame intervals. At 200 units, p95/p99 was 19.278/21.538 ms with a peak
+working set of 237,486,080 bytes. At 500 it was 65.755/67.426 ms with
+274,862,080 bytes. Both p99s exceed the 16.67 ms target. The frame auditor
+recomputed the summaries and rejected ten malformed variants per size.
+See `artifacts/orbit-frame-audit-2026-11-26.json`. Reference-hardware
+timing, human control feel and production presentation remain open.
+
 ## 2026-11-25 — terrain tangent, worker delivery and resource readability
 
 ### Native movement and economy
