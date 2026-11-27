@@ -90,11 +90,24 @@ bool holds_position(const Unit& unit) {
 
 std::vector<nav::Point> detour_around_group(const nav::World& world,const SpatialIndex& spatial,
         const std::vector<Unit>& units,const std::vector<nav::Point>& tick_start,
-        const Unit& mover,const Unit& obstacle,nav::Point goal) {
+        const Unit& mover,const Unit& obstacle,nav::Point goal,bool replacing_maneuver) {
+    constexpr int lookahead=4*kScale, margin=kScale;
+    std::vector<uint32_t> nearby;
+    if (replacing_maneuver) {
+        // Keep the existing maneuver when another unit can change the local
+        // geometry. Include the entire spatial buckets touching the planning
+        // window so a moving neighbor at its edge also retains priority.
+        constexpr int window=lookahead+margin;
+        spatial.query({mover.x-window,mover.z-window,mover.x+window,mover.z+window},nearby);
+        for (const auto id:nearby) {
+            const auto& other=units[id-1];
+            if (id!=mover.id && (!holds_position(other) || nav::Point{other.x,other.z}!=tick_start[id-1]))
+                return {};
+        }
+    }
     // Forbidden center rectangles meet when two held centers are four radii
     // apart. Include the neighbors of the first obstruction in stable ID order.
     constexpr int reach=4*unit_radius, clearance=2*unit_radius;
-    std::vector<uint32_t> nearby;
     spatial.query({obstacle.x-reach,obstacle.z-reach,obstacle.x+reach,obstacle.z+reach},nearby);
     std::vector<nav::Rect> blockers;
     for (const auto id:nearby) {
@@ -105,7 +118,7 @@ std::vector<nav::Point> detour_around_group(const nav::World& world,const Spatia
         if (blockers.size()>8) return {};
     }
     if (blockers.size()<2) return {};
-    return world.local_detour({mover.x,mover.z},goal,std::move(blockers),4*kScale,kScale);
+    return world.local_detour({mover.x,mover.z},goal,std::move(blockers),lookahead,margin);
 }
 }
 
@@ -535,13 +548,19 @@ void Sim::step() {
                         if (!(last==first)) best.push_back(last);
                     }
                 }
-                if (best.empty() && holds_position(obstacle)) {
+                // A padded corner can be reachable while its onward leg
+                // crosses the same held footprint, sending the unit in a loop.
+                if (holds_position(obstacle) &&
+                    (best.empty() || !nav::segment_clear(best.back(),destination,exact))) {
                     // Limit larger searches to eight identities per tick. Two
                     // consecutive ticks per window cover both blocked-step phases.
                     constexpr size_t slots=8;
                     const auto first=(uint64_t(tick_/2)*slots)%units_.size();
-                    if ((u.id-1+units_.size()-first)%units_.size()<slots)
-                        best=detour_around_group(navigation_,spatial,units_,tick_start,u,obstacle,goal);
+                    if ((u.id-1+units_.size()-first)%units_.size()<slots) {
+                        auto replacement=detour_around_group(navigation_,spatial,units_,tick_start,
+                                                             u,obstacle,goal,!best.empty());
+                        if (!replacement.empty()) best=std::move(replacement);
+                    }
                 }
                 if (best.empty() && !u.detour.empty()) u.route_goal={-1,-1};
                 u.detour=std::move(best); u.blocked_ticks=0;

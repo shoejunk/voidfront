@@ -27,8 +27,10 @@ void wire_validation() {
         check(serialize_frame(output) == saved, "decoder partially changed output");
     }
     for (const size_t offset : {size_t(0), size_t(3), size_t(4), size_t(8), size_t(20), size_t(21), size_t(25)}) {
-        auto bad = bytes; bad[offset] = 255;
+        auto bad = bytes;
+        bad[offset] ^= 0xff;  // An arbitrary content-ID byte may already be 0xff.
         check(!deserialize_frame(bad, output), "invalid frame header or length accepted");
+        check(serialize_frame(output) == saved, "invalid header partially changed output");
     }
     auto bad = bytes; bad.push_back(0);
     check(!deserialize_frame(bad, output), "trailing frame byte accepted");

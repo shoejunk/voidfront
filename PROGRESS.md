@@ -35,6 +35,21 @@ every client tick. The held-route verifier also checks the friendly health
 bars against their projected positions in each 720p frame. The four true
 phases passed and all twelve exchanged frame pairs failed independent review.
 
+Independent review found a second two-post defect on open ground. A
+walker kept circling because the final leg of its chosen detour crossed
+the same stationary post. The old route repeated every 62 ticks. When the
+nearby units are stationary, the simulation now replaces that detour if it
+finds a clear route. The single Move at 167 completes at 174 on both sides.
+Two broader experiments sacrificed formations that had previously finished
+and were dropped. The integrated change preserved every arrival count in
+the 1,440 formations and improved completion time in 38.
+
+The large-roster control exposed a scheduling delay. With 499 stationary
+neighbors and one walker moving, its first 123 requests miss the rotating
+search window. The ordinary Move takes 3,820 ticks, while a manually
+queued alignment takes six. Both recordings are checked in, and the
+November 26 roadmap gives the precise next experiment.
+
 ## 2026-11-25 America/Los_Angeles — worker route past the central flux deposit
 
 Clean `dev` began at `3606799`. A single worker with a Gather order stops

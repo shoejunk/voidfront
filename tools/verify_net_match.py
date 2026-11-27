@@ -519,6 +519,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('folder', type=Path)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--native-dir', type=Path, default=ROOT / 'build/windows/sim',
+                        help='directory containing the Debug and Release readers for the captured game')
     parser.add_argument('--require-cargo', action='store_true',
                         help='require both clients to have recorded visible worker cargo IDs at every capture')
     args = parser.parse_args()
@@ -546,7 +548,7 @@ def main():
     final_captures = [args.folder / f'p{p}.png' for p in (0, 1)]
     require(all(path.is_file() and path.read_bytes()[:8] == b'\x89PNG\r\n\x1a\n' for path in final_captures), 'missing/invalid terminal PNGs')
     args.out.mkdir(parents=True, exist_ok=False)
-    binaries = {c: ROOT / f'build/windows/sim/{c}/voidfront_headless.exe' for c in ('Debug', 'Release')}
+    binaries = {c: (args.native_dir / c / 'voidfront_headless.exe').resolve(strict=True) for c in ('Debug', 'Release')}
     fingerprints = {c: digest(path) for c, path in binaries.items()}
     summary = dict(started_utc=datetime.now(timezone.utc).isoformat(), report_sha256=[digest(path) for path in paths],
                    verifier_sha256=digest(Path(__file__)),

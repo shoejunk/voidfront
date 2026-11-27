@@ -121,6 +121,60 @@ See `artifacts/holders-visual-2026-11-26/review.md`,
 `artifacts/holders-independent-visual-2026-11-26/mask-check.json` and
 `artifacts/holders-runtime-2026-11-26/{passage,delivery}-audit/summary.json`.
 
+### Open-ground orbit and final simulation content
+
+On the three-walker Foundry setup, the expanded holder footprints meet at
+z=2944. At tick 167 the middle walker receives a Move spanning 144 units
+in x and 16 in z. In the first checkpoint it walked 67,474 units over
+2,500 ticks without finishing. At 169 the last corner of its chosen
+detour was (2160,2672). Its onward leg crossed the first holder's own
+clearance rectangle. The exact two-corner choice recurred at 231.
+
+When that onward leg crosses the stationary post, a replacement query
+can now run if the spatial buckets in the local window contain no other
+movers. A failed replacement keeps the previous maneuver. The final
+single Move stops at 174 on either spawn, one tick after the manually
+queued alignment. The mirrored CTest fails on the prior implementation.
+The 1,214 two-holder route lengths and all 1,440 formation arrival counts
+were preserved. Thirty-eight complete formations finished 26–34 ticks
+sooner. In the 5,064 timed-release trials, 14 arrivals were later by up
+to 13 ticks and four were earlier. The number of completions was unchanged.
+All fourteen mining openings kept every command and state from the first
+checkpoint. The four longer games repeated their terminal ticks and the
+44 extraction, purchase, withdrawal and payment prefix checks.
+
+Final simulation identity is `936b292c1236b4ff`. Both official builds
+reproduced the 174-tick slot recordings and both ordinary 500-unit
+recordings. On the latter, the lone walker missed its first 123 local
+search opportunities while every other body remained stationary after
+launch. It took 3,820 ticks for the 145-unit trip. All 2,410,500 rows of
+the unassisted replay passed the independent speed, terrain and
+unit-relative sweep checks. See the dated roadmap. The 200/500 opposing
+crossings still have zero exact arrivals.
+
+The Debug and Release suites, malformed-replay checks, output alias tests
+and 2,000-tick determinism suite passed. The new identity exposed a faulty
+negative test. Overwriting its first content byte with 0xff left the packet
+untouched. The test now flips all eight bits at the chosen offset and checks
+that rejection preserves the output. The decoder was unchanged. A separate
+build attempt found the Debug reader locked by an earlier match audit. The
+verified build ran after that audit exited. The paired-match auditor now
+accepts `--native-dir` to use archived readers for an older game.
+
+The final 22 separate-process network cases passed, including injected
+checksum disagreements, delay and disconnects. Independent review replayed
+76 peer archives, checked 11,196 tick hashes and reproduced the reported
+confirmation boundaries. At emulated 80 ms RTT, generated-command p95 was
+104.04/102.15 ms. The two-peer 160 ms case with four ticks of input delay
+ran at about 20 Hz with command p95 of 201.22/202.88 ms. These were
+240-tick loopback controls. The four mixed-version live pairs and four
+cross-version replay loads also rejected incompatible content at startup.
+
+Primary results are in `artifacts/orbit-runtime-2026-11-26`,
+`artifacts/orbit-network-2026-11-26` and `artifacts/orbit-long-2026-11-26`.
+The independent route and network audits are indexed by
+`artifacts/holders-review-2026-11-26/review.md`.
+
 ## 2026-11-25 — terrain tangent, worker delivery and resource readability
 
 ### Native movement and economy

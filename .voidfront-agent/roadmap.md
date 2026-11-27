@@ -1,5 +1,38 @@
 # Continuing roadmap
 
+## 2026-11-26 — a seven-tick move waits for a search slot
+
+Use the ordinary seed-42 Scale128 recordings
+`.voidfront-agent/replays/2026-11-26-scale500-gap-{move,bypass}.vfr`
+with simulation content `936b292c1236b4ff`. The starting roster contains
+250 units per side. Three units use canonical orders to stage two held
+posts and walker 258. At 1,000 it receives one Move from (29584,10224)
+to (29440,10240). All 499 other units stay still after launch. The walker
+reaches its slot at 4,820, taking 191 seconds of game time. The same setup
+with a short alignment and queued original goal arrives at 1,006.
+
+Instrumented copies isolate the scheduling cause. With a single mover,
+the local search is needed at relative ticks 1, 32, 63, 94 and so on.
+The eight-ID budget first admits 258 at 64–65, then 188–189. The first
+123 requests miss their slot. The 124th request qualifies at 3,814 and
+the walker arrives at 3,820. Granting just its first request recovers the
+isolated seven-tick trip. The nearby-unit query at each request contained
+two or three stationary neighbors. The recorded normal game and diagnostic
+fixtures are in `artifacts/holders-review-2026-11-26/final`.
+
+Next, spend deterministic search work on units that actually need it.
+Measure time from request to service for one and many requesters. Verify
+progress under sustained contention while bounding expensive queries per
+tick. Preserve Hold, relative swept clearance, exact destinations, the
+two-spawn seven-tick approach, the 1,214 flux trips and 1,440 formations.
+Rerun the 200/500 crossings under load. The three-moving-walker deadlock in
+the 1,2,0,4,3,5 formation remains a separate case once a search can run.
+
+The selected worker now reads at both rear anchor positions. The next
+visual checks are the intersecting bars on the two held workers and the
+enemy anchor nameplate at zoomed viewport edges. Human play, physical
+network soak, reference-hardware performance and production content remain open.
+
 ## 2026-11-25 — passing between two held workers and the flux field
 
 Use the two November 25 `two-holders` recordings in

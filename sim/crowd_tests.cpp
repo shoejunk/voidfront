@@ -244,6 +244,40 @@ void goal_redistribution(std::ostream* trace) {
         check(u.x==u.goal_x && u.z==u.goal_z && u.order==vf::Order::Stop,"same-stream reversed goals remained locked");
 }
 
+uint32_t enter_tangent_gap(uint32_t side) {
+    // The two expanded post footprints touch along the goal's z coordinate.
+    // A valid final approach remains on that boundary.
+    vf::Sim sim(42,3);
+    const auto orient=[&](vf::nav::Point p) { return vf::nav::Point{side?sim.width()*vf::kScale-p.x:p.x,p.z}; };
+    const uint32_t mover=3*side+2;
+    const auto first=orient({2304,2816}),second=orient({2304,3072}),goal=orient({2304,2944});
+    uint32_t sequence=0;
+    const auto place=[&](uint32_t id,vf::nav::Point point) {
+        const auto& unit=sim.units()[id-1];
+        order(sim,++sequence,id,point.x,point.z);
+        const auto start=sim.tick();
+        do { step(sim,"tangent_gap",nullptr); } while (unit.order!=vf::Order::Stop && sim.tick()-start<400);
+        check(vf::nav::Point{unit.x,unit.z}==point,"tangent gap setup missed its post");
+        order(sim,++sequence,id,0,0,vf::Order::Hold);
+    };
+    place(mover,orient({2448,2928}));
+    place(mover-1,first);
+    place(mover+1,second);
+    const auto launch=sim.tick();
+    order(sim,++sequence,mover,goal.x,goal.z);
+    const auto& actor=sim.units()[mover-1];
+    do {
+        step(sim,"tangent_gap",nullptr);
+        const auto& a=sim.units()[mover-2];
+        const auto& b=sim.units()[mover];
+        check(a.order==vf::Order::Hold && b.order==vf::Order::Hold &&
+              vf::nav::Point{a.x,a.z}==first && vf::nav::Point{b.x,b.z}==second,"tangent gap displaced a post");
+        check(vf::nav::Point{actor.goal_x,actor.goal_z}==goal,"tangent gap changed assigned goal");
+    } while (actor.order!=vf::Order::Stop && sim.tick()-launch<64);
+    check(actor.order==vf::Order::Stop && vf::nav::Point{actor.x,actor.z}==goal,"walker orbited the held posts");
+    return sim.tick()-launch;
+}
+
 void blocked_convoy(vf::Order pause,const std::string& name,std::ostream* trace) {
     vf::Sim sim(1,6);
     for (uint32_t id=1;id<=6;++id) order(sim,id,id,640,2432+128*(id-1));
@@ -331,5 +365,9 @@ int main(int argc,char** argv) {
     // Always exercise the reversed destinations in CTest. Preserve the
     // regular trace schema for callers which request the smaller ledger.
     if (redistribution || !out) run("goal_redistribution",[&] { goal_redistribution(out); });
+    run("tangent_gap",[] {
+        const auto travel=enter_tangent_gap(0);
+        check(enter_tangent_gap(1)==travel,"mirrored tangent gap timings differed");
+    });
     return failed?1:0;
 }
