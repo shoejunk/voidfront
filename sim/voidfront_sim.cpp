@@ -83,6 +83,30 @@ void step_candidates(nav::Point here,nav::Point waypoint,std::vector<nav::Point>
         return std::make_tuple(sign*(a.x-here.x),sign*(a.z-here.z))<std::make_tuple(sign*(b.x-here.x),sign*(b.z-here.z));
     });
 }
+
+bool holds_position(const Unit& unit) {
+    return unit.order==Order::Stop || unit.order==Order::Hold;
+}
+
+std::vector<nav::Point> detour_around_group(const nav::World& world,const SpatialIndex& spatial,
+        const std::vector<Unit>& units,const std::vector<nav::Point>& tick_start,
+        const Unit& mover,const Unit& obstacle,nav::Point goal) {
+    // Forbidden center rectangles meet when two held centers are four radii
+    // apart. Include the neighbors of the first obstruction in stable ID order.
+    constexpr int reach=4*unit_radius, clearance=2*unit_radius;
+    std::vector<uint32_t> nearby;
+    spatial.query({obstacle.x-reach,obstacle.z-reach,obstacle.x+reach,obstacle.z+reach},nearby);
+    std::vector<nav::Rect> blockers;
+    for (const auto id:nearby) {
+        const auto& other=units[id-1];
+        if (id==mover.id || !holds_position(other) || nav::Point{other.x,other.z}!=tick_start[id-1] ||
+            std::max(std::abs(other.x-obstacle.x),std::abs(other.z-obstacle.z))>reach) continue;
+        blockers.push_back({other.x-clearance,other.z-clearance,other.x+clearance,other.z+clearance});
+        if (blockers.size()>8) return {};
+    }
+    if (blockers.size()<2) return {};
+    return world.local_detour({mover.x,mover.z},goal,std::move(blockers),4*kScale,kScale);
+}
 }
 
 Sim::Sim(uint32_t seed, uint32_t count, Map map) : map_(map), rng_(seed ? seed : 1), navigation_(terrain_bounds(map), map_terrain(map), unit_radius) {
@@ -473,7 +497,7 @@ void Sim::step() {
             const auto exact=occupied(obstacle);
             const bool occupied_goal=goal.x>exact.min_x && goal.x<exact.max_x &&
                 goal.z>exact.min_z && goal.z<exact.max_z;
-            if (occupied_goal && (obstacle.order==Order::Stop || obstacle.order==Order::Hold)) {
+            if (occupied_goal && holds_position(obstacle)) {
                 if (!u.detour.empty()) u.route_goal={-1,-1};
                 u.detour.clear(); u.blocked_ticks=0;
             } else if (u.detour.empty() || u.blocked_ticks>=8) {
@@ -510,6 +534,14 @@ void Sim::step() {
                         best_cost=cost; best_side=side; best={first};
                         if (!(last==first)) best.push_back(last);
                     }
+                }
+                if (best.empty() && holds_position(obstacle)) {
+                    // Limit larger searches to eight identities per tick. Two
+                    // consecutive ticks per window cover both blocked-step phases.
+                    constexpr size_t slots=8;
+                    const auto first=(uint64_t(tick_/2)*slots)%units_.size();
+                    if ((u.id-1+units_.size()-first)%units_.size()<slots)
+                        best=detour_around_group(navigation_,spatial,units_,tick_start,u,obstacle,goal);
                 }
                 if (best.empty() && !u.detour.empty()) u.route_goal={-1,-1};
                 u.detour=std::move(best); u.blocked_ticks=0;

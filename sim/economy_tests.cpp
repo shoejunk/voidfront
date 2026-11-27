@@ -105,6 +105,17 @@ void occupied_service_goal() {
 
 // Three ordinary orders from an untouched start. From the middle worker's
 // anchor slot, integer steps toward the far salvage field graze the central flux.
+nav::World stationary_clearance(const Sim& sim,const Unit& mover) {
+    // Reconstruct clearance independently of the worker's cached waypoints.
+    auto obstacles=map_terrain(sim.map());
+    const auto footprint=[&](int x,int z,int half_extent) {
+        obstacles.push_back({x-half_extent,z-half_extent,x+half_extent,z+half_extent});
+    };
+    for (const auto& b:sim.structures()) footprint(b.x,b.z,kScale);
+    for (const auto& d:sim.deposits()) footprint(d.x,d.z,kScale/2);
+    for (const auto& u:sim.units()) if (u.id!=mover.id) footprint(u.x,u.z,64);
+    return nav::World({kScale,kScale,(sim.width()-1)*kScale,(sim.height()-1)*kScale},std::move(obstacles),64);
+}
 std::array<uint32_t,2> gather_across_flux(uint8_t player) {
     Sim sim(42,3,Map::Economy);
     const auto& miner=sim.units()[3*player+1];
@@ -113,16 +124,7 @@ std::array<uint32_t,2> gather_across_flux(uint8_t player) {
     const auto home=sim.service_slots(miner,{anchor.x,anchor.z},kScale).front();
     const auto mine=sim.service_slots(miner,{patch.x,patch.z},kScale/2).front();
     const nav::Point scout{patch.x+(player?3:-3)*kScale,patch.z};
-
-    // Reconstruct clearance independently of the worker's cached waypoints.
-    auto obstacles=map_terrain(sim.map());
-    const auto footprint=[&](int x,int z,int half_extent) {
-        obstacles.push_back({x-half_extent,z-half_extent,x+half_extent,z+half_extent});
-    };
-    for (const auto& b:sim.structures()) footprint(b.x,b.z,kScale);
-    for (const auto& d:sim.deposits()) footprint(d.x,d.z,kScale/2);
-    for (const auto& u:sim.units()) if (u.id!=miner.id) footprint(u.x,u.z,64);
-    const nav::World world({kScale,kScale,(sim.width()-1)*kScale,(sim.height()-1)*kScale},std::move(obstacles),64);
+    const auto world=stationary_clearance(sim,miner);
     const auto position=[&]{return nav::Point{miner.x,miner.z};};
     const auto advance=[&] {
         const auto before=position();
@@ -162,6 +164,44 @@ std::array<uint32_t,2> gather_across_flux(uint8_t player) {
         delivery=sim.tick();
     }
     return deliveries;
+}
+uint32_t pass_held_workers(uint8_t player) {
+    Sim sim(42,3,Map::Economy);
+    const auto rotate=[&](nav::Point p) {
+        return player?nav::Point{sim.width()*kScale-p.x,sim.height()*kScale-p.z}:p;
+    };
+    const auto& first=sim.units()[3*player];
+    const auto& miner=sim.units()[3*player+1];
+    const auto& second=sim.units()[3*player+2];
+    const auto west=rotate({7488,5888}),east=rotate({7616,5760}),goal=rotate({14464,10144});
+    uint32_t sequence=0;
+    const auto order=[&](const Unit& unit,Order type,nav::Point target) {
+        check(sim.submit({sim.tick(),++sequence,player,type,{unit.id},target.x,target.z}),"two-holder order rejected");
+    };
+    const auto place=[&](const Unit& unit,nav::Point point) {
+        order(unit,Order::Move,point);
+        const auto start=sim.tick();
+        do { sim.step(); } while (unit.order!=Order::Stop && sim.tick()-start<1000);
+        check(nav::Point{unit.x,unit.z}==point,"two-holder setup did not reach its post");
+        order(unit,Order::Hold,{});
+    };
+    place(miner,rotate({1152,2848}));
+    place(first,west);
+    place(second,east);
+    const auto world=stationary_clearance(sim,miner);
+    order(miner,Order::Move,goal);
+    const auto start=sim.tick();
+    do {
+        const nav::Point before{miner.x,miner.z};
+        sim.step();
+        const int dx=miner.x-before.x,dz=miner.z-before.z;
+        check(dx*dx+dz*dz<=32*32 && world.clear(before,{miner.x,miner.z}),"two-holder worker sweep failed");
+        check(first.order==Order::Hold && second.order==Order::Hold &&
+              nav::Point{first.x,first.z}==west && nav::Point{second.x,second.z}==east,"held worker displaced");
+        check(nav::Point{miner.goal_x,miner.goal_z}==goal,"two-holder move lost its destination");
+    } while (miner.order!=Order::Stop && sim.tick()-start<1000);
+    check(miner.order==Order::Stop && nav::Point{miner.x,miner.z}==goal,"worker stalled between held units and flux");
+    return sim.tick()-start;
 }
 void competing_purchases() {
     Sim s(42,3,Map::Economy);
@@ -571,6 +611,8 @@ int main() {
         validation(); interruption_and_depletion(); construction_and_routes(); occupied_service_goal(); competing_purchases(); replay_and_apply_time();
         const auto deliveries=gather_across_flux(0);
         check(gather_across_flux(1)==deliveries,"cross-field salvage delivery timings differed by spawn");
+        const auto travel=pass_held_workers(0);
+        check(pass_held_workers(1)==travel,"two-holder journey timings differed by spawn");
         worker_replacement(0,0,kWorkerCost);
         worker_replacement(1,1,3*kWorkerCost);
         worker_replacement(1,0,kWorkerCost-kCargoCapacity);

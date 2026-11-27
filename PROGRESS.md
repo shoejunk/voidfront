@@ -1,5 +1,30 @@
 # Voidfront progress
 
+## 2026-11-26 America/Los_Angeles — worker movement between held units
+
+Clean `dev` started at `82fa9e9`. On Glass Reach an ordinary Move
+between two friendly workers holding by the central flux deposit stops
+at tick 662. The recorded bypass reaches the same goal. Reproduce the
+blocked step, recover automatically while preserving Hold and swept
+clearance, and compare the 1,214 placements and existing controls. At
+the anchor, inspect and address the selected miner disappearing behind
+the building on return. Verify the changes in native builds and the
+Windows client.
+
+The old Move reached (7359,5868) at tick 662. All seven forward steps
+hit the same held worker, and the one-blocker detour could not see the
+distant goal past the flux terrain. If that detour fails, the simulation
+now searches a short prefix of the terrain route with nearby stationary
+footprints included. The existing collision checks still govern every step.
+On either spawn the middle worker arrives at 932 with the original Move.
+All 1,214 two-holder placements arrive, up from 1,036. The 2,888 solo
+and 1,152 one-neighbor trips retain their results. Reversing the six
+assigned slots now finishes at 339/341. Both MSVC builds passed all 12
+CTest entries, and the expanded 18-fixture crowd ledger passed ten times
+per build. Fourteen paid mining openings and four longer matches were
+regenerated. Four larger garrisons changed timing, with all 14 winners
+preserved. See the November 26 verification entry for the full evidence.
+
 ## 2026-11-25 America/Los_Angeles — worker route past the central flux deposit
 
 Clean `dev` began at `3606799`. A single worker with a Gather order stops

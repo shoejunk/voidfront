@@ -328,6 +328,8 @@ int main(int argc,char** argv) {
     run("convoy_stop",[&] { blocked_convoy(vf::Order::Stop,"convoy_stop",out); });
     run("convoy_hold",[&] { blocked_convoy(vf::Order::Hold,"convoy_hold",out); });
     run("convoy_retarget",[&] { convoy_retarget(out); });
-    if (redistribution) run("goal_redistribution",[&] { goal_redistribution(out); });
+    // Always exercise the reversed destinations in CTest. Preserve the
+    // regular trace schema for callers which request the smaller ledger.
+    if (redistribution || !out) run("goal_redistribution",[&] { goal_redistribution(out); });
     return failed?1:0;
 }

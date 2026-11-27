@@ -53,6 +53,7 @@ def verify(rows, cases=None):
         previous = initial.copy()
         previous_hp = {uid:100 for uid in initial}
         pursuit_detour = False
+        settled = {}
         for t in range(1,ticks+1):
             group = entries[(t-1)*2*count:t*2*count]
             require([r['id'] for r in group] == list(initial), 'missing/reordered/duplicate unit')
@@ -125,6 +126,15 @@ def verify(rows, cases=None):
                     require(all(current[uid]==(640,2432+128*(uid-1)+32*(t-160)) for uid in range(1,7)),
                             'retarget convoy never advanced together')
                 if t==165: require(current[3][0]>640 and current[3][1]==2816,'retarget convoy followed obsolete direction')
+            if name == 'goal_redistribution' and t > 160:
+                for uid in range(1, count + 1):
+                    goal = (2304, 2432 + 128 * (count - uid))
+                    stopped = group[uid - 1]['order'] == 0
+                    if uid in settled:
+                        require(stopped and current[uid] == goal, 'settled unit displaced or reordered')
+                    elif stopped:
+                        require(current[uid] == goal, 'unit stopped short of assigned slot')
+                        settled[uid] = t
             previous = current
             previous_hp = {r['id']:r['hp'] for r in group}
         expected = {'stationary_blocker': {1:(640,4300)}, 'stationary_chain': {1:(640,4300)},
@@ -145,6 +155,8 @@ def verify(rows, cases=None):
             require(previous[uid]==goal and entries[-2*count+uid-1]['order']==0, f'{name}: false/missing arrival')
         if name=='moving_attack_target': require(pursuit_detour, 'moving pursuit never detoured')
         results[name] = {'ticks':ticks, 'rows':len(entries), 'exact_arrivals':len(expected)}
+        if name == 'goal_redistribution':
+            results[name]['arrival_ticks'] = settled
     return results
 
 def main():
@@ -152,11 +164,9 @@ def main():
     parser.add_argument('--build',type=Path,default=Path('build/windows/sim'))
     parser.add_argument('--out',type=Path,required=True)
     parser.add_argument('--cooperative',action='store_true',help='compatibility flag; cooperative regression coverage is always included')
-    parser.add_argument('--redistribution',action='store_true',help='include opt-in reversed same-stream goal diagnostic')
+    parser.add_argument('--redistribution',action='store_true',help='compatibility flag; reversed destinations are always checked')
     args=parser.parse_args()
-    cases=dict(CASES)
-    flags=[]
-    if args.redistribution: cases.update(REDISTRIBUTION_CASES); flags.append('--redistribution')
+    cases = {**CASES, **REDISTRIBUTION_CASES}
     # Legal endpoints can still overlap between ticks. The oracle must catch
     # this corner crossing, while permitting an exact tangent control.
     require(midpoint_enters_open_rect((128,112),(112,128),(-128,-128,128,128)), 'missed analytic swept crossing')
@@ -170,7 +180,7 @@ def main():
         exe=(args.build/config/'voidfront_crowd_tests.exe').resolve()
         for repeat in range(10):
             ledger=args.out/f'{config}-{repeat}.csv'
-            run=subprocess.run([str(exe),str(ledger),*flags],capture_output=True,text=True)
+            run=subprocess.run([str(exe),str(ledger),'--redistribution'],capture_output=True,text=True)
             (args.out/f'{config}-{repeat}.log').write_text(run.stdout+run.stderr)
             require(run.returncode==0,f'{config} run {repeat} failed; complete stdout/stderr retained beside {ledger}')
             raw=ledger.read_bytes()
@@ -232,6 +242,7 @@ def main():
     for name,tick,uid,update,expected_error in [
         ('convoy_hold',161,6,{'order':0},'blocked convoy displaced stationary leader'),
         ('convoy_stop',161,6,{'x':641},'blocked convoy displaced stationary leader'),
+        ('goal_redistribution',740,2,{'order':1},'settled unit displaced or reordered'),
         ('convoy_retarget',364,3,{'order':1},'false/missing arrival')]:
         changed=copy.deepcopy(rows)
         row=next(r for r in changed if r['case']==name and r['tick']==tick and r['id']==uid)
@@ -243,7 +254,7 @@ def main():
         mutations.append((name+'_semantic_mutation',None))
     summary['rejected_mutations']=[name for name,_ in mutations]
     summary['finished_utc']=datetime.now(timezone.utc).isoformat()
-    summary['scope']='Seventeen bounded small-map fixtures; original twelve safety/arrival checks retained, plus tangent followers in both ID directions, blocked Stop/Hold convoys, and interrupted convoy retarget. Optional reversed-goal redistribution remains diagnostic. Outer-channel prefix and blocked convoy prefixes do not establish eventual completion. No transaction-cap exhaustion, dense-stream, 128x128/performance or human-play acceptance.'
+    summary['scope']='Eighteen small-map fixtures cover swept clearance, movement, retargets and arrivals. The reversed six-unit rank checks each assigned destination and continued Stop through tick 760. Outer-channel and blocked-convoy samples cover only the recorded prefix.'
     (args.out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
     print(json.dumps({'ok':True,'fixtures':summary['fixtures'],'runs':len(summary['runs']),
                       'rejected_mutations':summary['rejected_mutations']}))

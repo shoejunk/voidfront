@@ -205,4 +205,41 @@ std::vector<Point> World::route(Point start, Point goal) const {
     return result;
 }
 
+std::vector<Point> World::local_detour(Point start, Point goal, std::vector<Rect> blockers,
+                                      std::int32_t lookahead, std::int32_t margin) const {
+    // Sixteen rectangles plus the boundary generate at most 4*17 corners
+    // and four intersections per unordered pair, below the world vertex cap.
+    constexpr std::size_t max_local_rectangles = 16;
+    if (lookahead <= 0 || margin < 0 || lookahead > input_limit || margin > input_limit ||
+        blockers.empty() || blockers.size() > max_local_rectangles) return {};
+
+    // Stop partway along the refreshed terrain path. A goal on the other
+    // side of a ridge need not be visible from the final avoidance corner.
+    auto target = start;
+    int remaining = lookahead;
+    for (const auto corner : route(start, goal)) {
+        const int dx = corner.x - target.x, dz = corner.z - target.z;
+        const int length = std::max(std::abs(dx), std::abs(dz));
+        if (length > remaining) {
+            target.x += static_cast<int>(std::int64_t(dx) * remaining / length);
+            target.z += static_cast<int>(std::int64_t(dz) * remaining / length);
+            break;
+        }
+        target = corner;
+        remaining -= length;
+    }
+    if (target == start) return {};
+    const int radius = lookahead + margin;
+    const Rect window{std::max(bounds_.min_x, start.x - radius), std::max(bounds_.min_z, start.z - radius),
+                      std::min(bounds_.max_x, start.x + radius), std::min(bounds_.max_z, start.z + radius)};
+    if (!proper(window, input_limit)) return {};
+    for (const auto rect : obstacles_) {
+        if (rect.min_x < window.max_x && rect.max_x > window.min_x &&
+            rect.min_z < window.max_z && rect.max_z > window.min_z) blockers.push_back(rect);
+    }
+    if (blockers.size() > max_local_rectangles ||
+        !std::all_of(blockers.begin(), blockers.end(), [](Rect r) { return proper(r, input_limit); })) return {};
+    return World(window, std::move(blockers), 0).route(start, target);
+}
+
 } // namespace vf::nav

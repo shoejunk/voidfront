@@ -45,6 +45,12 @@ public:
     // integer coordinate units; stable lexicographic vertices break ties.
     std::vector<Point> route(Point start, Point goal) const;
 
+    // Route a short prefix of the terrain path around stationary footprints.
+    // Blockers are already expanded for the moving unit. An empty result also
+    // covers windows exceeding the local search budget.
+    std::vector<Point> local_detour(Point start, Point goal, std::vector<Rect> blockers,
+                                    std::int32_t lookahead, std::int32_t margin) const;
+
 private:
     struct Edge {
         std::size_t node;
