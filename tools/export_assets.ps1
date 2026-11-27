@@ -9,6 +9,8 @@ if (!$DepositsOnly) {
     if ($LASTEXITCODE -ne 0) { throw 'Walker generation failed' }
     & $blender --background --factory-startup --python-exit-code 2 --python (Join-Path $repo 'art/validate_walker.py')
     if ($LASTEXITCODE -ne 0) { throw 'Walker GLB validation failed' }
+    & $blender --background --factory-startup --python-exit-code 2 --python (Join-Path $repo 'art/generate_anchor.py')
+    if ($LASTEXITCODE -ne 0) { throw 'Command anchor export failed' }
 }
 $depositArgs = @()
 if ($RecreateDeposits) { $depositArgs += '--recreate-source' }

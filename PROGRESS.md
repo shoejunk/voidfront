@@ -25,6 +25,16 @@ per build. Fourteen paid mining openings and four longer matches were
 regenerated. Four larger garrisons changed timing, with all 14 winners
 preserved. See the November 26 verification entry for the full evidence.
 
+The editable command anchor now leaves the rear service position visible.
+At the actual ten-salvage payment, the worker retained 232 of 241 visible
+pixels in the independent rendering comparison, up from roughly one.
+Nearby deposit labels move clear of the selected worker and the HUD.
+The frozen client repeated the seven-command route to tick 932 and paid
+ten at 1,563 in the separate one-Gather trip. Debug and Release reproduced
+every client tick. The held-route verifier also checks the friendly health
+bars against their projected positions in each 720p frame. The four true
+phases passed and all twelve exchanged frame pairs failed independent review.
+
 ## 2026-11-25 America/Los_Angeles — worker route past the central flux deposit
 
 Clean `dev` began at `3606799`. A single worker with a Gather order stops

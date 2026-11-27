@@ -1,5 +1,126 @@
 # Verification ledger
 
+## 2026-11-26 — passing stationary workers on Glass Reach
+
+### Native reproduction and controls at `2f9d5be`
+
+On seed 42, mouse selection, the Move button and the Hold hotkey reproduced
+the seven command frames in the November 25 stall recording byte for byte.
+The stock Windows project stopped at (7359,5868) at tick 662. Both stock
+native readers matched all 1,442 captured ticks. At contact, terrain
+allowed each of the seven step proposals, but each hit the first holder.
+The remaining leg to the goal crossed terrain. None of the first holder's
+corners could see the distant destination. Repeating Move at 912 made the
+stock worker arrive at 1,182. A preplanned bypass arrived at 928.
+
+The new search considers the next four tiles of a fresh terrain route with
+up to eight nearby stationary footprints. Its window extends one more tile
+and contains at most sixteen rectangles including terrain. Eight unit IDs are
+eligible per tick. Each proposed step still goes through the regular speed
+and relative swept-clearance checks. With no intervention, both spawns
+arrived at 932. The new economy regression failed against the stock library.
+
+| Executed cases | Prior arrivals | Arrivals at 2f9d5be |
+| --- | ---: | ---: |
+| Single worker | 2,888 / 2,888 | 2,888 / 2,888 |
+| One neighbor | 1,152 / 1,152 | 1,152 / 1,152 |
+| Two workers holding near flux | 1,036 / 1,214 | 1,214 / 1,214 |
+| Offset posts and timed releases | 4,858 / 5,064 | 5,030 / 5,064 |
+| All six walkers reach permuted slots | 57 / 1,440 | 1,221 / 1,440 |
+
+The independent sweep found no overlap or overspeed and each old successful
+two-holder trip kept its trajectory length. The normal worker traveled
+15,344 fixed-point units against a shortest geometric route of 15,270.
+Across all 1,214 trips, 446 exceeded the static navigation tolerance of
+1% plus two units when applied to the executed route. Maximum excess was
+3.914%. The static navigation API separately passed all 51 fixtures ten
+times in each build. The 200- and 500-unit crossings reproduced all
+800,200 and 2,000,500 stock rows. Neither had an exact arrival by 4,000.
+The two-holder matrix does not establish general crowd progress.
+
+The reversed six-walker rank finished at 339 and 341 on mirrored starts.
+Each arriving unit stayed in its assigned slot on Stop through tick 760.
+The checker previously accepted a false Move on an arrived walker at
+740. It now rejects that corruption. The full 18-case ledger matched over
+20 executions and rejected 23 corruptions. Six previously incomplete rank
+permutations lost one arrival. In slot order 1,2,0,4,3,5 three walkers
+retain Move and one another's next steps are blocked. All six arrive when
+unit 2 makes a short retreat at 380 and queues its original destination.
+The northwest stall and bypass recordings are in `.voidfront-agent/replays`.
+
+Both MSVC configurations and the GDExtension built with the pinned Godot
+4.7.2 engine, templates and godot-cpp. All 12 CTest entries passed per
+configuration, with matching 2,000-tick traces and ten repeat playbacks.
+Simulation content is `43cbd4c7f41b29ef`. All four old/new replay loads
+and four mixed-revision peer pairs rejected before a command executed.
+An initial sandboxed build reported C1902. The verified run used the local
+compiler service. Logs and probes are in
+`artifacts/holders-{implementation,review,runtime,navigation,crowds}-2026-11-26`.
+
+Fourteen regenerated paid mining openings retained all winners. Ten retained
+every command and state hash. The four- and eight-guard garrisons changed
+on both sides starting at 2,344, shifting the endpoints by −33 to +37 ticks.
+All 208,721 positions matched between Debug and Release generation and
+playback. Sixty-four native prefixes checked source, ore, HP, cargo and
+payment. Four longer full games finished at 84,412 (guard leaves) or
+97,118 (guard stays) on each spawn. Forty-four native prefixes confirmed
+the events. See `artifacts/holders-runtime-2026-11-26/openings` and
+`artifacts/holders-long-2026-11-26`.
+
+### Windows input, anchor and deposit labels
+
+Use a fresh report directory for each capture.
+
+```powershell
+.\artifacts\package\Voidfront.exe --resolution 1280x720 -- --held-route-smoke --seed=42 --report=C:/dev/voidfront/artifacts/fresh-held-route
+python tools/verify_held_route.py artifacts/fresh-held-route --out artifacts/fresh-held-audit
+```
+
+The input fixture selects
+all three workers, uses the Move button to pick the precise ground and
+the H hotkey to set the posts. The last Move is issued at 442.
+At 662 the worker is at (7359,5868). At 710 it is at (8491,6534).
+At 932 it stops at the original (14464,10144) destination. Both holders
+keep their exact positions and orders on every tick. The two native readers
+match all 932 graphical ticks and five prefixes per build. The separate
+one-Gather fixture still pays at 1,563 and matches eleven prefixes per build.
+
+The held-route checker decodes the four original PNGs, checks the phase
+hashes and native actor states, and finds the ordinary friendly health
+bars at their projected positions in each frame. Peer review rejected
+all twelve exchanges of two different phases. Recomputing the PNG digest
+used to let an exchange through. Review also found a stale selection ring
+at launch and an obstructed destination label after the final camera pan.
+The fixture now refreshes the actors, HUD and economy view at the recorded
+tick before capture. Its clock is driven and its setup accelerated.
+These are scripted input and appearance checks.
+
+The new static command anchor exports from the editable Blender scene as
+436 triangles, four material surfaces, UVs and unit normals. Re-exporting
+the saved scene produced the same GLB SHA256
+`c6505be2587cb3521b99797fd23b02d5b57fdb3564b592143d37517ae79d4675`.
+At the rear of the anchor the fixed-pose masks recovered 239.71 of 253.21
+unobstructed equivalent worker pixels on the northwest side and 194.15
+of 202.40 on the southeast side. The old values were 2.16 and zero.
+The actual paid frame improved from 1.12 to 232.41 of 240.67. Close
+workers can still visually merge. Twenty-four label samples cover both
+contacts, twelve mining positions, two destination views and eight zoomed
+camera positions. The deposit text stayed inside the viewport and outside
+the HUD in every sample. The southeast arrival still shows all of
+SALVAGE 2000 with the selected miner and minimap visible. The enemy anchor
+nameplate itself can clip at the edge of a zoomed view.
+
+In the retained StarCraft II mineral-line screenshot, the dark support
+feet leave visible gaps around bright workers. The Voidfront anchor's
+lighter hood shares the workers' brightest values. Ground materials,
+lighting and overlapping unit bars remain prominent differences at this
+zoom. Blizzard also illustrates why units need reachable space behind
+resource patches. [Blizzard mapmaking reference](https://news.blizzard.com/en-us/article/20521249/mastering-mapmaking-part-two)
+
+See `artifacts/holders-visual-2026-11-26/review.md`,
+`artifacts/holders-independent-visual-2026-11-26/mask-check.json` and
+`artifacts/holders-runtime-2026-11-26/{passage,delivery}-audit/summary.json`.
+
 ## 2026-11-25 — terrain tangent, worker delivery and resource readability
 
 ### Native movement and economy

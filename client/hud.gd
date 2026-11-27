@@ -332,12 +332,9 @@ func _draw() -> void:
 		draw_circle(at, 2.5, color)
 		if game.actors.has(u.id) and (not game.scale128 or selected_ids.has(u.id) or u.hp < game.max_hp):
 			var actor: Node3D = game.actors[u.id].root
-			var screen: Vector2 = game.camera.unproject_position(actor.position + Vector3(0, 1.8, 0))
 			if not game.camera.is_position_behind(actor.position):
 				var bar_width: float = clampf(24.0 * 27.0 / game.camera.size, 3, 24) if game.scale128 else 36.0
-				var bar := Rect2(screen - Vector2(bar_width / 2, 0), Vector2(bar_width, 4))
-				if not label_rects.is_empty():
-					bar = _place_health_bar(bar, label_rects, view.y)
+				var bar := health_bar_rect(actor.position, bar_width, label_rects, view.y)
 				draw_rect(bar, Color("102128"))
 				draw_rect(Rect2(bar.position, Vector2(bar_width * clampf(float(u.hp) / float(u.max_hp), 0, 1), 3)), color)
 	if game.economy:
@@ -361,10 +358,15 @@ func _economy_label_rects() -> Array[Rect2]:
 	for entry in game.economy_actors.values():
 		var label: Label3D = entry.label
 		if not label.is_visible_in_tree() or camera.is_position_behind(label.global_position): continue
-		rects.append(_world_label_rect(label, pixels_per_unit))
+		rects.append(world_label_rect(label, pixels_per_unit))
 	return rects
 
-func _world_label_rect(label: Label3D, pixels_per_unit: float) -> Rect2:
+func health_bar_rect(position_on_map: Vector3, width: float, labels: Array[Rect2], view_height: float) -> Rect2:
+	var screen: Vector2 = game.camera.unproject_position(position_on_map + Vector3(0, 1.8, 0))
+	var desired := Rect2(screen - Vector2(width / 2.0, 0), Vector2(width, 4))
+	return desired if labels.is_empty() else _place_health_bar(desired, labels, view_height)
+
+func world_label_rect(label: Label3D, pixels_per_unit: float) -> Rect2:
 	var font := label.font if label.font else ThemeDB.fallback_font
 	var text_size := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size)
 	var text_scale := label.pixel_size * pixels_per_unit
@@ -372,10 +374,11 @@ func _world_label_rect(label: Label3D, pixels_per_unit: float) -> Rect2:
 	var at: Vector2 = game.camera.unproject_position(label.global_position)
 	return Rect2(at - screen_size * 0.5, screen_size).grow(label.outline_size * text_scale + 2.0)
 
-func status_covers_label(label: Label3D) -> bool:
-	# The RTS camera keeps its vertical extent when the window changes shape.
-	var pixels_per_unit: float = get_viewport_rect().size.y / game.camera.size
-	return is_visible_in_tree() and _status_panel_rect().intersects(_world_label_rect(label, pixels_per_unit))
+func world_label_fits(rect: Rect2) -> bool:
+	if not get_viewport_rect().encloses(rect): return false
+	if not is_visible_in_tree(): return true
+	return not (_status_panel_rect().intersects(rect) or minimap_rect().grow(6).intersects(rect)
+		or (command_card.visible and command_card.get_global_rect().intersects(rect)))
 
 func _place_health_bar(desired: Rect2, labels: Array[Rect2], view_height: float) -> Rect2:
 	var above := desired

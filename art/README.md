@@ -57,3 +57,13 @@ materials. The simulation owns each deposit's position, stock and obstacle.
 Edit either scene and run `tools/export_assets.ps1 -DepositsOnly` to export both
 GLBs into `client/assets`. To deliberately replace the editable scenes with the
 procedural originals, use `-DepositsOnly -RecreateDeposits`.
+
+## Cairn command anchor
+
+`command_anchor.blend` contains the editable command deck, paired signal
+vanes, cargo apron and team enamel. Its origin is ground center. The two
+vanes sit toward the camera to keep the rear approach visible. The
+footprint fits within the two-cell simulation obstacle. A full run of
+`tools/export_assets.ps1` exports the saved scene. Run Blender with
+`--background --python art/generate_anchor.py -- --recreate-source` only
+to replace the scene with the original procedural mesh.
