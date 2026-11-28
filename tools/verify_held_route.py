@@ -67,17 +67,26 @@ def check_phase_bars(path, event, units):
         if 20 <= x < WIDTH - 20 and TOP + 3 <= y < BOTTOM - 3:
             expected.append((x, y))
     spans = visible_bars(path)
-    # Overlapping bars can merge into one scanline and leave a single row
-    # visible for a neighbor. Check coverage in both directions. Looking at
-    # each expected bar alone would miss an additional worker in a stale shot.
+    # A full 36-unit fill covers 28 or 29 pixels at this resolution. Bind
+    # every visible worker to a complete fill and require a clear row between
+    # horizontally overlapping bars. A merged or partially painted bar fails.
+    fills = []
     for x, y in expected:
-        if not any(abs(row - y) <= 2 and left <= x - 10 and right >= x + 10
-                   for left, right, row in spans):
-            raise ValueError(f"{reason}: missing bar at {(x, y)}")
-    for left, right, row in spans:
-        if any(not any(abs(col - x) <= 17 and abs(row - y) <= 3 for x, y in expected)
-               for col in range(left, right + 1)):
-            raise ValueError(f"{reason}: unexpected cyan span {(left, right, row)}")
+        rows = [(left, right, row) for left, right, row in spans if
+                right - left + 1 in (28, 29) and abs((left + right + 1) / 2 - x) <= 1
+                and abs(row + 0.5 - y) <= 2]
+        if len(rows) not in (2, 3) or rows[-1][2] - rows[0][2] != len(rows) - 1:
+            raise ValueError(f"{reason}: missing full-height bar at {(x, y)}")
+        fills.append(rows)
+    if sorted(span for rows in fills for span in rows) != sorted(spans):
+        raise ValueError(reason + ": extra or merged cyan spans")
+    for i, rows in enumerate(fills):
+        left, right, top = rows[0]
+        bottom = rows[-1][2]
+        for other in fills[:i]:
+            x0, x1, y0 = other[0]
+            if x0 <= right and left <= x1 and top <= other[-1][2] + 1 and y0 <= bottom + 1:
+                raise ValueError(reason + ": full bars touch")
 
 
 def verify(folder, out):
@@ -106,6 +115,13 @@ def verify(folder, out):
     require(events["launch"]["position"] == [1152, 2848] and events["arrival"]["position"] == [14464, 10144],
             "wrong start or destination")
     require(events["contact"]["position"] != events["passage"]["position"], "stationary at the posts")
+    # The first three stills share a camera. Passing the two held units must
+    # leave each stationary unit's own bar at its original screen position.
+    for name in ("contact", "passage"):
+        for index in (0, 2):
+            require(math.dist(events["launch"]["friendly_bars"][index],
+                              events[name]["friendly_bars"][index]) <= 0.5,
+                    f"{name}: passing worker displaced a holder's health bar")
     out.mkdir(parents=True, exist_ok=False)
     sample_ticks = sorted({events[name]["tick"] for name in names} | {ticks - 1})
     binaries = {}

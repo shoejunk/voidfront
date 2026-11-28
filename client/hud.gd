@@ -17,6 +17,7 @@ var message_panel := PanelContainer.new()
 var message_detail: Label
 var message_actions: Label
 var minimap_obstacles: MultiMesh
+var drawn_health_bars: Dictionary[int, Rect2] = {}
 var command_card := preload("res://command_card.gd").new()
 
 func _ready() -> void:
@@ -291,6 +292,7 @@ func _status_panel_rect() -> Rect2:
 func _draw() -> void:
 	var profile_start := Time.get_ticks_usec() if is_instance_valid(game) and game.presentation_profiler else 0
 	var view := get_viewport_rect().size
+	drawn_health_bars.clear()
 	if is_instance_valid(game) and game.setup_open:
 		draw_rect(Rect2(Vector2.ZERO, view), Color(0.01, 0.02, 0.025, 0.72))
 		return
@@ -324,6 +326,9 @@ func _draw() -> void:
 				draw_circle(at, 3.0, Color("5cc8ff") if int(deposit.get("kind", 0)) == 1 else Color("d6b869"))
 	for id in game.selected: selected_ids[id] = true
 	var label_rects := _economy_label_rects()
+	var bar_cells := {}
+	var resting: Array[Dictionary] = []
+	var active: Array[Dictionary] = []
 	for u in game.current.units:
 		if u.hp <= 0 or not game._entity_visible(u):
 			continue
@@ -331,12 +336,19 @@ func _draw() -> void:
 		var at := map_rect.position + Vector2(u.x, u.z) / 256.0 * map_scale
 		draw_circle(at, 2.5, color)
 		if game.actors.has(u.id) and (not game.scale128 or selected_ids.has(u.id) or u.hp < game.max_hp):
-			var actor: Node3D = game.actors[u.id].root
-			if not game.camera.is_position_behind(actor.position):
-				var bar_width: float = clampf(24.0 * 27.0 / game.camera.size, 3, 24) if game.scale128 else 36.0
-				var bar := health_bar_rect(actor.position, bar_width, label_rects, view.y)
-				draw_rect(bar, Color("102128"))
-				draw_rect(Rect2(bar.position, Vector2(bar_width * clampf(float(u.hp) / float(u.max_hp), 0, 1), 3)), color)
+			if u.order == game.Action.STOP or u.order == game.Action.HOLD: resting.append(u)
+			else: active.append(u)
+	# Allocate resting bars first so a passing unit cannot displace a holder's bar.
+	resting.append_array(active)
+	for u in resting:
+		var actor: Node3D = game.actors[u.id].root
+		if game.camera.is_position_behind(actor.position): continue
+		var bar_width: float = clampf(24.0 * 27.0 / game.camera.size, 3, 24) if game.scale128 else 36.0
+		var bar := _health_bar_rect(actor.position, bar_width, label_rects, bar_cells, view)
+		drawn_health_bars[u.id] = bar
+		var color := Color("64e5df") if u.player == 0 else Color("fda06d")
+		draw_rect(bar, Color("102128"))
+		draw_rect(Rect2(bar.position, Vector2(bar_width * clampf(float(u.hp) / float(u.max_hp), 0, 1), 3)), color)
 	if game.economy:
 		var corners := PackedVector2Array()
 		for screen in [Vector2.ZERO, Vector2(view.x, 0), view, Vector2(0, view.y), Vector2.ZERO]:
@@ -361,10 +373,34 @@ func _economy_label_rects() -> Array[Rect2]:
 		rects.append(world_label_rect(label, pixels_per_unit))
 	return rects
 
-func health_bar_rect(position_on_map: Vector3, width: float, labels: Array[Rect2], view_height: float) -> Rect2:
+func _health_bar_rect(position_on_map: Vector3, width: float, labels: Array[Rect2], bar_cells: Dictionary, view: Vector2) -> Rect2:
 	var screen: Vector2 = game.camera.unproject_position(position_on_map + Vector3(0, 1.8, 0))
 	var desired := Rect2(screen - Vector2(width / 2.0, 0), Vector2(width, 4))
-	return desired if labels.is_empty() else _place_health_bar(desired, labels, view_height)
+	var bar := desired if labels.is_empty() else _place_health_bar(desired, labels, view.y)
+	if not Rect2(Vector2.ZERO, view).intersects(bar): return bar
+	# Keep each bar horizontally centered on its unit. Nearby bars can share
+	# that span, so look for a small vertical separation.
+	const MAX_SHIFT := 18.0
+	const CELL_SIZE := 48.0 # Wider than any health bar including its gutter.
+	var reach := bar.grow_individual(0, MAX_SHIFT, 0, MAX_SHIFT)
+	var cell := Vector2i((bar.get_center() / CELL_SIZE).floor())
+	var blockers: Array[Rect2] = []
+	for cy in range(cell.y - 1, cell.y + 2):
+		for cx in range(cell.x - 1, cell.x + 2):
+			var key := Vector2i(cx, cy)
+			if not bar_cells.has(key): continue
+			for neighbor: Rect2 in bar_cells[key]:
+				if reach.intersects(neighbor): blockers.append(neighbor)
+	if not blockers.is_empty():
+		blockers.append_array(labels)
+		var separated := _place_health_bar(bar, blockers, view.y)
+		# In a saturated crowd, keep the readout attached to its own unit.
+		if absf(separated.position.y - bar.position.y) <= MAX_SHIFT:
+			bar = separated
+	cell = Vector2i((bar.get_center() / CELL_SIZE).floor())
+	if not bar_cells.has(cell): bar_cells[cell] = []
+	bar_cells[cell].append(bar.grow(3))
+	return bar
 
 func world_label_rect(label: Label3D, pixels_per_unit: float) -> Rect2:
 	var font := label.font if label.font else ThemeDB.fallback_font

@@ -44,18 +44,12 @@ func key(code: Key, control := false) -> void:
 
 func move_to_destination(next_label: String) -> void:
 	label = next_label
-	# Both axes exceed the old Foundry map. Project through the production camera.
-	var screen: Vector2 = game.camera.unproject_position(Vector3(108.5, 0, 64.5))
+	# Pick the center of the requested fixed-point bin so ray projection and
+	# truncation agree across viewport stretch factors.
+	var screen: Vector2 = game.camera.unproject_position(Vector3(27776.5, 0, 16512.5) / game.SCALE)
 	check(game.get_viewport().get_visible_rect().has_point(screen), next_label + " click is inside the viewport")
-	var press := InputEventMouseButton.new()
-	press.button_index = MOUSE_BUTTON_RIGHT
-	press.position = screen
-	press.pressed = true
-	Input.parse_input_event(press)
-	var release := InputEventMouseButton.new()
-	release.button_index = MOUSE_BUTTON_RIGHT
-	release.position = screen
-	Input.parse_input_event(release)
+	game._smoke_mouse(MOUSE_BUTTON_RIGHT, screen, true)
+	game._smoke_mouse(MOUSE_BUTTON_RIGHT, screen, false)
 	await game.get_tree().process_frame
 	await game.get_tree().process_frame
 
@@ -133,8 +127,8 @@ func run() -> void:
 	await key(KEY_1)
 	check(game.selected == selected_ids, "1 recalls the entire saved scale army")
 	await move_to_destination("move")
-	check(inputs.size() == 1 and inputs[0].accepted and inputs[0].x > 32 * 256 and inputs[0].z > 24 * 256,
-		"Production right click accepts destination beyond both former map bounds")
+	check(inputs.size() == 1 and inputs[0].accepted and inputs[0].x == 27776 and inputs[0].z == 16512,
+		"Production right click accepts the requested far-map destination")
 	while game.current.tick < 25 and game.current.tick < game.finish_tick:
 		await game.get_tree().process_frame
 	check(moved_before_stop, "Selected army moved before Stop")
@@ -152,6 +146,8 @@ func run() -> void:
 		await game.get_tree().process_frame
 	game.completed = true
 	var final_snapshot: Dictionary = game.current.duplicate(true)
+	var replay: PackedByteArray = game.bridge.replay_bytes()
+	check(not replay.is_empty(), "Bridge recorded the applied large-map commands")
 	check(moved_after_resume, "Selected army moved after resume")
 	check(trace.size() == game.finish_tick + 1 and trace.back().tick == game.finish_tick,
 		"Full tick hash trace includes tick zero through the requested finish")
@@ -174,6 +170,7 @@ func run() -> void:
 	check(game.control_groups.is_empty() and game.selected.is_empty(), "R clears saved groups and selection")
 	check(str(game.current.hash) == str(initial_snapshot.hash), "R restores the exact initial deterministic state")
 	var report := {"ok": errors.is_empty(), "mode": "scale", "seed": 1, "count": game.scale_count,
+		"capture_version": 2, "replay_hex": replay.hex_encode(),
 		"units_per_team": game.scale_count,
 		"setup": {"map_id": initial_snapshot.get("map_id"), "width": initial_snapshot.width,
 			"height": initial_snapshot.height, "protocol": initial_snapshot.get("protocol"),

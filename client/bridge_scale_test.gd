@@ -66,6 +66,23 @@ func _initialize() -> void:
 		check(bridge.snapshot().hash == stepped.hash, "reset command replay is deterministic")
 	check(bridge.reset_scale(0, 1, false), "zero seed accepted")
 	check(bridge.reset_scale(4294967295, 250, false), "maximum uint32 seed accepted")
+	check(bridge.replay_bytes().is_empty(), "a fresh match has no applied replay prefix")
+	check(bridge.issue(1, PackedInt32Array([1]), 4608, 13568), "record first large-map Move")
+	bridge.advance()
+	var applied: PackedByteArray = bridge.replay_bytes()
+	check(applied.size() == 70, "one applied Move occupies one replay frame")
+	if applied.size() >= 36:
+		check(applied.decode_u32(8) == 4294967295 and applied.decode_u32(12) == 250
+			and applied.decode_u32(16) == 1 and applied.decode_u32(20) == 1
+			and applied.decode_u32(32) == 1, "replay preserves seed, initial roster, tick, frame count and map")
+	check(bridge.issue(0, PackedInt32Array([1]), 0, 0), "accept Stop on the pending tick")
+	check(bridge.replay_bytes() == applied, "unapplied Stop leaves the saved prefix intact")
+	check(not bridge.network_start(-1, 39370, 39371, 99213, 2, 30), "invalid network setup rejects")
+	check(bridge.replay_bytes() == applied, "failed network setup preserves the offline recording")
+	bridge.advance()
+	var continued: PackedByteArray = bridge.replay_bytes()
+	check(continued.size() == 104 and continued.decode_u32(16) == 2 and continued.decode_u32(20) == 2
+		and continued.slice(36, applied.size()) == applied.slice(36), "the next prefix retains Move and appends the applied Stop")
 	bridge.reset(42, false)
 	var foundry: Dictionary = bridge.snapshot()
 	check(foundry.map_id == 0 and foundry.width == 32 and foundry.height == 24 and foundry.units.size() == 12, "legacy reset remains Foundry six per team")

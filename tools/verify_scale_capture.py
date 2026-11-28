@@ -14,7 +14,7 @@ from verify_scale import read_commands, audit_ledger, require
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def recording(report):
+def recording(report, require_bridge=False):
     require(report['ok'] and not report['errors'], 'client fixture failed')
     setup = report['setup']
     final = report['final_snapshot']
@@ -41,6 +41,8 @@ def recording(report):
         require(0 <= command['x'] < 32768 and 0 <= command['z'] < 32768, 'invalid input coordinate')
         if command['order'] == 1:
             require(command['x'] > 32 * 256 and command['z'] > 24 * 256, 'Move did not exercise expanded bounds')
+            if report.get('capture_version') == 2:
+                require((command['x'], command['z']) == (27776, 16512), 'Move missed the projected destination')
         frame = b'VFC\1' + struct.pack('<IIBBIII', tick, sequence, 0, command['order'],
                                      command['x'], command['z'], len(ids))
         frame += struct.pack('<' + 'I' * len(ids), *ids)
@@ -48,6 +50,11 @@ def recording(report):
         prior_tick = tick
     raw = b'VFR\3' + struct.pack('<5IQI', setup['protocol'], report['seed'], count, ticks,
                                   len(frames), int(setup['content_id'], 16), 1) + b''.join(frames)
+    if require_bridge or 'capture_version' in report or 'replay_hex' in report:
+        require(report.get('capture_version') == 2, 'unknown scale capture version')
+        recorded = bytes.fromhex(report.get('replay_hex', ''))
+        require(recorded == raw, 'bridge recording differs from the observed inputs and setup')
+        raw = recorded
     return raw, '\n'.join(f"{r['tick']} {int(r['hash'], 16)}" for r in trace[1:]) + '\n'
 
 
@@ -55,13 +62,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('report', type=Path)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--require-bridge-recording', action='store_true',
+                        help='reject reports that provide only the legacy input reconstruction')
     args = parser.parse_args()
     require(not (ROOT / '.voidfront-agent/STOP').exists(), 'STOP is present')
     report = json.loads(args.report.read_text())
-    raw, golden = recording(report)
+    raw, golden = recording(report, args.require_bridge_recording)
     # Verify the input/trace checks actually reject evidence omissions and aliases.
     rejected = []
-    for label in ('trace-gap', 'trace-duplicate', 'input-missing', 'foreign-id', 'old-map', 'old-bounds', 'collapsed-stop', 'stop-tick'):
+    faults = ['trace-gap', 'trace-duplicate', 'input-missing', 'foreign-id', 'old-map', 'old-bounds', 'collapsed-stop', 'stop-tick']
+    if 'capture_version' in report:
+        faults += ['missing-recording', 'changed-recording', 'unversioned-recording']
+        if args.require_bridge_recording:
+            faults.append('stripped-recording')
+    for label in faults:
         bad = copy.deepcopy(report)
         if label == 'trace-gap': bad['trace'].pop(1)
         elif label == 'trace-duplicate': bad['trace'][1] = bad['trace'][0]
@@ -73,7 +87,15 @@ def main():
             bad['inputs'][2]['event_tick'] = bad['inputs'][1]['event_tick']
             bad['inputs'][2]['application_tick'] = bad['inputs'][1]['application_tick']
         elif label == 'stop-tick': bad['stop_tick'] += 1
-        try: recording(bad)
+        elif label == 'missing-recording': del bad['replay_hex']
+        elif label == 'changed-recording':
+            data = bytearray.fromhex(bad['replay_hex'])
+            data[-1] ^= 1
+            bad['replay_hex'] = data.hex()
+        elif label == 'unversioned-recording': del bad['capture_version']
+        elif label == 'stripped-recording':
+            del bad['capture_version'], bad['replay_hex']
+        try: recording(bad, args.require_bridge_recording)
         except AssertionError: rejected.append(label)
         else: raise AssertionError(f'accepted corrupt evidence: {label}')
     args.out.mkdir(parents=True, exist_ok=False)
@@ -85,6 +107,7 @@ def main():
     fingerprints = {c: digest(p) for c, p in binaries.items()}
     summary = {'started_utc': datetime.now(timezone.utc).isoformat(), 'report_sha256': digest(args.report),
                'binaries': fingerprints, 'ticks': report['final_snapshot']['tick'], 'runs': [],
+               'replay_source': 'bridge' if 'capture_version' in report else 'reconstructed from legacy input report',
                'rejected_corruptions': rejected}
     for config, repeats in (('Debug', 1), ('Release', 10)):
         for repeat in range(repeats):

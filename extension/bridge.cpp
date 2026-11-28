@@ -14,7 +14,6 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
-#include <tuple>
 
 using namespace godot;
 
@@ -24,8 +23,11 @@ class VoidfrontBridge : public RefCounted {
     uint32_t human_sequence = 0;
     uint32_t ai_sequence = 0;
     bool ai_enabled = true;
-    uint32_t economy_seed = 1;
-    std::vector<vf::Command> economy_commands;
+    uint32_t offline_seed = 1, offline_units_per_team = 3;
+    std::vector<uint8_t> offline_frames;
+    uint32_t offline_command_count = 0, applied_command_count = 0;
+    size_t applied_frame_bytes = 0;
+    bool offline_overflow = false, offline_replay_complete = true;
     std::unique_ptr<vf::net::Session> network;
     vf::net::SessionOptions network_options;
     std::string network_failure;
@@ -44,6 +46,7 @@ class VoidfrontBridge : public RefCounted {
     bool evidence_complete = true;
     static constexpr size_t max_queued_inputs = 64, max_recorded_commands = 100000;
     static constexpr size_t max_replay_bytes = 64 * 1024 * 1024;
+    static constexpr uint32_t max_offline_replay_ticks = 10000000;
 
     static int64_t clock_usec() { return static_cast<int64_t>(Time::get_singleton()->get_ticks_usec()); }
     static String hash_string(uint64_t value) {
@@ -54,16 +57,35 @@ class VoidfrontBridge : public RefCounted {
     static void append_u32(std::vector<uint8_t>& bytes, uint32_t value) {
         for (unsigned shift = 0; shift < 32; shift += 8) bytes.push_back(static_cast<uint8_t>(value >> shift));
     }
+    void record_offline(const vf::Command& command) {
+        if (simulation.map() == vf::Map::Foundry || offline_overflow || !offline_replay_complete) return;
+        // Human orders arrive before advance() submits this tick's AI orders.
+        // Within each player they already follow accepted sequence order.
+        const auto frame = vf::serialize_command(command);
+        if (offline_command_count >= max_recorded_commands ||
+                36 + offline_frames.size() + 4 + frame.size() > max_replay_bytes) {
+            offline_overflow = true;
+            return;
+        }
+        append_u32(offline_frames, static_cast<uint32_t>(frame.size()));
+        offline_frames.insert(offline_frames.end(), frame.begin(), frame.end());
+        ++offline_command_count;
+    }
     void fail_network(const char* message) {
         network_failure = message;
         if (network) network->cancel();
     }
     void clear_network() {
-        economy_commands.clear();
         network.reset(); network_failure.clear(); inputs.clear(); pending_inputs.clear();
         executed_inputs.clear(); trace.clear(); replay_commands.clear();
         replay_count = recorded_ticks = issued_sequence = 0; last_sampled_source = UINT32_MAX;
         network_options = {}; evidence_complete = true;
+    }
+    void begin_offline_recording(uint32_t seed, uint32_t units_per_team) {
+        offline_seed = seed; offline_units_per_team = units_per_team;
+        offline_frames.clear();
+        offline_command_count = applied_command_count = 0;
+        applied_frame_bytes = 0; offline_overflow = false; offline_replay_complete = true;
     }
     static const char* state_name(vf::net::SessionStatus status) {
         using S = vf::net::SessionStatus;
@@ -177,6 +199,7 @@ public:
     void reset(int64_t seed, bool ai) {
         clear_network();
         simulation = vf::Sim(static_cast<uint32_t>(seed));
+        begin_offline_recording(static_cast<uint32_t>(seed), 6);
         human_sequence = 0; ai_sequence = 0; ai_enabled = ai;
     }
     bool reset_scale(int64_t seed, int64_t units_per_team, bool enemy_ai) {
@@ -188,6 +211,7 @@ public:
             vf::Sim replacement(static_cast<uint32_t>(seed), static_cast<uint32_t>(units_per_team), vf::Map::Scale128);
             simulation = std::move(replacement);
             clear_network();
+            begin_offline_recording(static_cast<uint32_t>(seed), static_cast<uint32_t>(units_per_team));
             human_sequence = 0; ai_sequence = 0; ai_enabled = enemy_ai;
             return true;
         } catch (...) { return false; }
@@ -196,13 +220,16 @@ public:
         if (network) return;
         if (ai_enabled && (simulation.map() == vf::Map::Economy || simulation.tick() >= 100)) {
             for (auto &command : vf::make_ai_commands(simulation, 1, ai_sequence)) {
-                if (simulation.submit(command) && simulation.map() == vf::Map::Economy) {
-                    if (economy_commands.size() < max_recorded_commands) economy_commands.push_back(command);
-                    else evidence_complete = false;
-                }
+                if (simulation.submit(command)) record_offline(command);
             }
         }
         simulation.step();
+        applied_frame_bytes = offline_frames.size();
+        applied_command_count = offline_command_count;
+        // A queued order that exceeds a reader limit invalidates the next
+        // tick, but a save before that tick still owns its complete prefix.
+        if (offline_overflow || (simulation.map() != vf::Map::Foundry && simulation.tick() > max_offline_replay_ticks))
+            offline_replay_complete = false;
     }
     bool reset_economy(int64_t seed, bool enemy_ai) {
         if (seed < 0 || seed > UINT32_MAX || (network &&
@@ -211,7 +238,8 @@ public:
         try {
             vf::Sim replacement(static_cast<uint32_t>(seed), 3, vf::Map::Economy);
             simulation = std::move(replacement);
-            clear_network(); economy_seed = static_cast<uint32_t>(seed);
+            clear_network();
+            begin_offline_recording(static_cast<uint32_t>(seed), 3);
             human_sequence = ai_sequence = 0; ai_enabled = enemy_ai;
             return true;
         } catch (...) { return false; }
@@ -223,25 +251,15 @@ public:
     }
     PackedByteArray replay_bytes() const {
         PackedByteArray result;
-        if (network || simulation.map() != vf::Map::Economy || simulation.tick() == 0 || !evidence_complete) return result;
+        if (network || simulation.map() == vf::Map::Foundry || simulation.tick() == 0 || !offline_replay_complete) return result;
         std::vector<uint8_t> bytes{'V','F','R',3};
-        append_u32(bytes, vf::kProtocolVersion); append_u32(bytes, economy_seed);
-        append_u32(bytes, 3); append_u32(bytes, simulation.tick());
-        const auto count = std::count_if(economy_commands.begin(), economy_commands.end(),
-            [this](const auto& c) { return c.tick < simulation.tick(); });
-        append_u32(bytes, static_cast<uint32_t>(count));
+        append_u32(bytes, vf::kProtocolVersion); append_u32(bytes, offline_seed);
+        append_u32(bytes, offline_units_per_team); append_u32(bytes, simulation.tick());
+        append_u32(bytes, applied_command_count);
         append_u32(bytes, static_cast<uint32_t>(vf::kLockstepContentId));
         append_u32(bytes, static_cast<uint32_t>(vf::kLockstepContentId >> 32));
-        append_u32(bytes, static_cast<uint32_t>(vf::Map::Economy));
-        auto ordered = economy_commands;
-        std::sort(ordered.begin(), ordered.end(), [](const auto& a, const auto& b) {
-            return std::tie(a.tick, a.player, a.sequence) < std::tie(b.tick, b.player, b.sequence);
-        });
-        for (const auto& command : ordered) if (command.tick < simulation.tick()) {
-            const auto encoded = vf::serialize_command(command);
-            append_u32(bytes, static_cast<uint32_t>(encoded.size()));
-            bytes.insert(bytes.end(), encoded.begin(), encoded.end());
-        }
+        append_u32(bytes, static_cast<uint32_t>(simulation.map()));
+        bytes.insert(bytes.end(), offline_frames.begin(), offline_frames.begin() + applied_frame_bytes);
         result.resize(static_cast<int64_t>(bytes.size()));
         std::copy(bytes.begin(), bytes.end(), result.ptrw());
         return result;
@@ -263,10 +281,7 @@ public:
         command.units.erase(std::unique(command.units.begin(), command.units.end()), command.units.end());
         if (!simulation.submit(command)) return false;
         ++human_sequence;
-        if (simulation.map() == vf::Map::Economy) {
-            if (economy_commands.size() < max_recorded_commands) economy_commands.push_back(command);
-            else evidence_complete = false;
-        }
+        record_offline(command);
         return true;
     }
     bool is_blocked(int64_t x, int64_t z) const {
@@ -282,7 +297,7 @@ public:
         result["protocol"] = vf::kProtocolVersion;
         result["tick"] = state.tick(); result["winner"] = state.winner();
         result["enemy_ai"] = !network && ai_enabled;
-        result["replay_complete"] = evidence_complete;
+        result["replay_complete"] = network ? evidence_complete : offline_replay_complete;
         result["hash"] = hash_string(network ? state.state_hash() : state.hash());
         Array units;
         for (const auto &unit : state.units()) {

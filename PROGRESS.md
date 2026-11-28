@@ -35,6 +35,21 @@ The 200- and 500-unit opposing crossings still have zero exact arrivals
 at tick 4,000. Both native configurations passed the corrected rank
 tests and the rest of the 12-entry CTest suite.
 
+The Windows client now keeps the bars of resting workers in place as a
+moving worker passes. At contact all three fills are visible. The
+packaged passage still ends at tick 932. Its 386-frame movie and four
+phase images are in `artifacts/request-runtime-2026-11-27`.
+
+Scale128 now records actual human and AI frames through the bridge. A
+failed network start preserves the offline game and its recording, and
+a pending over-limit order leaves the last applied prefix available
+until the next tick. The final bridge passed both the 100,000-command
+and exact 64 MiB boundaries. Its army capture now projects clicks
+through the window transform. The shipped game accepted both Moves at
+(27776,16512) for 500 units at 720p and 200 units at 1080p. Each
+recording matched all 220 ticks in eleven native replays and rejected
+twelve evidence mutations.
+
 ## 2026-11-26 America/Los_Angeles — worker movement between held units
 
 Clean `dev` started at `82fa9e9`. On Glass Reach an ordinary Move

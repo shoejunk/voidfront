@@ -20,13 +20,14 @@ func photograph(label: String) -> void:
 	game._present_economy()
 	await super.photograph(label)
 	var view := get_viewport()
-	var labels: Array[Rect2] = game.hud._economy_label_rects()
 	var centers := []
 	var transform := view.get_final_transform()
 	for id in [1, 2, 3]:
-		var position_on_map: Vector3 = game.actors[id].root.position
-		var bar: Rect2 = game.hud.health_bar_rect(position_on_map, 36.0, labels, view.get_visible_rect().size.y)
-		var pixel := transform * (bar.position + Vector2(18, 1.5))
+		if not game.hud.drawn_health_bars.has(id):
+			capture_errors.append("%s: no rendered bar for worker %d" % [label, id])
+			return
+		var bar: Rect2 = game.hud.drawn_health_bars[id]
+		var pixel := transform * (bar.position + Vector2(bar.size.x / 2, 1.5))
 		centers.append([pixel.x, pixel.y])
 	events[label].friendly_bars = centers
 	events[label].camera_target = [game.camera_target.x, game.camera_target.z]
