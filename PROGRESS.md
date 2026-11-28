@@ -1,5 +1,40 @@
 # Voidfront progress
 
+## 2026-11-27 America/Los_Angeles — servicing blocked movement requests
+
+Clean `dev` started at `9243fce`. In the recorded 500-unit match,
+walker 258 takes 3,820 ticks to complete a Move that a queued alignment
+finishes in six. Reproduce both routes, schedule bounded searches for
+the units that request them, and measure service under contention.
+Check the stationary-worker and formation controls, crowded crossings
+and packaged gameplay. Also inspect the overlapping health bars on the
+two workers holding near the flux field.
+
+The first scheduling change finished the original recorded trip in seven
+ticks. Independent testing caught four newly stalled six-walker
+formations. All four first diverged near another moving unit. The
+integration gate is to keep every previously completed formation as
+well as the measured improvement for the lone walker.
+
+A second reproduction uses the local player's mouse and Hold hotkey in
+the 500-unit Godot scene. The baseline Move at 1,031 reached its slot at
+4,882. The bridge returned an empty recording on this map, so the
+baseline needed reconstruction from the input events and tick hashes.
+This run also extends offline replay recording to Scale128 and compares
+its actual bytes with the independently reconstructed inputs.
+
+The integrated movement change grants up to eight searches per tick to
+blocked movers. Oldest blocked step goes first, with unit ID breaking
+ties. A short wait near passing units preserved every previous six-unit
+formation completion. The original Move finishes at 1,007 and the local
+player's at 1,038, seven ticks after each command. Both controls keep
+their holders in place. Across 250 start phases, all 25,000 tested
+mixed-traffic trips reached their exact slots. Maximum observed wait
+from the first qualifying opportunity to search was 14 ticks.
+The 200- and 500-unit opposing crossings still have zero exact arrivals
+at tick 4,000. Both native configurations passed the corrected rank
+tests and the rest of the 12-entry CTest suite.
+
 ## 2026-11-26 America/Los_Angeles — worker movement between held units
 
 Clean `dev` started at `82fa9e9`. On Glass Reach an ordinary Move

@@ -88,21 +88,23 @@ bool holds_position(const Unit& unit) {
     return unit.order==Order::Stop || unit.order==Order::Hold;
 }
 
-std::vector<nav::Point> detour_around_group(const nav::World& world,const SpatialIndex& spatial,
+constexpr int detour_lookahead=4*kScale, detour_margin=kScale;
+constexpr size_t group_search_budget=8;
+
+std::vector<nav::Rect> stationary_group(const SpatialIndex& spatial,
         const std::vector<Unit>& units,const std::vector<nav::Point>& tick_start,
-        const Unit& mover,const Unit& obstacle,nav::Point goal,bool replacing_maneuver) {
-    constexpr int lookahead=4*kScale, margin=kScale;
+        const Unit& mover,const Unit& obstacle,bool replacing_maneuver,bool& has_traffic) {
     std::vector<uint32_t> nearby;
-    if (replacing_maneuver) {
-        // Keep the existing maneuver when another unit can change the local
-        // geometry. Include the entire spatial buckets touching the planning
-        // window so a moving neighbor at its edge also retains priority.
-        constexpr int window=lookahead+margin;
-        spatial.query({mover.x-window,mover.z-window,mover.x+window,mover.z+window},nearby);
-        for (const auto id:nearby) {
-            const auto& other=units[id-1];
-            if (id!=mover.id && (!holds_position(other) || nav::Point{other.x,other.z}!=tick_start[id-1]))
-                return {};
+    // Include the entire spatial buckets touching the planning window. Keep
+    // an existing maneuver when another unit can change the local geometry.
+    constexpr int window=detour_lookahead+detour_margin;
+    spatial.query({mover.x-window,mover.z-window,mover.x+window,mover.z+window},nearby);
+    for (const auto id:nearby) {
+        const auto& other=units[id-1];
+        if (id!=mover.id && (!holds_position(other) || nav::Point{other.x,other.z}!=tick_start[id-1])) {
+            has_traffic=true;
+            if (replacing_maneuver) return {};
+            break;
         }
     }
     // Forbidden center rectangles meet when two held centers are four radii
@@ -118,7 +120,23 @@ std::vector<nav::Point> detour_around_group(const nav::World& world,const Spatia
         if (blockers.size()>8) return {};
     }
     if (blockers.size()<2) return {};
-    return world.local_detour({mover.x,mover.z},goal,std::move(blockers),lookahead,margin);
+    return blockers;
+}
+
+bool wait_for_passing_units(const Unit& mover,uint32_t tick,size_t roster_size) {
+    // In mixed traffic the first search used to be staggered. Let those
+    // neighbors pass for one ordinary two-tick retry when its phase is closed.
+    // A mover with a stale maneuver makes its first request after eight blocks.
+    if (mover.blocked_ticks==3) return true;
+    if (mover.blocked_ticks!=(mover.detour.empty()?2:8)) return false;
+    const auto first=(uint64_t(tick/2)*group_search_budget)%roster_size;
+    return (mover.id-1+roster_size-first)%roster_size>=group_search_budget;
+}
+
+void install_detour(Unit& mover,std::vector<nav::Point> route) {
+    if (route.empty() && !mover.detour.empty()) mover.route_goal={-1,-1};
+    mover.detour=std::move(route);
+    mover.blocked_ticks=0;
 }
 }
 
@@ -377,6 +395,13 @@ void Sim::step() {
     candidates.reserve(9);
     std::vector<std::vector<nav::Point>> attempted_detours(units_.size());
     std::vector<uint8_t> reconsidered_detour(units_.size(),0);
+    struct GroupRequest {
+        uint32_t unit_id;
+        nav::Point goal;
+        std::vector<nav::Rect> blockers;
+        std::vector<nav::Point> fallback;
+    };
+    std::vector<GroupRequest> group_requests;
     constexpr int64_t attack_range2 = int64_t(strider_range_tiles * kScale) * (strider_range_tiles * kScale);
     constexpr int64_t acquire_range2 = int64_t(strider_acquire_tiles * kScale) * (strider_acquire_tiles * kScale);
     for (auto& u : units_) {
@@ -552,22 +577,43 @@ void Sim::step() {
                 // crosses the same held footprint, sending the unit in a loop.
                 if (holds_position(obstacle) &&
                     (best.empty() || !nav::segment_clear(best.back(),destination,exact))) {
-                    // Limit larger searches to eight identities per tick. Two
-                    // consecutive ticks per window cover both blocked-step phases.
-                    constexpr size_t slots=8;
-                    const auto first=(uint64_t(tick_/2)*slots)%units_.size();
-                    if ((u.id-1+units_.size()-first)%units_.size()<slots) {
-                        auto replacement=detour_around_group(navigation_,spatial,units_,tick_start,
-                                                             u,obstacle,goal,!best.empty());
-                        if (!replacement.empty()) best=std::move(replacement);
+                    bool has_traffic=false;
+                    auto blockers=stationary_group(spatial,units_,tick_start,u,obstacle,!best.empty(),has_traffic);
+                    if (!blockers.empty()) {
+                        if (has_traffic && wait_for_passing_units(u,tick_,units_.size())) {
+                            if (!u.detour.empty()) {
+                                install_detour(u,{});
+                                u.blocked_ticks=2;
+                            }
+                            continue;
+                        }
+                        group_requests.push_back({u.id,goal,std::move(blockers),std::move(best)});
+                        continue;
                     }
                 }
-                if (best.empty() && !u.detour.empty()) u.route_goal={-1,-1};
-                u.detour=std::move(best); u.blocked_ticks=0;
+                install_detour(u,std::move(best));
             }
         }
         if (u.order == Order::Move && u.queue.empty() && u.x == u.goal_x && u.z == u.goal_z) u.order = Order::Stop;
     }
+    // Grant expensive visibility searches to blocked movers. Deferred movers
+    // retain their blocked step and its age, and recheck it against live
+    // geometry next tick. Retries start at age zero after service. Stable ID
+    // breaks equal-age ties without letting new retries displace an older wait.
+    if (group_requests.size()>group_search_budget) {
+        const auto older=[&](const GroupRequest& a,const GroupRequest& b) {
+            const auto age_a=units_[a.unit_id-1].blocked_ticks,age_b=units_[b.unit_id-1].blocked_ticks;
+            return age_a!=age_b?age_a>age_b:a.unit_id<b.unit_id;
+        };
+        std::partial_sort(group_requests.begin(),group_requests.begin()+group_search_budget,group_requests.end(),older);
+        group_requests.resize(group_search_budget);
+    }
+    for (auto& request:group_requests) {
+        auto& u=units_[request.unit_id-1];
+        auto route=navigation_.local_detour({u.x,u.z},request.goal,std::move(request.blockers),detour_lookahead,detour_margin);
+        install_detour(u,route.empty()?std::move(request.fallback):std::move(route));
+    }
+
     // A stopped follower must not treat its leader's entire swept bounding box
     // as occupied at every instant. Resolve a bounded dependency transaction
     // after the ordinary combat/movement decisions, retaining their ordering.

@@ -278,6 +278,88 @@ uint32_t enter_tangent_gap(uint32_t side) {
     return sim.tick()-launch;
 }
 
+void simultaneous_gap_requests() {
+    // Each trio has the same tight approach as tangent_gap, in a separate
+    // arena. Keep reissuing the first sixteen movers' orders as soon as a
+    // search has run, so low IDs compete with the original waiting requests.
+    constexpr unsigned groups_per_side=24;
+    vf::Sim sim(42,3*groups_per_side,vf::Map::Scale128);
+    auto& units=const_cast<std::vector<vf::Unit>&>(sim.units());
+    std::array<vf::nav::Point,2*groups_per_side> goals;
+    std::array<unsigned,2*groups_per_side> first_service{};
+    std::array<uint32_t,2> sequence{};
+    for (unsigned g=0;g<goals.size();++g) {
+        const unsigned index=g%groups_per_side;
+        const int x=(g<groups_per_side?1800:21000)+int(index%4)*2000;
+        const int z=1800+int(index/4)*2000;
+        goals[g]={x,z};
+        for (unsigned post=0;post<3;++post) {
+            auto& u=units[3*g+post];
+            u.x=u.goal_x=u.next_x=post==1?x+144:x;
+            u.z=u.goal_z=u.next_z=z+(post==0?-128:post==2?128:-16);
+            order(sim,++sequence[u.player],u.id,x,z,post==1?vf::Order::Move:vf::Order::Hold);
+        }
+    }
+    for (unsigned t=1;t<=14;++t) {
+        step(sim,"simultaneous_gap_requests",nullptr);
+        unsigned serviced=0;
+        for (unsigned g=0;g<goals.size();++g) {
+            const auto& u=units[3*g+1];
+            // A new route installed at the blocked start is observable one
+            // tick before it moves. Later steps along that route do not count.
+            if (u.x==goals[g].x+144 && u.z==goals[g].z-16 &&
+                !u.detour.empty() && u.detour.back()==goals[g]) {
+                ++serviced;
+                if (!first_service[g]) first_service[g]=t;
+                if (g<16 && t<=7) order(sim,++sequence[u.player],u.id,goals[g].x,goals[g].z);
+            }
+        }
+        check(serviced<=8,"exceeded eight simultaneous group searches");
+        if (t>=2 && t<=7) check(serviced==8,"unused group search capacity with waiting movers");
+    }
+    for (unsigned g=0;g<goals.size();++g) {
+        const auto goal=goals[g];
+        const auto& a=units[3*g]; const auto& mover=units[3*g+1]; const auto& b=units[3*g+2];
+        check(first_service[g]==2+g/8,"an older request lost its turn to a retry");
+        check(mover.order==vf::Order::Stop && vf::nav::Point{mover.x,mover.z}==goal,"deferred mover missed exact arrival");
+        check(a.order==vf::Order::Hold && b.order==vf::Order::Hold &&
+              a.x==goal.x && a.z==goal.z-128 && b.x==goal.x && b.z==goal.z+128,"group search displaced a post");
+    }
+}
+
+void passing_units_at_rank_slots() {
+    // An immediate group search can block a neighbor which is still filing
+    // into its rank. These four ordinary Move sequences regressed when the
+    // search schedule for quiet gaps was applied unchanged in moving traffic.
+    struct Case { uint32_t side; std::array<int,6> slots; };
+    const std::array<Case,4> cases{{
+        {0,{0,3,4,5,2,1}}, {0,{4,5,1,0,3,2}},
+        {1,{4,0,1,5,3,2}}, {1,{4,3,5,1,0,2}}
+    }};
+    for (const auto& c:cases) {
+        vf::Sim sim(1,6);
+        const auto orient=[&](int x) { return c.side?sim.width()*vf::kScale-x:x; };
+        const auto first=1+6*c.side;
+        for (uint32_t i=0;i<6;++i) order(sim,i+1,first+i,orient(640),2432+128*i);
+        while (sim.tick()<160) step(sim,"rank_slots",nullptr);
+        for (uint32_t i=0;i<6;++i) {
+            const auto& u=sim.units()[first+i-1];
+            check(u.x==orient(640) && u.z==2432+128*int(i),"rank setup missed a slot");
+            order(sim,7+i,first+i,orient(2304),2432+128*c.slots[i]);
+        }
+        unsigned arrived=0;
+        while (arrived<6 && sim.tick()<760) {
+            step(sim,"rank_slots",nullptr);
+            arrived=0;
+            for (uint32_t i=0;i<6;++i) {
+                const auto& u=sim.units()[first+i-1];
+                if (u.order==vf::Order::Stop && u.x==orient(2304) && u.z==2432+128*c.slots[i]) ++arrived;
+            }
+        }
+        check(arrived==6,"group searches stranded units at rank slots in passing traffic");
+    }
+}
+
 void blocked_convoy(vf::Order pause,const std::string& name,std::ostream* trace) {
     vf::Sim sim(1,6);
     for (uint32_t id=1;id<=6;++id) order(sim,id,id,640,2432+128*(id-1));
@@ -369,5 +451,7 @@ int main(int argc,char** argv) {
         const auto travel=enter_tangent_gap(0);
         check(enter_tangent_gap(1)==travel,"mirrored tangent gap timings differed");
     });
+    run("simultaneous_gap_requests",simultaneous_gap_requests);
+    run("passing_units_at_rank_slots",passing_units_at_rank_slots);
     return failed?1:0;
 }
